@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Menu, Sun, Moon } from 'lucide-react';
+import { Analytics } from '@vercel/analytics/react';
 import Sidebar, { type PageId } from '@/components/Sidebar';
 import MeeshoCalculator from '@/components/MeeshoCalculator';
 import FlipkartCalculator from '@/components/FlipkartCalculator';
@@ -124,6 +125,7 @@ export default function App() {
         </main>
         <Footer onNavigate={handleNavigate} />
       </div>
+      <Analytics />
     </div>
   );
 }

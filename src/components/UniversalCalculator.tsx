@@ -23,6 +23,7 @@ import {
   Info,
 } from 'lucide-react';
 import WaterfallChart from '@/components/WaterfallChart';
+import AIInsights from '@/components/AIInsights';
 
 type MarketplaceId =
   | 'amazon'
@@ -687,6 +688,19 @@ export default function UniversalCalculator() {
         cogs={state.cogs}
         netProfit={result.netProfit}
         marketplaceName={activeMarketplace.name}
+      />
+
+      {/* AI Strategic Insights */}
+      <AIInsights
+        marketplaceName={activeMarketplace.name}
+        sellingPrice={state.sellingPrice}
+        commissionRate={state.commissionRate}
+        shippingFee={result.shippingFee}
+        gstAmount={result.gstOnMarketplaceFees + result.tcsTds + result.productGst}
+        returnRate={state.returnRate}
+        netProfit={result.netProfit}
+        cogs={state.cogs}
+        breakEvenPrice={result.breakEvenPrice}
       />
 
       {/* Affiliate Card */}

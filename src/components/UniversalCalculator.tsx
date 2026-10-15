@@ -22,6 +22,7 @@ import {
   Calculator,
   Info,
 } from 'lucide-react';
+import WaterfallChart from '@/components/WaterfallChart';
 
 type MarketplaceId =
   | 'amazon'
@@ -675,6 +676,18 @@ export default function UniversalCalculator() {
           />
         </div>
       </div>
+
+      {/* Waterfall Chart */}
+      <WaterfallChart
+        revenue={state.sellingPrice}
+        commission={result.commissionAmount + state.closingFee}
+        shipping={result.shippingFee}
+        gst={result.gstOnMarketplaceFees + result.tcsTds + result.productGst}
+        rto={result.effectiveReturnCost}
+        cogs={state.cogs}
+        netProfit={result.netProfit}
+        marketplaceName={activeMarketplace.name}
+      />
 
       {/* Affiliate Card */}
       <div className="no-print bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl p-6 border border-slate-700 overflow-hidden relative">

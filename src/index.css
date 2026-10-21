@@ -1,0 +1,95 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Dark mode global overrides for component classes */
+@layer utilities {
+  .dark .bg-white {
+    background-color: rgb(30 41 59) !important;
+  }
+  .dark .bg-slate-50 {
+    background-color: rgb(15 23 42) !important;
+  }
+  .dark .bg-slate-100 {
+    background-color: rgb(30 41 59) !important;
+  }
+  .dark .border-slate-200 {
+    border-color: rgb(51 65 85) !important;
+  }
+  .dark .border-slate-100 {
+    border-color: rgb(51 65 85) !important;
+  }
+  .dark .text-slate-900 {
+    color: rgb(241 245 249) !important;
+  }
+  .dark .text-slate-800 {
+    color: rgb(226 232 240) !important;
+  }
+  .dark .text-slate-700 {
+    color: rgb(203 213 225) !important;
+  }
+  .dark .text-slate-600 {
+    color: rgb(148 163 184) !important;
+  }
+  .dark .text-slate-500 {
+    color: rgb(100 116 139) !important;
+  }
+  .dark .bg-slate-50\/50 {
+    background-color: rgb(15 23 42 / 0.5) !important;
+  }
+  .dark .hover\:bg-slate-100:hover {
+    background-color: rgb(30 41 59) !important;
+  }
+  .dark .hover\:bg-slate-50:hover {
+    background-color: rgb(30 41 59 / 0.5) !important;
+  }
+  .dark .focus\:bg-white:focus {
+    background-color: rgb(15 23 42) !important;
+  }
+  .dark .border-2.border-slate-200 {
+    border-color: rgb(51 65 85) !important;
+  }
+  .dark select option {
+    background-color: rgb(30 41 59);
+    color: rgb(241 245 249);
+  }
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+
+  body {
+    background: white !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  .print-area {
+    position: absolute !important;
+    top: 0;
+    left: 0;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  /* Force light theme for printing */
+  .dark {
+    background: white !important;
+  }
+}
+
+.print-only {
+  display: none;
+}

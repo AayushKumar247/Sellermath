@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { useRemoteCalc } from '@/lib/calculateApi';
 import {
   Globe,
   ShoppingBag,
@@ -21,9 +22,11 @@ import {
   AlertCircle,
   Calculator,
   Info,
+  Target,
 } from 'lucide-react';
 import WaterfallChart from '@/components/WaterfallChart';
 import AIInsights from '@/components/AIInsights';
+import MarketplaceLogo from '@/components/MarketplaceLogo';
 
 type MarketplaceId =
   | 'amazon'
@@ -247,13 +250,6 @@ function formatINR(val: number): string {
   })}`;
 }
 
-function calcShippingFee(weight: number, zoneMult: number): number {
-  const baseFee = 35;
-  const perKg = 20;
-  const weightKg = weight / 1000;
-  return Math.round((baseFee + perKg * weightKg) * zoneMult);
-}
-
 interface CalcResult {
   taxableValue: number;
   productGst: number;
@@ -272,6 +268,23 @@ interface CalcResult {
 }
 
 const STORAGE_KEY = 'sellermath_universal_calc';
+
+const EMPTY_RESULT: CalcResult = {
+  taxableValue: 0,
+  productGst: 0,
+  commissionAmount: 0,
+  closingFee: 0,
+  shippingFee: 0,
+  totalMarketplaceFees: 0,
+  gstOnMarketplaceFees: 0,
+  tcsTds: 0,
+  totalDeductions: 0,
+  netSettlement: 0,
+  netProfit: 0,
+  netProfitMargin: 0,
+  breakEvenPrice: 0,
+  effectiveReturnCost: 0,
+};
 
 const DEFAULT_STATE: CalcState = {
   marketplace: 'amazon',
@@ -341,55 +354,20 @@ export default function UniversalCalculator() {
     setState((prev) => ({ ...prev, [key]: value }));
   };
 
-  const result = useMemo<CalcResult>(() => {
-    const {
-      sellingPrice,
-      cogs,
-      productGstRate,
-      commissionRate,
-      closingFee,
-      shippingWeight,
-      zone,
-      returnRate,
-    } = state;
-
-    const taxableValue = sellingPrice / (1 + productGstRate / 100);
-    const productGst = sellingPrice - taxableValue;
-    const commissionAmount = (taxableValue * commissionRate) / 100;
-
-    const zoneMult = ZONES.find((z) => z.id === zone)?.multiplier ?? 1;
-    const shippingFee = calcShippingFee(shippingWeight, zoneMult);
-
-    const totalMarketplaceFees = commissionAmount + closingFee + shippingFee;
-    const gstOnMarketplaceFees = totalMarketplaceFees * 0.18;
-    const tcsTds = (sellingPrice * 1) / 100;
-    const totalDeductions =
-      totalMarketplaceFees + gstOnMarketplaceFees + tcsTds + productGst;
-
-    const effectiveReturnCost = (shippingFee * returnRate) / 100;
-    const netSettlement = sellingPrice - totalDeductions - effectiveReturnCost;
-    const netProfit = netSettlement - cogs;
-    const netProfitMargin = sellingPrice > 0 ? (netProfit / sellingPrice) * 100 : 0;
-    const breakEvenPrice =
-      cogs + totalDeductions + effectiveReturnCost;
-
-    return {
-      taxableValue,
-      productGst,
-      commissionAmount,
-      closingFee,
-      shippingFee,
-      totalMarketplaceFees,
-      gstOnMarketplaceFees,
-      tcsTds,
-      totalDeductions,
-      netSettlement,
-      netProfit,
-      netProfitMargin,
-      breakEvenPrice,
-      effectiveReturnCost,
-    };
-  }, [state]);
+  const { result, error } = useRemoteCalc<CalcResult>(
+    '/api/calculate/universal',
+    {
+      sellingPrice: state.sellingPrice,
+      cogs: state.cogs,
+      productGstRate: state.productGstRate,
+      commissionRate: state.commissionRate,
+      closingFee: state.closingFee,
+      shippingWeight: state.shippingWeight,
+      zone: state.zone,
+      returnRate: state.returnRate,
+    },
+    EMPTY_RESULT,
+  );
 
   const handlePrint = () => {
     window.print();
@@ -413,6 +391,12 @@ export default function UniversalCalculator() {
           </div>
         </div>
 
+        {error && (
+          <p className="no-print text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-2">
+            {error} Start the API with `npm run server`.
+          </p>
+        )}
+
         {/* Marketplace Selector */}
         <div className="no-print">
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">
@@ -420,14 +404,13 @@ export default function UniversalCalculator() {
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
             {MARKETPLACES.map((mp) => {
-              const Icon = mp.icon;
               const isActive = state.marketplace === mp.id;
               return (
                 <button
                   key={mp.id}
                   onClick={() => selectMarketplace(mp.id)}
                   className={`
-                    relative flex flex-col items-center gap-2 p-4 rounded-xl border-2
+                    relative flex flex-col items-center gap-1.5 sm:gap-2 p-3 sm:p-4 rounded-xl border-2
                     transition-all duration-200 group
                     ${
                       isActive
@@ -436,10 +419,7 @@ export default function UniversalCalculator() {
                     }
                   `}
                 >
-                  <Icon
-                    className={`w-6 h-6 ${isActive ? 'text-white' : 'text-slate-500'}`}
-                    strokeWidth={2}
-                  />
+                  <MarketplaceLogo id={mp.id} size="lg" />
                   <span className={`text-xs font-bold ${isActive ? 'text-white' : 'text-slate-700'}`}>
                     {mp.shortName}
                   </span>
@@ -518,9 +498,16 @@ export default function UniversalCalculator() {
                     <label className="text-sm font-semibold text-slate-700">
                       Shipping Weight
                     </label>
-                    <span className="text-sm font-bold text-slate-900 ml-auto">
-                      {state.shippingWeight}g
-                    </span>
+                    <div className="relative ml-auto">
+                      <input
+                        type="number"
+                        value={state.shippingWeight || ''}
+                        onChange={(e) => update('shippingWeight', parseInt(e.target.value) || 0)}
+                        placeholder="0"
+                        className="w-20 text-sm font-bold text-slate-900 bg-slate-50 rounded-lg border-2 border-slate-200 px-2 py-1 text-right focus:outline-none focus:border-emerald-500"
+                      />
+                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none">g</span>
+                    </div>
                   </div>
                   <input
                     type="range"
@@ -535,6 +522,28 @@ export default function UniversalCalculator() {
                     <span>100g</span>
                     <span>5kg</span>
                   </div>
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {[250, 500, 1000, 2000, 5000].map((weight) => {
+                      const isSelected = state.shippingWeight === weight;
+                      return (
+                        <button
+                          key={weight}
+                          onClick={() => update('shippingWeight', weight)}
+                          className={`
+                            px-3 py-1.5 rounded-lg text-xs font-medium transition-all
+                            ${
+                              isSelected
+                                ? `bg-gradient-to-r ${activeMarketplace.gradient} text-white shadow-md`
+                                : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200'
+                            }
+                          `}
+                        >
+                          {weight >= 1000 ? `${weight / 1000}kg` : `${weight}g`}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-2">1000g = 1kg</p>
                 </div>
 
                 <div>
@@ -675,6 +684,7 @@ export default function UniversalCalculator() {
               state={state}
               result={result}
               onPrint={handlePrint}
+              onUpdateSellingPrice={(price) => update('sellingPrice', price)}
             />
           </div>
         </div>
@@ -702,6 +712,19 @@ export default function UniversalCalculator() {
           netProfit={result.netProfit}
           cogs={state.cogs}
           breakEvenPrice={result.breakEvenPrice}
+        />
+
+        {/* Cross-Platform Profit Comparison */}
+        <CrossPlatformComparison
+          sellingPrice={state.sellingPrice}
+          cogs={state.cogs}
+          shippingWeight={state.shippingWeight}
+          zone={state.zone}
+          productGstRate={state.productGstRate}
+          returnRate={state.returnRate}
+          category={state.category}
+          currentMarketplace={state.marketplace}
+          onMarketplaceSelect={selectMarketplace}
         />
 
         {/* Affiliate Card */}
@@ -809,23 +832,48 @@ interface TaxLedgerProps {
   state: CalcState;
   result: CalcResult;
   onPrint: () => void;
+  onUpdateSellingPrice: (price: number) => void;
 }
 
-function TaxLedger({ marketplace, state, result, onPrint }: TaxLedgerProps) {
+function TaxLedger({ marketplace, state, result, onPrint, onUpdateSellingPrice }: TaxLedgerProps) {
   const isProfit = result.netProfit >= 0;
   const Icon = marketplace.icon;
+  const categoryName = CATEGORIES.find((c) => c.id === state.category)?.label || state.category;
+  const [targetProfit, setTargetProfit] = useState(500);
+
+  const { result: targetPriceResult } = useRemoteCalc<{ recommendedPrice: number }>(
+    '/api/calculate/target-price',
+    {
+      cogs: state.cogs,
+      commissionRate: state.commissionRate,
+      closingFee: state.closingFee,
+      productGstRate: state.productGstRate,
+      shippingWeight: state.shippingWeight,
+      returnRate: state.returnRate,
+      zone: state.zone,
+      desiredProfit: targetProfit,
+    },
+    { recommendedPrice: 0 },
+  );
+
+  const recommendedPrice = targetPriceResult.recommendedPrice;
 
   return (
     <div className="sticky top-20 bg-white rounded-2xl border-2 border-slate-200 overflow-hidden shadow-lg">
       {/* Header */}
       <div className={`bg-gradient-to-r ${marketplace.gradient} p-4`}>
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-lg bg-white/20 flex items-center justify-center backdrop-blur-sm">
-            <Icon className="w-5 h-5 text-white" strokeWidth={2.5} />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-lg bg-white/20 flex items-center justify-center backdrop-blur-sm">
+              <Icon className="w-5 h-5 text-white" strokeWidth={2.5} />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-white">CA Tax Ledger</h3>
+              <p className="text-xs text-white/80">{marketplace.name} Settlement Receipt</p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-sm font-bold text-white">CA Tax Ledger</h3>
-            <p className="text-xs text-white/80">{marketplace.name} Settlement Receipt</p>
+          <div className="bg-white/20 backdrop-blur-sm text-white text-xs font-semibold px-3 py-1 rounded-full border border-white/30">
+            {marketplace.name} ({categoryName})
           </div>
         </div>
       </div>
@@ -923,6 +971,36 @@ function TaxLedger({ marketplace, state, result, onPrint }: TaxLedgerProps) {
           </div>
           <p className="text-lg font-bold text-slate-900">{formatINR(result.breakEvenPrice)}</p>
           <p className="text-xs text-slate-400">Minimum price to avoid losses</p>
+        </div>
+
+        {/* Target Profit Solver */}
+        <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-xl p-3 border border-emerald-200">
+          <div className="flex items-center gap-2 mb-2">
+            <Target className="w-4 h-4 text-emerald-600" />
+            <span className="text-xs font-semibold text-slate-700">Target Profit Solver</span>
+          </div>
+          <div className="flex items-center gap-2 mb-2">
+            <input
+              type="number"
+              value={targetProfit || ''}
+              onChange={(e) => setTargetProfit(parseFloat(e.target.value) || 0)}
+              placeholder="Desired profit"
+              className="flex-1 text-sm font-semibold text-slate-900 bg-white rounded-lg border-2 border-emerald-200 px-2 py-1.5 focus:outline-none focus:border-emerald-500"
+            />
+            <span className="text-xs text-slate-500">₹</span>
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <p className="text-[10px] text-slate-500">Recommended Price</p>
+              <p className="text-sm font-bold text-emerald-700">{formatINR(recommendedPrice)}</p>
+            </div>
+            <button
+              onClick={() => onUpdateSellingPrice(recommendedPrice)}
+              className="px-3 py-1.5 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-500 transition-colors"
+            >
+              Apply Price
+            </button>
+          </div>
         </div>
 
         {/* Print Button */}
@@ -1081,6 +1159,124 @@ const FAQS: { q: string; a: string }[] = [
     a: 'RTO (Return to Origin) impacts profit in three ways: (1) You lose the forward shipping cost since the product was shipped but not delivered, (2) Return shipping fees may apply (especially on Flipkart), and (3) The product may arrive damaged, reducing resale value. On Meesho, where commission is 0%, RTO is the single biggest profit killer since the entire shipping cost is borne by the seller. A 15% RTO rate on a ₹60 shipping fee means an effective cost of ₹9 per order across your total volume. Our calculator factors this in automatically using the Return/RTO rate slider.',
   },
 ];
+
+interface CrossPlatformComparisonProps {
+  sellingPrice: number;
+  cogs: number;
+  shippingWeight: number;
+  zone: ZoneId;
+  productGstRate: number;
+  returnRate: number;
+  category: CategoryId;
+  currentMarketplace: MarketplaceId;
+  onMarketplaceSelect: (id: MarketplaceId) => void;
+}
+
+function CrossPlatformComparison({
+  sellingPrice,
+  cogs,
+  shippingWeight,
+  zone,
+  productGstRate,
+  returnRate,
+  category,
+  currentMarketplace,
+  onMarketplaceSelect,
+}: CrossPlatformComparisonProps) {
+  const { result: comparisonResult } = useRemoteCalc<{ comparisons: Array<{ marketplaceId: string; netProfit: number; netProfitMargin: number }> }>(
+    '/api/calculate/cross-platform',
+    {
+      sellingPrice,
+      cogs,
+      shippingWeight,
+      zone,
+      productGstRate,
+      returnRate,
+      category,
+    },
+    { comparisons: [] },
+  );
+
+  const sortedComparisons = comparisonResult.comparisons.map((comp) => ({
+    ...comp,
+    marketplace: MARKETPLACES.find((mp) => mp.id === comp.marketplaceId as MarketplaceId)!,
+  })).sort((a, b) => b.netProfit - a.netProfit);
+
+  return (
+    <div className="no-print bg-white rounded-2xl border border-slate-200 overflow-hidden">
+      <div className="p-5 border-b border-slate-200">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-purple-500/20">
+            <TrendingUp className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-slate-900">Cross-Platform Profit Comparison</h3>
+            <p className="text-sm text-slate-500">Which marketplace pays best for your product?</p>
+          </div>
+        </div>
+      </div>
+      <div className="p-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {sortedComparisons.map((item, index) => {
+            const isBest = index === 0;
+            const isCurrent = item.marketplace.id === currentMarketplace;
+
+            return (
+              <button
+                key={item.marketplace.id}
+                onClick={() => onMarketplaceSelect(item.marketplace.id)}
+                className={`
+                  relative p-4 rounded-xl border-2 transition-all duration-200 text-left
+                  ${
+                    isBest
+                      ? 'bg-gradient-to-br from-emerald-50 to-green-50 border-emerald-300 shadow-md'
+                      : isCurrent
+                      ? 'bg-slate-50 border-slate-300'
+                      : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-sm'
+                  }
+                `}
+              >
+                {isBest && (
+                  <div className="absolute top-2 right-2 bg-emerald-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                    Best Margin
+                  </div>
+                )}
+                <div className="flex items-center gap-2 mb-2">
+                  <MarketplaceLogo id={item.marketplace.id} size="md" />
+                  <span className={`text-sm font-bold ${isBest ? 'text-emerald-700' : 'text-slate-700'}`}>
+                    {item.marketplace.name}
+                  </span>
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-slate-500">Net Profit</span>
+                    <span
+                      className={`text-sm font-bold ${
+                        item.netProfit >= 0 ? 'text-emerald-600' : 'text-red-600'
+                      }`}
+                    >
+                      {formatINR(item.netProfit)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-slate-500">Margin</span>
+                    <span
+                      className={`text-xs font-semibold ${
+                        item.netProfitMargin >= 0 ? 'text-emerald-600' : 'text-red-600'
+                      }`}
+                    >
+                      {item.netProfitMargin.toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function FAQAccordion() {
   const [open, setOpen] = useState<number | null>(0);

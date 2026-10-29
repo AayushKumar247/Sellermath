@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
+import { useRemoteCalc } from '@/lib/calculateApi';
 import {
   Store,
   Package,
@@ -39,30 +40,11 @@ export default function FlipkartCalculator() {
     setInputs((prev) => ({ ...prev, [key]: isNaN(val) ? 0 : val }));
   };
 
-  const results = useMemo(() => {
-    const {
-      productCost,
-      sellingPrice,
-      commissionRate,
-      fixedFee,
-      forwardShipping,
-      reverseShipping,
-      returnRate,
-    } = inputs;
-
-    const commission = (sellingPrice * commissionRate) / 100;
-    const shippingGst = forwardShipping * 0.18;
-    const deliveredProfit =
-      sellingPrice - productCost - commission - fixedFee - forwardShipping - shippingGst;
-
-    const returnShippingGst = (forwardShipping + reverseShipping) * 0.18;
-    const returnedLoss = forwardShipping + reverseShipping + returnShippingGst + fixedFee;
-
-    const blendedProfit =
-      deliveredProfit * ((100 - returnRate) / 100) - returnedLoss * (returnRate / 100);
-
-    return { commission, deliveredProfit, returnedLoss, blendedProfit };
-  }, [inputs]);
+  const { result: results, error } = useRemoteCalc(
+    '/api/calculate/flipkart',
+    { ...inputs },
+    { commission: 0, deliveredProfit: 0, returnedLoss: 0, blendedProfit: 0 },
+  );
 
   return (
     <div className="space-y-8">
@@ -77,6 +59,12 @@ export default function FlipkartCalculator() {
           </p>
         </div>
       </div>
+
+      {error && (
+        <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-2">
+          {error} Start the API with `npm run server`.
+        </p>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <InputCard

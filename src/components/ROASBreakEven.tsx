@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
+import { useRemoteCalc } from '@/lib/calculateApi';
 import {
   Target,
   IndianRupee,
@@ -40,29 +41,20 @@ export default function ROASBreakEven() {
     setInputs((prev) => ({ ...prev, [key]: isNaN(val) ? 0 : val }));
   };
 
-  const results = useMemo(() => {
-    const { aov, totalCost, targetRevenue } = inputs;
-
-    const grossProfit = aov - totalCost;
-    const profitMargin = aov > 0 ? grossProfit / aov : 0;
-    const profitMarginPercent = profitMargin * 100;
-    const breakEvenROAS = profitMargin > 0 ? 1 / profitMargin : 0;
-    const maxCPA = grossProfit;
-    const ordersNeeded = aov > 0 ? targetRevenue / aov : 0;
-    const maxAdBudget = maxCPA * ordersNeeded;
-    const isProfitable = grossProfit > 0;
-
-    return {
-      grossProfit,
-      profitMargin,
-      profitMarginPercent,
-      breakEvenROAS,
-      maxCPA,
-      ordersNeeded,
-      maxAdBudget,
-      isProfitable,
-    };
-  }, [inputs]);
+  const { result: results, error } = useRemoteCalc(
+    '/api/calculate/roas',
+    { ...inputs },
+    {
+      grossProfit: 0,
+      profitMargin: 0,
+      profitMarginPercent: 0,
+      breakEvenROAS: 0,
+      maxCPA: 0,
+      ordersNeeded: 0,
+      maxAdBudget: 0,
+      isProfitable: false,
+    },
+  );
 
   return (
     <div className="space-y-8">
@@ -77,6 +69,12 @@ export default function ROASBreakEven() {
           </p>
         </div>
       </div>
+
+      {error && (
+        <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-2">
+          {error} Start the API with `npm run server`.
+        </p>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <InputCard

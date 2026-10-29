@@ -1,19 +1,21 @@
 import { Calculator, Store, Truck, Sparkles, ShoppingBag, Target, FileText, Globe, X } from 'lucide-react';
+import MarketplaceLogo from './MarketplaceLogo';
 
 export type PageId = 'meesho' | 'flipkart' | 'blinkit' | 'ai-listing' | 'amazon-fba' | 'roas' | 'gst-invoice' | 'universal' | 'about' | 'contact' | 'privacy' | 'terms';
 
 interface NavItem {
   id: PageId;
   label: string;
-  icon: React.ElementType;
+  icon?: React.ElementType;
+  logoId?: string;
 }
 
 const navItems: NavItem[] = [
   { id: 'universal', label: 'Universal Profit Calculator', icon: Globe },
-  { id: 'meesho', label: 'Meesho Calculator', icon: Calculator },
-  { id: 'flipkart', label: 'Flipkart Calculator', icon: Store },
-  { id: 'blinkit', label: 'Blinkit Margin', icon: Truck },
-  { id: 'amazon-fba', label: 'Amazon FBA Calculator', icon: ShoppingBag },
+  { id: 'meesho', label: 'Meesho Calculator', logoId: 'meesho' },
+  { id: 'flipkart', label: 'Flipkart Calculator', logoId: 'flipkart' },
+  { id: 'blinkit', label: 'Blinkit Margin', logoId: 'blinkit' },
+  { id: 'amazon-fba', label: 'Amazon FBA Calculator', logoId: 'amazon' },
   { id: 'roas', label: 'ROAS / Break-Even Tool', icon: Target },
   { id: 'gst-invoice', label: 'GST Invoice Generator', icon: FileText },
   { id: 'ai-listing', label: 'AI Listing Writer', icon: Sparkles },
@@ -82,12 +84,16 @@ export default function Sidebar({ activePage, onNavigate, isOpen, onClose }: Sid
                   }
                 `}
               >
-                <Icon
-                  className={`w-5 h-5 transition-transform group-hover:scale-110 ${
-                    isActive ? 'text-emerald-400' : ''
-                  }`}
-                  strokeWidth={2}
-                />
+                {item.logoId ? (
+                  <MarketplaceLogo id={item.logoId} size="sm" />
+                ) : (
+                  <Icon
+                    className={`w-5 h-5 transition-transform group-hover:scale-110 ${
+                      isActive ? 'text-emerald-400' : ''
+                    }`}
+                    strokeWidth={2}
+                  />
+                )}
                 <span>{item.label}</span>
                 {isActive && (
                   <span className="ml-auto w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />

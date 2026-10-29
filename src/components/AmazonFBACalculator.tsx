@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
+import { useRemoteCalc } from '@/lib/calculateApi';
 import {
   ShoppingBag,
   Package,
@@ -45,25 +46,18 @@ export default function AmazonFBACalculator() {
     setInputs((prev) => ({ ...prev, [key]: isNaN(val) ? 0 : val }));
   };
 
-  const results = useMemo(() => {
-    const { sellingPrice, productCost, referralFee, closingFee, pickPackFee, storageFee } = inputs;
-
-    const referralAmount = (sellingPrice * referralFee) / 100;
-    const totalAmazonFees = referralAmount + closingFee + pickPackFee + storageFee;
-    const gstOnFees = totalAmazonFees * 0.18;
-    const netProfit = sellingPrice - productCost - totalAmazonFees - gstOnFees;
-    const breakEvenPrice = productCost + totalAmazonFees + gstOnFees;
-    const currentPriceVsBreakEven = sellingPrice - breakEvenPrice;
-
-    return {
-      referralAmount,
-      totalAmazonFees,
-      gstOnFees,
-      netProfit,
-      breakEvenPrice,
-      currentPriceVsBreakEven,
-    };
-  }, [inputs]);
+  const { result: results, error } = useRemoteCalc(
+    '/api/calculate/amazon-fba',
+    { ...inputs },
+    {
+      referralAmount: 0,
+      totalAmazonFees: 0,
+      gstOnFees: 0,
+      netProfit: 0,
+      breakEvenPrice: 0,
+      currentPriceVsBreakEven: 0,
+    },
+  );
 
   const isAboveBreakEven = results.currentPriceVsBreakEven >= 0;
 
@@ -80,6 +74,12 @@ export default function AmazonFBACalculator() {
           </p>
         </div>
       </div>
+
+      {error && (
+        <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-2">
+          {error} Start the API with `npm run server`.
+        </p>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <InputCard

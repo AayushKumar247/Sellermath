@@ -37,6 +37,9 @@ export default function WaterfallChart({
   netProfit,
   marketplaceName,
 }: WaterfallChartProps) {
+  const isProfit = netProfit >= 0;
+  const isLoss = !isProfit;
+
   const steps: WaterfallStep[] = [
     { label: 'Revenue', shortLabel: 'Revenue', value: revenue, type: 'start', icon: IndianRupee },
     { label: 'Commission + Closing Fee', shortLabel: 'Commission', value: -commission, type: 'deduction', icon: Percent },
@@ -44,7 +47,7 @@ export default function WaterfallChart({
     { label: 'GST + TCS/TDS', shortLabel: 'GST & Tax', value: -gst, type: 'deduction', icon: Receipt },
     { label: 'RTO / Return Charges', shortLabel: 'RTO', value: -rto, type: 'deduction', icon: RotateCcw },
     { label: 'Product Cost (COGS)', shortLabel: 'COGS', value: -cogs, type: 'deduction', icon: Package },
-    { label: 'Real Profit', shortLabel: 'Profit', value: netProfit, type: 'end', icon: TrendingUp },
+    { label: isLoss ? 'Real Loss' : 'Real Profit', shortLabel: isLoss ? 'Loss' : 'Profit', value: netProfit, type: 'end', icon: isLoss ? TrendingDown : TrendingUp },
   ];
 
   const maxValue = revenue;
@@ -63,8 +66,6 @@ export default function WaterfallChart({
     }
     runningTotals.push(running);
   }
-
-  const isProfit = netProfit >= 0;
 
   return (
     <div className="bg-white rounded-2xl border-2 border-slate-200 overflow-hidden shadow-lg">
@@ -107,7 +108,7 @@ export default function WaterfallChart({
             >
               {steps.map((step, i) => {
                 const StepIcon = step.icon;
-                const isPositive = step.type === 'start' || step.type === 'end';
+                const isPositive = step.type === 'start' || (step.type === 'end' && isProfit);
                 const isFinalProfit = step.type === 'end';
 
                 let barBottom = 0;
@@ -136,6 +137,16 @@ export default function WaterfallChart({
                   ? 'bg-gradient-to-t from-emerald-600 to-emerald-400'
                   : 'bg-gradient-to-t from-red-500 to-rose-400';
 
+                const valueLabelColor = isFinalProfit && isLoss
+                  ? 'text-red-400'
+                  : isPositive
+                  ? 'text-emerald-600'
+                  : 'text-red-500';
+
+                const valueLabel = isFinalProfit && isLoss
+                  ? `-₹${Math.abs(step.value).toFixed(2)}`
+                  : `${isPositive ? '' : '-'}${formatINR(Math.abs(step.value)).replace('-', '')}`;
+
                 return (
                   <div
                     key={i}
@@ -148,9 +159,8 @@ export default function WaterfallChart({
                         bottom: barBottom + barHeight + 6,
                       }}
                     >
-                      <span className={isPositive ? 'text-emerald-600' : 'text-red-500'}>
-                        {isPositive ? '' : '-'}
-                        {formatINR(Math.abs(step.value)).replace('-', '')}
+                      <span className={valueLabelColor}>
+                        {valueLabel}
                       </span>
                     </div>
 
@@ -194,12 +204,13 @@ export default function WaterfallChart({
             >
               {steps.map((step, i) => {
                 const StepIcon = step.icon;
+                const isFinalLoss = step.type === 'end' && isLoss;
                 return (
                   <div key={i} className="flex-1 flex flex-col items-center text-center">
                     <StepIcon
                       className={`w-3.5 h-3.5 mb-1 ${
                         step.type === 'start' || step.type === 'end'
-                          ? step.type === 'end' && !isProfit
+                          ? isFinalLoss
                             ? 'text-red-500'
                             : 'text-emerald-500'
                           : 'text-red-400'
@@ -221,11 +232,11 @@ export default function WaterfallChart({
           <div className="flex items-center justify-center gap-4 mt-4 pt-4 border-t border-slate-100">
             <div className="flex items-center gap-1.5">
               <div className="w-3 h-3 rounded-sm bg-gradient-to-t from-emerald-600 to-emerald-400" />
-              <span className="text-xs font-medium text-slate-500">Revenue / Profit</span>
+              <span className="text-xs font-medium text-slate-500">Revenue{isProfit ? ' / Profit' : ''}</span>
             </div>
             <div className="flex items-center gap-1.5">
               <div className="w-3 h-3 rounded-sm bg-gradient-to-t from-red-500 to-rose-400" />
-              <span className="text-xs font-medium text-slate-500">Deductions</span>
+              <span className="text-xs font-medium text-slate-500">Deductions{isLoss ? ' / Loss' : ''}</span>
             </div>
           </div>
         </div>
@@ -283,7 +294,7 @@ export default function WaterfallChart({
             <div className="border-t-2 border-slate-300 my-2" />
             <SummaryRow
               icon={isProfit ? TrendingUp : TrendingDown}
-              label="Real Profit"
+              label={isLoss ? 'Real Loss' : 'Real Profit'}
               value={netProfit}
               color={isProfit ? 'emerald' : 'red'}
               isBold
@@ -323,6 +334,11 @@ function SummaryRow({ icon: Icon, label, value, color, isDeduction, isBold }: Su
   const valueColor = color === 'emerald' ? 'text-emerald-600' : 'text-red-500';
   const iconBg = color === 'emerald' ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-500';
 
+  // For the final profit/loss row, show the actual sign
+  const displayValue = isBold && !isDeduction
+    ? formatINR(value)
+    : `${isDeduction ? '-' : ''}${formatINR(Math.abs(value)).replace('-', '')}`;
+
   return (
     <div className="flex items-center justify-between gap-2">
       <div className="flex items-center gap-2 min-w-0">
@@ -334,7 +350,7 @@ function SummaryRow({ icon: Icon, label, value, color, isDeduction, isBold }: Su
         </span>
       </div>
       <span className={`text-xs sm:text-sm ${isBold ? 'font-bold' : 'font-semibold'} ${valueColor} whitespace-nowrap`}>
-        {isDeduction ? '-' : ''}{formatINR(Math.abs(value)).replace('-', '')}
+        {displayValue}
       </span>
     </div>
   );

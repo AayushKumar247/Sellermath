@@ -349,4 +349,6 @@ app.post('/api/calculate/cross-platform', handleCalc(calculateCrossPlatformCompa
 export default app;
 
 // For local development
-app.listen(PORT, '127.0.0.1', () => console.log(`API running on http://127.0.0.1:${PORT}`));
+if (!process.env.VERCEL) {
+  app.listen(PORT, '127.0.0.1', () => console.log(`API running on http://127.0.0.1:${PORT}`));
+}

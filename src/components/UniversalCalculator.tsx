@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useRemoteCalc } from '@/lib/calculateApi';
 import {
-  Globe,
   ShoppingBag,
   Store,
   Truck,
@@ -376,19 +375,11 @@ export default function UniversalCalculator() {
   return (
     <>
       <div className="space-y-6">
-        {/* Header */}
+        {/* Tagline */}
         <div className="no-print">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-              <Globe className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold text-slate-900">Universal Profit Calculator</h2>
-              <p className="text-sm text-slate-500">
-                India's most accurate e-commerce profit engine — all marketplaces, one tool
-              </p>
-            </div>
-          </div>
+          <p className="text-base sm:text-lg md:text-xl font-semibold tracking-tight bg-gradient-to-r from-emerald-600 to-teal-500 dark:from-emerald-400 dark:to-teal-300 bg-clip-text text-transparent mb-6">
+            India's most accurate e-commerce profit engine — all marketplaces, one tool
+          </p>
         </div>
 
         {error && (
@@ -399,7 +390,7 @@ export default function UniversalCalculator() {
 
         {/* Marketplace Selector */}
         <div className="no-print">
-          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">
+          <p className="text-xs font-semibold text-slate-400 dark:text-zinc-300 uppercase tracking-wide mb-3">
             Select Marketplace
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
@@ -415,15 +406,15 @@ export default function UniversalCalculator() {
                     ${
                       isActive
                         ? `bg-gradient-to-br ${mp.gradient} text-white border-transparent shadow-lg scale-105`
-                        : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-md'
+                        : 'bg-white dark:bg-zinc-900/90 border-slate-200 dark:border-zinc-700/80 hover:border-slate-300 dark:hover:border-zinc-600 hover:shadow-md'
                     }
                   `}
                 >
                   <MarketplaceLogo id={mp.id} size="lg" />
-                  <span className={`text-xs font-bold ${isActive ? 'text-white' : 'text-slate-700'}`}>
+                  <span className={`text-xs font-bold ${isActive ? 'text-white' : 'text-slate-700 dark:text-zinc-50'}`}>
                     {mp.shortName}
                   </span>
-                  <span className={`text-[10px] leading-tight text-center ${isActive ? 'text-white/80' : 'text-slate-400'}`}>
+                  <span className={`text-[10px] leading-tight text-center ${isActive ? 'text-white/80' : 'text-slate-400 dark:text-zinc-300'}`}>
                     {mp.tagline}
                   </span>
                 </button>
@@ -437,12 +428,12 @@ export default function UniversalCalculator() {
           {/* Left: Inputs (2 cols) */}
           <div className="lg:col-span-2 space-y-4 no-print">
             {/* Category */}
-            <div className="bg-white rounded-2xl border border-slate-200 p-5">
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5">
               <div className="flex items-center gap-2.5 mb-4">
-                <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
-                  <Package className="w-4 h-4 text-slate-600" strokeWidth={2} />
+                <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-zinc-800 flex items-center justify-center">
+                  <Package className="w-4 h-4 text-slate-600 dark:text-zinc-300" strokeWidth={2} />
                 </div>
-                <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">
+                <h3 className="text-sm font-bold text-slate-700 dark:text-zinc-50 uppercase tracking-wide">
                   Product Category
                 </h3>
               </div>
@@ -458,7 +449,7 @@ export default function UniversalCalculator() {
                         ${
                           isActive
                             ? `bg-gradient-to-r ${activeMarketplace.gradient} text-white shadow-md`
-                            : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200'
+                            : 'bg-slate-50 dark:bg-zinc-900/90 text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-700/80'
                         }
                       `}
                     >
@@ -490,12 +481,12 @@ export default function UniversalCalculator() {
             </div>
 
             {/* Weight & Zone */}
-            <div className="bg-white rounded-2xl border border-slate-200 p-5">
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
                   <div className="flex items-center gap-2 mb-3">
-                    <Weight className="w-4 h-4 text-slate-500" />
-                    <label className="text-sm font-semibold text-slate-700">
+                    <Weight className="w-4 h-4 text-slate-500 dark:text-zinc-300" />
+                    <label className="text-sm font-semibold text-slate-700 dark:text-zinc-50">
                       Shipping Weight
                     </label>
                     <div className="relative ml-auto">
@@ -504,9 +495,9 @@ export default function UniversalCalculator() {
                         value={state.shippingWeight || ''}
                         onChange={(e) => update('shippingWeight', parseInt(e.target.value) || 0)}
                         placeholder="0"
-                        className="w-20 text-sm font-bold text-slate-900 bg-slate-50 rounded-lg border-2 border-slate-200 px-2 py-1 text-right focus:outline-none focus:border-emerald-500"
+                        className="w-20 text-sm font-bold text-slate-900 dark:text-zinc-50 bg-slate-50 dark:bg-zinc-900/90 rounded-lg border-2 border-slate-200 dark:border-zinc-700/80 px-2 py-1 text-right focus:outline-none focus:border-emerald-500"
                       />
-                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none">g</span>
+                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400 dark:text-zinc-300 pointer-events-none">g</span>
                     </div>
                   </div>
                   <input
@@ -518,7 +509,7 @@ export default function UniversalCalculator() {
                     onChange={(e) => update('shippingWeight', parseInt(e.target.value))}
                     className="w-full accent-emerald-500"
                   />
-                  <div className="flex justify-between text-xs text-slate-400 mt-1">
+                  <div className="flex justify-between text-xs text-slate-400 dark:text-zinc-300 mt-1">
                     <span>100g</span>
                     <span>5kg</span>
                   </div>
@@ -534,7 +525,7 @@ export default function UniversalCalculator() {
                             ${
                               isSelected
                                 ? `bg-gradient-to-r ${activeMarketplace.gradient} text-white shadow-md`
-                                : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200'
+                                : 'bg-slate-50 dark:bg-zinc-900/90 text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-700/80'
                             }
                           `}
                         >
@@ -543,13 +534,13 @@ export default function UniversalCalculator() {
                       );
                     })}
                   </div>
-                  <p className="text-[10px] text-slate-400 mt-2">1000g = 1kg</p>
+                  <p className="text-[10px] text-slate-400 dark:text-zinc-300 mt-2">1000g = 1kg</p>
                 </div>
 
                 <div>
                   <div className="flex items-center gap-2 mb-3">
-                    <MapPin className="w-4 h-4 text-slate-500" />
-                    <label className="text-sm font-semibold text-slate-700">Shipping Zone</label>
+                    <MapPin className="w-4 h-4 text-slate-500 dark:text-zinc-300" />
+                    <label className="text-sm font-semibold text-slate-700 dark:text-zinc-50">Shipping Zone</label>
                   </div>
                   <div className="grid grid-cols-3 gap-2">
                     {ZONES.map((z) => {
@@ -563,7 +554,7 @@ export default function UniversalCalculator() {
                             ${
                               isActive
                                 ? `bg-gradient-to-r ${activeMarketplace.gradient} text-white shadow-md`
-                                : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200'
+                                : 'bg-slate-50 dark:bg-zinc-900/90 text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-700/80'
                             }
                           `}
                         >
@@ -578,10 +569,10 @@ export default function UniversalCalculator() {
 
             {/* GST Rate & Return Rate */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="bg-white rounded-2xl border border-slate-200 p-5">
+              <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5">
                 <div className="flex items-center gap-2 mb-3">
-                  <Percent className="w-4 h-4 text-slate-500" />
-                  <label className="text-sm font-semibold text-slate-700">Product GST Rate</label>
+                  <Percent className="w-4 h-4 text-slate-500 dark:text-zinc-300" />
+                  <label className="text-sm font-semibold text-slate-700 dark:text-zinc-50">Product GST Rate</label>
                   <InfoTooltip text="The tax rate applicable to your physical product category." />
                 </div>
                 <div className="grid grid-cols-5 gap-2">
@@ -595,8 +586,8 @@ export default function UniversalCalculator() {
                           py-2.5 rounded-lg text-sm font-bold transition-all
                           ${
                             isActive
-                              ? 'bg-slate-900 text-white shadow-md'
-                              : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200'
+                              ? 'bg-zinc-950 dark:bg-zinc-950 text-white shadow-md'
+                              : 'bg-slate-50 dark:bg-zinc-900/90 text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-700/80'
                           }
                         `}
                       >
@@ -607,11 +598,11 @@ export default function UniversalCalculator() {
                 </div>
               </div>
 
-              <div className="bg-white rounded-2xl border border-slate-200 p-5">
+              <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5">
                 <div className="flex items-center gap-2 mb-3">
-                  <RotateCcw className="w-4 h-4 text-slate-500" />
-                  <label className="text-sm font-semibold text-slate-700">Return / RTO Rate</label>
-                  <span className="text-sm font-bold text-slate-900 ml-auto">
+                  <RotateCcw className="w-4 h-4 text-slate-500 dark:text-zinc-300" />
+                  <label className="text-sm font-semibold text-slate-700 dark:text-zinc-50">Return / RTO Rate</label>
+                  <span className="text-sm font-bold text-slate-900 dark:text-zinc-50 ml-auto">
                     {state.returnRate}%
                   </span>
                 </div>
@@ -624,7 +615,7 @@ export default function UniversalCalculator() {
                   onChange={(e) => update('returnRate', parseInt(e.target.value))}
                   className="w-full accent-rose-500"
                 />
-                <div className="flex justify-between text-xs text-slate-400 mt-1">
+                <div className="flex justify-between text-xs text-slate-400 dark:text-zinc-300 mt-1">
                   <span>0%</span>
                   <span>50%</span>
                 </div>
@@ -632,12 +623,12 @@ export default function UniversalCalculator() {
             </div>
 
             {/* Auto-filled Fee Fields */}
-            <div className="bg-slate-50 rounded-2xl border border-slate-200 p-5">
+            <div className="bg-slate-50 dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-5">
               <div className="flex items-center gap-2.5 mb-4">
-                <div className="w-8 h-8 rounded-lg bg-slate-200 flex items-center justify-center">
-                  <Receipt className="w-4 h-4 text-slate-600" strokeWidth={2} />
+                <div className="w-8 h-8 rounded-lg bg-slate-200 dark:bg-zinc-800 flex items-center justify-center">
+                  <Receipt className="w-4 h-4 text-slate-600 dark:text-zinc-300" strokeWidth={2} />
                 </div>
-                <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">
+                <h3 className="text-sm font-bold text-slate-700 dark:text-zinc-50 uppercase tracking-wide">
                   Marketplace Fees (Auto-filled, Editable)
                 </h3>
               </div>
@@ -661,15 +652,15 @@ export default function UniversalCalculator() {
                   compact
                   tooltip="A fixed fee charged by the marketplace per item sold, based on price tiers."
                 />
-                <div className="bg-white rounded-xl border-2 border-slate-200 p-4">
+                <div className="bg-white dark:bg-zinc-900/90 rounded-xl border-2 border-slate-200 dark:border-zinc-700/80 p-4">
                   <div className="flex items-center gap-2 mb-1">
-                    <TruckIcon className="w-4 h-4 text-slate-500" />
-                    <span className="text-xs font-semibold text-slate-600">Pick & Pack Fee</span>
+                    <TruckIcon className="w-4 h-4 text-slate-500 dark:text-zinc-300" />
+                    <span className="text-xs font-semibold text-slate-600 dark:text-zinc-300">Pick & Pack Fee</span>
                   </div>
-                  <p className="text-lg font-bold text-slate-900">
+                  <p className="text-lg font-bold text-slate-900 dark:text-zinc-50">
                     ₹{result.shippingFee.toLocaleString('en-IN')}
                   </p>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-slate-400 dark:text-zinc-300">
                     {state.shippingWeight}g · {ZONES.find((z) => z.id === state.zone)?.label}
                   </p>
                 </div>
@@ -728,7 +719,7 @@ export default function UniversalCalculator() {
         />
 
         {/* Affiliate Card */}
-        <div className="no-print bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl p-6 border border-slate-700 overflow-hidden relative">
+        <div className="no-print bg-gradient-to-br from-zinc-950 to-zinc-900 rounded-2xl p-6 border border-zinc-800 overflow-hidden relative">
           <div className="absolute top-0 right-0 w-48 h-48 rounded-full blur-3xl opacity-20 bg-emerald-500" />
           <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-start gap-3">
@@ -736,10 +727,10 @@ export default function UniversalCalculator() {
                 <TruckIcon className="w-5 h-5 text-white" strokeWidth={2.5} />
               </div>
               <div>
-                <h3 className="text-base font-bold text-white">
+                <h3 className="text-base font-bold text-zinc-50">
                   Losing money on RTO shipping?
                 </h3>
-                <p className="text-sm text-slate-400 mt-0.5">
+                <p className="text-sm text-zinc-300 mt-0.5">
                   Check Shiprocket discounted shipping rates — save up to 40% on forward & RTO logistics
                 </p>
               </div>
@@ -790,20 +781,20 @@ function NumberInput({
   tooltip,
 }: NumberInputProps) {
   return (
-    <div className={`bg-white rounded-2xl border border-slate-200 ${compact ? 'p-4' : 'p-5'}`}>
+    <div className={`bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 ${compact ? 'p-4' : 'p-5'}`}>
       <div className="flex items-center gap-2 mb-2">
-        <Icon className="w-4 h-4 text-slate-500" />
+        <Icon className="w-4 h-4 text-slate-500 dark:text-zinc-300" />
         <div>
-          <label className="text-sm font-semibold text-slate-700 block leading-tight">
+          <label className="text-sm font-semibold text-slate-700 dark:text-zinc-50 block leading-tight">
             {label}
           </label>
           {tooltip && <InfoTooltip text={tooltip} />}
-          <p className="text-xs text-slate-400">{hint}</p>
+          <p className="text-xs text-slate-400 dark:text-zinc-300">{hint}</p>
         </div>
       </div>
       <div className="relative">
         {prefix && (
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-semibold pointer-events-none">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-zinc-300 font-semibold pointer-events-none">
             {prefix}
           </span>
         )}
@@ -813,12 +804,12 @@ function NumberInput({
           value={value || ''}
           onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
           placeholder="0"
-          className={`w-full font-semibold text-slate-900 bg-slate-50 rounded-xl border-2 border-slate-200 transition-all focus:outline-none focus:border-emerald-500 focus:bg-white ${
+          className={`w-full font-semibold text-slate-900 dark:text-zinc-50 bg-slate-50 dark:bg-zinc-900/90 rounded-xl border-2 border-slate-200 dark:border-zinc-700/80 transition-all focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-zinc-900/90 ${
             prefix ? 'pl-8' : 'pl-3'
           } ${suffix ? 'pr-8' : 'pr-3'} ${compact ? 'py-2 text-sm' : 'py-3 text-lg'}`}
         />
         {suffix && (
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-semibold pointer-events-none">
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-zinc-300 font-semibold pointer-events-none">
             {suffix}
           </span>
         )}
@@ -859,7 +850,7 @@ function TaxLedger({ marketplace, state, result, onPrint, onUpdateSellingPrice }
   const recommendedPrice = targetPriceResult.recommendedPrice;
 
   return (
-    <div className="sticky top-20 bg-white rounded-2xl border-2 border-slate-200 overflow-hidden shadow-lg">
+    <div className="sticky top-20 bg-white dark:bg-zinc-900 rounded-2xl border-2 border-slate-200 dark:border-zinc-800 overflow-hidden shadow-lg">
       {/* Header */}
       <div className={`bg-gradient-to-r ${marketplace.gradient} p-4`}>
         <div className="flex items-center justify-between">
@@ -938,7 +929,7 @@ function TaxLedger({ marketplace, state, result, onPrint, onUpdateSellingPrice }
             ) : (
               <TrendingDown className="w-5 h-5 text-red-500" strokeWidth={2.5} />
             )}
-            <span className="text-sm font-bold text-slate-700">Final Net Profit</span>
+            <span className="text-sm font-bold text-slate-700 dark:text-zinc-50">Final Net Profit</span>
           </div>
           <p
             className={`text-3xl font-bold tracking-tight ${
@@ -957,27 +948,27 @@ function TaxLedger({ marketplace, state, result, onPrint, onUpdateSellingPrice }
             >
               {isProfit ? 'PROFITABLE' : 'LOSS'}
             </span>
-            <span className="text-xs text-slate-400">
+            <span className="text-xs text-slate-400 dark:text-zinc-300">
               Margin: {result.netProfitMargin.toFixed(2)}%
             </span>
           </div>
         </div>
 
         {/* Break-Even */}
-        <div className="bg-slate-50 rounded-xl p-3 border border-slate-200">
+        <div className="bg-slate-50 dark:bg-zinc-900/90 rounded-xl p-3 border border-slate-200 dark:border-zinc-800">
           <div className="flex items-center gap-2 mb-1">
             <AlertCircle className="w-4 h-4 text-amber-500" />
-            <span className="text-xs font-semibold text-slate-600">Break-Even Selling Price</span>
+            <span className="text-xs font-semibold text-slate-600 dark:text-zinc-300">Break-Even Selling Price</span>
           </div>
-          <p className="text-lg font-bold text-slate-900">{formatINR(result.breakEvenPrice)}</p>
-          <p className="text-xs text-slate-400">Minimum price to avoid losses</p>
+          <p className="text-lg font-bold text-slate-900 dark:text-zinc-50">{formatINR(result.breakEvenPrice)}</p>
+          <p className="text-xs text-slate-400 dark:text-zinc-300">Minimum price to avoid losses</p>
         </div>
 
         {/* Target Profit Solver */}
         <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-xl p-3 border border-emerald-200">
           <div className="flex items-center gap-2 mb-2">
             <Target className="w-4 h-4 text-emerald-600" />
-            <span className="text-xs font-semibold text-slate-700">Target Profit Solver</span>
+            <span className="text-xs font-semibold text-slate-700 dark:text-zinc-50">Target Profit Solver</span>
           </div>
           <div className="flex items-center gap-2 mb-2">
             <input
@@ -985,13 +976,13 @@ function TaxLedger({ marketplace, state, result, onPrint, onUpdateSellingPrice }
               value={targetProfit || ''}
               onChange={(e) => setTargetProfit(parseFloat(e.target.value) || 0)}
               placeholder="Desired profit"
-              className="flex-1 text-sm font-semibold text-slate-900 bg-white rounded-lg border-2 border-emerald-200 px-2 py-1.5 focus:outline-none focus:border-emerald-500"
+              className="flex-1 text-sm font-semibold text-slate-900 dark:text-zinc-50 bg-white dark:bg-zinc-900/90 rounded-lg border-2 border-emerald-200 dark:border-zinc-700/80 px-2 py-1.5 focus:outline-none focus:border-emerald-500"
             />
-            <span className="text-xs text-slate-500">₹</span>
+            <span className="text-xs text-slate-500 dark:text-zinc-300">₹</span>
           </div>
           <div className="flex items-center justify-between gap-2">
             <div>
-              <p className="text-[10px] text-slate-500">Recommended Price</p>
+              <p className="text-[10px] text-slate-500 dark:text-zinc-300">Recommended Price</p>
               <p className="text-sm font-bold text-emerald-700">{formatINR(recommendedPrice)}</p>
             </div>
             <button
@@ -1006,7 +997,7 @@ function TaxLedger({ marketplace, state, result, onPrint, onUpdateSellingPrice }
         {/* Print Button */}
         <button
           onClick={onPrint}
-          className="no-print w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold bg-slate-900 text-white shadow-md hover:bg-slate-800 transition-all mt-2"
+          className="no-print w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold bg-zinc-950 dark:bg-zinc-950 text-white shadow-md hover:bg-zinc-900 dark:hover:bg-zinc-800 transition-all mt-2"
         >
           <Printer className="w-4 h-4" />
           Download / Print Tax Breakdown
@@ -1037,16 +1028,16 @@ function LedgerRow({ label, value, sub, bold, tone, tooltip }: LedgerRowProps) {
       ? 'text-rose-600'
       : tone === 'emerald'
       ? 'text-emerald-600'
-      : 'text-slate-700';
+      : 'text-slate-700 dark:text-zinc-50';
 
   return (
     <div className="flex items-start justify-between gap-2">
       <div className="min-w-0">
-        <p className={`text-xs ${bold ? 'font-bold text-slate-700' : 'text-slate-500'} flex items-center gap-1`}>
+        <p className={`text-xs ${bold ? 'font-bold text-slate-700 dark:text-zinc-50' : 'text-slate-500 dark:text-zinc-300'} flex items-center gap-1`}>
           {label}
           {tooltip && <InfoTooltip text={tooltip} />}
         </p>
-        {sub && <p className="text-[10px] text-slate-400">{sub}</p>}
+        {sub && <p className="text-[10px] text-slate-400 dark:text-zinc-300">{sub}</p>}
       </div>
       <p className={`text-sm ${bold ? 'font-bold' : 'font-semibold'} ${toneClass} whitespace-nowrap`}>
         {formatINR(value)}
@@ -1067,16 +1058,16 @@ function InfoTooltip({ text }: { text: string }) {
           e.stopPropagation();
           setOpen((v) => !v);
         }}
-        className="text-slate-400 hover:text-emerald-500 transition-colors"
+        className="text-slate-400 dark:text-zinc-300 hover:text-emerald-500 transition-colors"
       >
         <Info className="w-3.5 h-3.5" />
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute z-50 left-1/2 -translate-x-1/2 top-full mt-1.5 w-56 bg-slate-900 text-white text-xs font-medium leading-relaxed rounded-lg px-3 py-2 shadow-xl pointer-events-none">
+          <div className="absolute z-50 left-1/2 -translate-x-1/2 top-full mt-1.5 w-56 bg-zinc-950 dark:bg-zinc-950 text-white text-xs font-medium leading-relaxed rounded-lg px-3 py-2 shadow-xl pointer-events-none">
             {text}
-            <div className="absolute left-1/2 -translate-x-1/2 -bottom-1 w-2 h-2 bg-slate-900 rotate-45" />
+            <div className="absolute left-1/2 -translate-x-1/2 -bottom-1 w-2 h-2 bg-zinc-950 dark:bg-zinc-950 rotate-45" />
           </div>
         </>
       )}
@@ -1101,41 +1092,41 @@ function FeeMatrixTable() {
   ];
 
   return (
-    <div className="no-print bg-white rounded-2xl border border-slate-200 overflow-hidden">
-      <div className="p-5 border-b border-slate-200">
-        <h3 className="text-lg font-bold text-slate-900">
+    <div className="no-print bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden">
+      <div className="p-5 border-b border-slate-200 dark:border-zinc-800">
+        <h3 className="text-lg font-bold text-slate-900 dark:text-zinc-50">
           2026 Marketplace Fee Matrix
         </h3>
-        <p className="text-sm text-slate-500 mt-1">
+        <p className="text-sm text-slate-500 dark:text-zinc-300 mt-1">
           Amazon vs Flipkart vs Meesho vs Quick Commerce — all commission rates at a glance
         </p>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-slate-50 border-b border-slate-200">
-              <th className="text-left px-4 py-3 font-semibold text-slate-600">Marketplace</th>
-              <th className="text-center px-4 py-3 font-semibold text-slate-600">Commission</th>
-              <th className="text-center px-4 py-3 font-semibold text-slate-600">Closing Fee</th>
-              <th className="text-center px-4 py-3 font-semibold text-slate-600">Shipping</th>
-              <th className="text-center px-4 py-3 font-semibold text-slate-600">GST on Fees</th>
-              <th className="text-left px-4 py-3 font-semibold text-slate-600">Notes</th>
+            <tr className="bg-slate-50 dark:bg-zinc-950/50 border-b border-slate-200 dark:border-zinc-800">
+              <th className="text-left px-4 py-3 font-semibold text-slate-600 dark:text-zinc-300">Marketplace</th>
+              <th className="text-center px-4 py-3 font-semibold text-slate-600 dark:text-zinc-300">Commission</th>
+              <th className="text-center px-4 py-3 font-semibold text-slate-600 dark:text-zinc-300">Closing Fee</th>
+              <th className="text-center px-4 py-3 font-semibold text-slate-600 dark:text-zinc-300">Shipping</th>
+              <th className="text-center px-4 py-3 font-semibold text-slate-600 dark:text-zinc-300">GST on Fees</th>
+              <th className="text-left px-4 py-3 font-semibold text-slate-600 dark:text-zinc-300">Notes</th>
             </tr>
           </thead>
           <tbody>
             {tableData.map((row, i) => (
               <tr
                 key={row.marketplace}
-                className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${
-                  i % 2 === 1 ? 'bg-slate-50/50' : ''
+                className={`border-b border-slate-100 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800/50 transition-colors ${
+                  i % 2 === 1 ? 'bg-slate-50/50 dark:bg-zinc-900/30' : ''
                 }`}
               >
-                <td className="px-4 py-3 font-bold text-slate-900">{row.marketplace}</td>
-                <td className="text-center px-4 py-3 font-medium text-slate-700">{row.commission}</td>
-                <td className="text-center px-4 py-3 text-slate-600">{row.closingFee}</td>
-                <td className="text-center px-4 py-3 text-slate-600">{row.shipping}</td>
-                <td className="text-center px-4 py-3 text-slate-600">{row.gst}</td>
-                <td className="px-4 py-3 text-xs text-slate-500">{row.notes}</td>
+                <td className="px-4 py-3 font-bold text-slate-900 dark:text-zinc-50">{row.marketplace}</td>
+                <td className="text-center px-4 py-3 font-medium text-slate-700 dark:text-zinc-300">{row.commission}</td>
+                <td className="text-center px-4 py-3 text-slate-600 dark:text-zinc-300">{row.closingFee}</td>
+                <td className="text-center px-4 py-3 text-slate-600 dark:text-zinc-300">{row.shipping}</td>
+                <td className="text-center px-4 py-3 text-slate-600 dark:text-zinc-300">{row.gst}</td>
+                <td className="px-4 py-3 text-xs text-slate-500 dark:text-zinc-300">{row.notes}</td>
               </tr>
             ))}
           </tbody>
@@ -1203,15 +1194,15 @@ function CrossPlatformComparison({
   })).sort((a, b) => b.netProfit - a.netProfit);
 
   return (
-    <div className="no-print bg-white rounded-2xl border border-slate-200 overflow-hidden">
-      <div className="p-5 border-b border-slate-200">
+    <div className="no-print bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden">
+      <div className="p-5 border-b border-slate-200 dark:border-zinc-800">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-purple-500/20">
             <TrendingUp className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-slate-900">Cross-Platform Profit Comparison</h3>
-            <p className="text-sm text-slate-500">Which marketplace pays best for your product?</p>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-zinc-50">Cross-Platform Profit Comparison</h3>
+            <p className="text-sm text-slate-500 dark:text-zinc-300">Which marketplace pays best for your product?</p>
           </div>
         </div>
       </div>
@@ -1231,8 +1222,8 @@ function CrossPlatformComparison({
                     isBest
                       ? 'bg-gradient-to-br from-emerald-50 to-green-50 border-emerald-300 shadow-md'
                       : isCurrent
-                      ? 'bg-slate-50 border-slate-300'
-                      : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-sm'
+                      ? 'bg-slate-50 dark:bg-zinc-900/90 border-slate-300 dark:border-zinc-700/80'
+                      : 'bg-white dark:bg-zinc-900/90 border-slate-200 dark:border-zinc-700/80 hover:border-slate-300 dark:hover:border-zinc-600 hover:shadow-sm'
                   }
                 `}
               >
@@ -1243,13 +1234,13 @@ function CrossPlatformComparison({
                 )}
                 <div className="flex items-center gap-2 mb-2">
                   <MarketplaceLogo id={item.marketplace.id} size="md" />
-                  <span className={`text-sm font-bold ${isBest ? 'text-emerald-700' : 'text-slate-700'}`}>
+                  <span className={`text-sm font-bold ${isBest ? 'text-emerald-700' : 'text-slate-700 dark:text-zinc-50'}`}>
                     {item.marketplace.name}
                   </span>
                 </div>
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-slate-500">Net Profit</span>
+                    <span className="text-xs text-slate-500 dark:text-zinc-300">Net Profit</span>
                     <span
                       className={`text-sm font-bold ${
                         item.netProfit >= 0 ? 'text-emerald-600' : 'text-red-600'
@@ -1259,7 +1250,7 @@ function CrossPlatformComparison({
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-slate-500">Margin</span>
+                    <span className="text-xs text-slate-500 dark:text-zinc-300">Margin</span>
                     <span
                       className={`text-xs font-semibold ${
                         item.netProfitMargin >= 0 ? 'text-emerald-600' : 'text-red-600'
@@ -1282,34 +1273,34 @@ function FAQAccordion() {
   const [open, setOpen] = useState<number | null>(0);
 
   return (
-    <div className="no-print bg-white rounded-2xl border border-slate-200 overflow-hidden">
-      <div className="p-5 border-b border-slate-200">
-        <h3 className="text-lg font-bold text-slate-900">
+    <div className="no-print bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden">
+      <div className="p-5 border-b border-slate-200 dark:border-zinc-800">
+        <h3 className="text-lg font-bold text-slate-900 dark:text-zinc-50">
           Frequently Asked Questions
         </h3>
-        <p className="text-sm text-slate-500 mt-1">
+        <p className="text-sm text-slate-500 dark:text-zinc-300 mt-1">
           Everything Indian e-commerce sellers need to know about fees, GST, and profitability
         </p>
       </div>
-      <div className="divide-y divide-slate-100">
+      <div className="divide-y divide-slate-100 dark:divide-zinc-800">
         {FAQS.map((faq, i) => {
           const isOpen = open === i;
           return (
             <div key={i}>
               <button
                 onClick={() => setOpen(isOpen ? null : i)}
-                className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left hover:bg-slate-50 transition-colors"
+                className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left hover:bg-slate-50 dark:hover:bg-zinc-800/50 transition-colors"
               >
-                <span className="text-sm font-semibold text-slate-700">{faq.q}</span>
+                <span className="text-sm font-semibold text-slate-700 dark:text-zinc-50">{faq.q}</span>
                 <ChevronDown
-                  className={`w-5 h-5 text-slate-400 flex-shrink-0 transition-transform duration-200 ${
+                  className={`w-5 h-5 text-slate-400 dark:text-zinc-300 flex-shrink-0 transition-transform duration-200 ${
                     isOpen ? 'rotate-180' : ''
                   }`}
                 />
               </button>
               {isOpen && (
                 <div className="px-5 pb-4">
-                  <p className="text-sm text-slate-500 leading-relaxed">{faq.a}</p>
+                  <p className="text-sm text-slate-500 dark:text-zinc-300 leading-relaxed">{faq.a}</p>
                 </div>
               )}
             </div>

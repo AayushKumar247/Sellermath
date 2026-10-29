@@ -2,56 +2,56 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Dark mode global overrides for component classes */
+/* Dark mode global overrides for component classes - Obsidian/Carbon theme */
 @layer utilities {
   .dark .bg-white {
-    background-color: rgb(30 41 59) !important;
+    background-color: rgb(24 24 27) !important;
   }
   .dark .bg-slate-50 {
-    background-color: rgb(15 23 42) !important;
+    background-color: rgb(9 9 11) !important;
   }
   .dark .bg-slate-100 {
-    background-color: rgb(30 41 59) !important;
+    background-color: rgb(24 24 27) !important;
   }
   .dark .border-slate-200 {
-    border-color: rgb(51 65 85) !important;
+    border-color: rgb(63 63 70) !important;
   }
   .dark .border-slate-100 {
-    border-color: rgb(51 65 85) !important;
+    border-color: rgb(63 63 70) !important;
   }
   .dark .text-slate-900 {
-    color: rgb(241 245 249) !important;
+    color: rgb(250 250 250) !important;
   }
   .dark .text-slate-800 {
-    color: rgb(226 232 240) !important;
+    color: rgb(250 250 250) !important;
   }
   .dark .text-slate-700 {
-    color: rgb(203 213 225) !important;
+    color: rgb(212 212 216) !important;
   }
   .dark .text-slate-600 {
-    color: rgb(148 163 184) !important;
+    color: rgb(212 212 216) !important;
   }
   .dark .text-slate-500 {
-    color: rgb(100 116 139) !important;
+    color: rgb(212 212 216) !important;
   }
   .dark .bg-slate-50\/50 {
-    background-color: rgb(15 23 42 / 0.5) !important;
+    background-color: rgb(9 9 11 / 0.5) !important;
   }
   .dark .hover\:bg-slate-100:hover {
-    background-color: rgb(30 41 59) !important;
+    background-color: rgb(24 24 27) !important;
   }
   .dark .hover\:bg-slate-50:hover {
-    background-color: rgb(30 41 59 / 0.5) !important;
+    background-color: rgb(24 24 27 / 0.5) !important;
   }
   .dark .focus\:bg-white:focus {
-    background-color: rgb(15 23 42) !important;
+    background-color: rgb(9 9 11) !important;
   }
   .dark .border-2.border-slate-200 {
-    border-color: rgb(51 65 85) !important;
+    border-color: rgb(63 63 70) !important;
   }
   .dark select option {
-    background-color: rgb(30 41 59);
-    color: rgb(241 245 249);
+    background-color: rgb(24 24 27);
+    color: rgb(250 250 250);
   }
 }
 

@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { Share2, LifeBuoy, Sparkles, Check } from 'lucide-react';
+import { useRef } from 'react';
+import { Share2, LifeBuoy, Sparkles } from 'lucide-react';
 import { type PageId } from '@/components/Sidebar';
 
 interface ProfileDropdownProps {
@@ -9,24 +9,24 @@ interface ProfileDropdownProps {
 }
 
 export function ProfileDropdown({ isOpen, onClose, onNavigate }: ProfileDropdownProps) {
-  const [copied, setCopied] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!copied) return;
-    const timer = setTimeout(() => setCopied(false), 2000);
-    return () => clearTimeout(timer);
-  }, [copied]);
 
   if (!isOpen) return null;
 
   const handleShare = async () => {
-    try {
-      await navigator.clipboard.writeText(window.location.href);
-      setCopied(true);
-    } catch {
-      // Fallback for browsers without clipboard API
-      setCopied(true);
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'SellerMath AI',
+          text: 'Check out this e-commerce profit and ROAS calculator!',
+          url: window.location.href
+        });
+      } catch (err) {
+        console.log('Share canceled or failed.', err);
+      }
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      alert('Link copied to clipboard!');
     }
   };
 
@@ -60,14 +60,7 @@ export function ProfileDropdown({ isOpen, onClose, onNavigate }: ProfileDropdown
             className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800/50 transition-colors"
           >
             <Share2 className="w-4 h-4 text-slate-400 dark:text-zinc-300" />
-            {copied ? (
-              <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1.5">
-                <Check className="w-4 h-4" />
-                Link Copied!
-              </span>
-            ) : (
-              'Share Tool'
-            )}
+            Share Tool
           </button>
 
           <button

@@ -26,6 +26,7 @@ interface AIInsightsProps {
   marketplaceName: string;
   categoryName: string;
   marketplaceGradient: string;
+  marketplaceId?: string;
   sellingPrice: number;
   commissionRate: number;
   shippingFee: number;
@@ -77,6 +78,7 @@ export default function AIInsights({
   marketplaceName,
   categoryName,
   marketplaceGradient,
+  marketplaceId,
   sellingPrice,
   commissionRate,
   shippingFee,
@@ -86,6 +88,7 @@ export default function AIInsights({
   cogs,
   breakEvenPrice,
 }: AIInsightsProps) {
+  const isBlinkit = marketplaceId === 'blinkit';
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [insights, setInsights] = useState<InsightSection[] | null>(null);
@@ -147,20 +150,20 @@ export default function AIInsights({
         <div className="absolute top-0 right-0 w-48 h-48 rounded-full blur-3xl opacity-20 bg-emerald-500" />
         <div className="relative z-10 flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-sm">
-              <Sparkles className="w-6 h-6 text-white" strokeWidth={2.5} />
+            <div className={`w-11 h-11 rounded-xl ${isBlinkit ? 'bg-slate-900/20' : 'bg-white/20'} flex items-center justify-center backdrop-blur-sm`}>
+              <Sparkles className={`w-6 h-6 ${isBlinkit ? 'text-slate-900' : 'text-white'}`} strokeWidth={2.5} />
             </div>
             <div>
-              <h3 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+              <h3 className={`text-lg sm:text-xl font-bold ${isBlinkit ? 'text-slate-900' : 'text-white'} flex items-center gap-2`}>
                 AI Strategic Insights
                 <span className="text-emerald-400">✨</span>
               </h3>
-              <p className="text-sm text-white/80">
+              <p className={`text-sm ${isBlinkit ? 'text-slate-900/80' : 'text-white/80'}`}>
                 Get an AI-powered profitability report for your {marketplaceName} listing
               </p>
             </div>
           </div>
-          <div className="bg-white/15 backdrop-blur-sm text-white text-xs font-semibold px-3.5 py-1.5 rounded-full border border-white/25 shadow-sm">
+          <div className={`${isBlinkit ? 'bg-slate-900/15 text-slate-900 border-slate-900/25' : 'bg-white/15 backdrop-blur-sm text-white border-white/25'} text-xs font-semibold px-3.5 py-1.5 rounded-full border shadow-sm`}>
             {marketplaceName} ({categoryName})
           </div>
         </div>
@@ -279,6 +282,8 @@ export default function AIInsights({
               breakEvenPrice={breakEvenPrice}
               netProfit={netProfit}
               returnRate={returnRate}
+              marketplaceName={marketplaceName}
+              categoryName={categoryName}
             />
           </div>
         </div>
@@ -342,17 +347,22 @@ function StrategicVisualAnalyzer({
   breakEvenPrice,
   netProfit,
   returnRate,
+  marketplaceName,
+  categoryName,
 }: {
   sellingPrice: number;
   breakEvenPrice: number;
   netProfit: number;
   returnRate: number;
+  marketplaceName: string;
+  categoryName: string;
 }) {
   const profitBuffer = Math.max(0, sellingPrice - breakEvenPrice);
-  const isInDanger = returnRate >= RTO_DANGER_THRESHOLD;
-  const meterMax = Math.max(30, returnRate, RTO_DANGER_THRESHOLD);
-  const currentMeterPct = Math.min(100, (returnRate / meterMax) * 100);
-  const dangerMarkerPct = Math.min(100, (RTO_DANGER_THRESHOLD / meterMax) * 100);
+  const safeReturnRate = typeof returnRate === 'number' && !isNaN(returnRate) ? returnRate : 0;
+  const isInDanger = safeReturnRate >= RTO_DANGER_THRESHOLD;
+  // Dynamic progress bar width based directly on returnRate (capped at 100%)
+  const currentMeterPct = Math.min(100, Math.max(0, safeReturnRate));
+  const dangerMarkerPct = Math.min(100, RTO_DANGER_THRESHOLD);
 
   const data = useMemo<AnalyzerRow[]>(
     () => [
@@ -379,13 +389,18 @@ function StrategicVisualAnalyzer({
       <div className="absolute top-0 right-0 w-40 h-40 rounded-full blur-3xl opacity-20 bg-blue-500 pointer-events-none" />
 
       <div className="relative z-10">
-        <div className="flex items-center gap-2.5 mb-4">
-          <div className="w-9 h-9 rounded-lg bg-blue-500/20 border border-blue-400/20 flex items-center justify-center">
-            <BarChart3 className="w-4 h-4 text-blue-400" strokeWidth={2.5} />
+        <div className="flex items-start sm:items-center justify-between gap-4 w-full mb-4">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-lg bg-blue-500/20 border border-blue-400/20 flex items-center justify-center">
+              <BarChart3 className="w-4 h-4 text-blue-400" strokeWidth={2.5} />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-white">Strategic Visual Analyzer</h4>
+              <p className="text-[11px] text-slate-400">Live price vs break-even buffer</p>
+            </div>
           </div>
-          <div>
-            <h4 className="text-sm font-bold text-white">Strategic Visual Analyzer</h4>
-            <p className="text-[11px] text-slate-400">Live price vs break-even buffer</p>
+          <div className="px-3 py-1.5 rounded-full text-[11px] font-semibold tracking-wide bg-white/10 text-slate-300 border border-white/10 whitespace-nowrap">
+            {marketplaceName} ({categoryName})
           </div>
         </div>
 
@@ -493,8 +508,8 @@ function StrategicVisualAnalyzer({
               </p>
               <p className="text-[11px] text-slate-400 mt-0.5 leading-relaxed">
                 {isInDanger
-                  ? `${returnRate}% return rate sits in the ${RTO_DANGER_THRESHOLD}%+ risk area — RTO costs are eating into margin.`
-                  : `${returnRate}% return rate is below the ${RTO_DANGER_THRESHOLD}% danger threshold, but still a cost drag.`}
+                  ? `${safeReturnRate}% return rate sits in the ${RTO_DANGER_THRESHOLD}%+ risk area — RTO costs are eating into margin.`
+                  : `${safeReturnRate}% return rate is below the ${RTO_DANGER_THRESHOLD}% danger threshold, but still a cost drag.`}
               </p>
               <div className="relative mt-2.5 h-2 rounded-full bg-slate-800 overflow-hidden">
                 <div
@@ -504,15 +519,15 @@ function StrategicVisualAnalyzer({
                 <div
                   className="absolute top-[-3px] bottom-[-3px] w-0.5 bg-red-300/90"
                   style={{ left: `${dangerMarkerPct}%` }}
-                  title={`${RTO_DANGER_THRESHOLD}% danger line`}
+                  title={`${RTO_DANGER_THRESHOLD}% danger threshold`}
                 />
               </div>
               <div className="flex justify-between mt-1">
                 <span className="text-[10px] text-slate-500">0%</span>
                 <span className="text-[10px] font-semibold text-red-300/80">
-                  {RTO_DANGER_THRESHOLD}% risk area
+                  {safeReturnRate}% return rate
                 </span>
-                <span className="text-[10px] text-slate-500">{Math.round(meterMax)}%</span>
+                <span className="text-[10px] text-slate-500">100%</span>
               </div>
             </div>
           </div>

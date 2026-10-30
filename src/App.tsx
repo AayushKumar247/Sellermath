@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Menu, Sun, Moon, Globe, Sparkles, Store, Truck, ShoppingBag, Target, FileText } from 'lucide-react';
+import { Menu, Sun, Moon, Globe } from 'lucide-react';
 import { Analytics } from '@vercel/analytics/react';
 import Sidebar, { type PageId } from '@/components/Sidebar';
 import MeeshoCalculator from '@/components/MeeshoCalculator';
@@ -14,6 +14,7 @@ import Footer from '@/components/Footer';
 import InfoPages from '@/components/InfoPages';
 import { ProfileDropdown } from '@/components/HeaderMenus';
 import ScrollToTop from '@/components/ScrollToTop';
+import MarketplaceLogo from '@/components/MarketplaceLogo';
 
 const THEME_KEY = 'sellermath_theme';
 
@@ -63,21 +64,21 @@ export default function App() {
   };
 
   const getActivePageIcon = () => {
-    const pageIcons: Record<PageId, React.ElementType> = {
-      'universal': Globe,
-      'meesho': Sparkles,
-      'flipkart': Store,
-      'blinkit': Truck,
-      'amazon-fba': ShoppingBag,
-      'roas': Target,
-      'gst-invoice': FileText,
-      'ai-listing': Sparkles,
-      'about': Globe,
-      'contact': Globe,
-      'privacy': Globe,
-      'terms': Globe,
+    const pageIcons: Record<PageId, { type: 'image' | 'logo' | 'icon'; value?: string; logoId?: string }> = {
+      'universal': { type: 'image', value: '/universal-logo.png' },
+      'meesho': { type: 'logo', logoId: 'meesho' },
+      'flipkart': { type: 'logo', logoId: 'flipkart' },
+      'blinkit': { type: 'logo', logoId: 'blinkit' },
+      'amazon-fba': { type: 'logo', logoId: 'amazon' },
+      'roas': { type: 'image', value: '/roas-logo.png' },
+      'gst-invoice': { type: 'image', value: '/gst-logo.png' },
+      'ai-listing': { type: 'image', value: '/ai-writer-logo.png' },
+      'about': { type: 'icon' },
+      'contact': { type: 'icon' },
+      'privacy': { type: 'icon' },
+      'terms': { type: 'icon' },
     };
-    return pageIcons[activePage] || Globe;
+    return pageIcons[activePage] || { type: 'icon' };
   };
 
   const renderPage = () => {
@@ -134,12 +135,26 @@ export default function App() {
               <span className="text-lg font-bold text-slate-900 dark:text-zinc-50">SellerMath</span>
             </div>
             <div className="hidden md:flex items-center gap-3 flex-1">
-              <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center text-white shadow-sm shadow-emerald-500/20">
-                {(() => {
-                  const Icon = getActivePageIcon();
-                  return <Icon className="w-4 h-4" strokeWidth={2.5} />;
-                })()}
-              </div>
+              {(() => {
+                const iconData = getActivePageIcon();
+                if (iconData.type === 'image' && iconData.value) {
+                  return (
+                    <img
+                      src={iconData.value}
+                      alt={getActivePageName()}
+                      className="w-7 h-7 rounded-full overflow-hidden object-cover drop-shadow-sm shrink-0"
+                    />
+                  );
+                }
+                if (iconData.type === 'logo' && iconData.logoId) {
+                  return <MarketplaceLogo id={iconData.logoId} size="sm" />;
+                }
+                return (
+                  <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center text-white shadow-sm shadow-emerald-500/20">
+                    <Globe className="w-4 h-4" strokeWidth={2.5} />
+                  </div>
+                );
+              })()}
               <span className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-50 tracking-tight">{getActivePageName()}</span>
             </div>
             <div className="flex items-center gap-3 relative">

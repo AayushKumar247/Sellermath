@@ -23,14 +23,14 @@ export default function MarketplaceLogo({ id, size = 'md', className = '' }: Mar
   const logoUrl = logoUrls[id] || logoUrls.amazon;
 
   const brandColors: Record<string, string> = {
-    amazon: '#FF9900',
-    flipkart: '#2874F0',
-    meesho: '#F43397',
-    myntra: '#FF3F6C',
-    blinkit: '#F8CB46',
-    zepto: '#3B006A',
-    instamart: '#FC8019',
-    snapdeal: '#E40046',
+    amazon: '#FB923C',
+    flipkart: '#3B82F6',
+    meesho: '#C026D3',
+    myntra: '#F472B6',
+    blinkit: '#FACC15',
+    zepto: '#7C3AED',
+    instamart: '#F97316',
+    snapdeal: '#EF4444',
   };
 
   const brandInitials: Record<string, string> = {

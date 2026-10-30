@@ -11,6 +11,7 @@ interface WaterfallChartProps {
   marketplaceName: string;
   categoryName: string;
   marketplaceGradient: string;
+  marketplaceId?: string;
 }
 
 interface WaterfallStep {
@@ -40,7 +41,9 @@ export default function WaterfallChart({
   marketplaceName,
   categoryName,
   marketplaceGradient,
+  marketplaceId,
 }: WaterfallChartProps) {
+  const isBlinkit = marketplaceId === 'blinkit';
   const isProfit = netProfit >= 0;
   const isLoss = !isProfit;
 
@@ -54,19 +57,24 @@ export default function WaterfallChart({
     { label: isLoss ? 'Real Loss' : 'Real Profit', shortLabel: isLoss ? 'Loss' : 'Profit', value: netProfit, type: 'end', icon: isLoss ? TrendingDown : TrendingUp },
   ];
 
-  const maxValue = revenue;
+  // Calculate maxValue to accommodate all deductions without overflow
+  // Use the maximum of revenue and the absolute sum of all negative values (deductions)
+  const safeNum = (val: number) => (typeof val === 'number' && !isNaN(val) ? val : 0);
+  const totalDeductions = safeNum(commission) + safeNum(shipping) + safeNum(gst) + safeNum(rto) + safeNum(cogs);
+  const maxValue = Math.max(safeNum(revenue), totalDeductions, Math.abs(safeNum(netProfit)), 1);
   const chartHeight = 280;
   const minBarHeight = 4;
 
   const runningTotals: number[] = [];
   let running = 0;
   for (const step of steps) {
+    const stepValue = typeof step.value === 'number' && !isNaN(step.value) ? step.value : 0;
     if (step.type === 'start') {
-      running = step.value;
+      running = stepValue;
     } else if (step.type === 'deduction') {
-      running += step.value;
+      running += stepValue;
     } else {
-      running = step.value;
+      running = stepValue;
     }
     runningTotals.push(running);
   }
@@ -77,15 +85,15 @@ export default function WaterfallChart({
       <div className={`bg-gradient-to-r ${marketplaceGradient} p-5`}>
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-sm">
-              <BarChart3 className="w-5 h-5 text-white" strokeWidth={2.5} />
+            <div className={`w-10 h-10 rounded-xl ${isBlinkit ? 'bg-slate-900/20' : 'bg-white/20'} flex items-center justify-center backdrop-blur-sm`}>
+              <BarChart3 className={`w-5 h-5 ${isBlinkit ? 'text-slate-900' : 'text-white'}`} strokeWidth={2.5} />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-white">Real Earnings Breakdown</h3>
-              <p className="text-sm text-white/80">Waterfall view — {marketplaceName} profit structure</p>
+              <h3 className={`text-lg font-bold ${isBlinkit ? 'text-slate-900' : 'text-white'}`}>Real Earnings Breakdown</h3>
+              <p className={`text-sm ${isBlinkit ? 'text-slate-900/80' : 'text-white/80'}`}>Waterfall view — {marketplaceName} profit structure</p>
             </div>
           </div>
-          <div className="bg-white/15 backdrop-blur-sm text-white text-xs font-semibold px-3.5 py-1.5 rounded-full border border-white/25 shadow-sm">
+          <div className={`${isBlinkit ? 'bg-slate-900/15 text-slate-900 border-slate-900/25' : 'bg-white/15 backdrop-blur-sm text-white border-white/25'} text-xs font-semibold px-3.5 py-1.5 rounded-full border shadow-sm`}>
             {marketplaceName} ({categoryName})
           </div>
         </div>
@@ -100,11 +108,11 @@ export default function WaterfallChart({
               {[0, 25, 50, 75, 100].map((pct) => (
                 <div
                   key={pct}
-                  className="absolute left-0 right-0 border-t border-dashed border-slate-100"
+                  className="absolute left-0 right-0 border-t border-dashed border-slate-100 dark:border-slate-700"
                   style={{ top: `${pct}%` }}
                 >
-                  <span className="absolute -top-2.5 left-0 text-[10px] text-slate-300 font-medium bg-white pr-2">
-                    {formatINR(revenue * (100 - pct) / 100)}
+                  <span className="absolute -top-2.5 left-0 text-[10px] text-slate-500 dark:text-zinc-400 font-medium pr-2">
+                    {formatINR(maxValue * (100 - pct) / 100)}
                   </span>
                 </div>
               ))}
@@ -112,7 +120,7 @@ export default function WaterfallChart({
 
             {/* Bars */}
             <div
-              className="absolute left-12 right-0 top-0 flex items-end justify-between gap-1 sm:gap-2"
+              className="absolute left-12 right-0 top-0 flex items-end justify-between gap-1 sm:gap-2 overflow-hidden"
               style={{ height: chartHeight }}
             >
               {steps.map((step, i) => {
@@ -123,17 +131,20 @@ export default function WaterfallChart({
                 let barBottom = 0;
                 let barHeight = 0;
 
+                // Safeguard: ensure step.value is a valid number
+                const stepValue = typeof step.value === 'number' && !isNaN(step.value) ? step.value : 0;
+
                 if (step.type === 'start') {
                   barBottom = 0;
-                  barHeight = (Math.abs(step.value) / maxValue) * chartHeight;
+                  barHeight = Math.min((Math.abs(stepValue) / maxValue) * chartHeight, chartHeight);
                 } else if (step.type === 'deduction') {
                   const topOfDeduction = runningTotals[i - 1] ?? 0;
                   const bottomOfDeduction = runningTotals[i] ?? 0;
-                  barBottom = (Math.max(0, bottomOfDeduction) / maxValue) * chartHeight;
-                  barHeight = (Math.abs(step.value) / maxValue) * chartHeight;
+                  barBottom = Math.min(Math.max(0, (Math.max(0, bottomOfDeduction) / maxValue) * chartHeight), chartHeight);
+                  barHeight = Math.min((Math.abs(stepValue) / maxValue) * chartHeight, chartHeight);
                 } else if (step.type === 'end') {
                   barBottom = 0;
-                  barHeight = (Math.abs(step.value) / maxValue) * chartHeight;
+                  barHeight = Math.min((Math.abs(stepValue) / maxValue) * chartHeight, chartHeight);
                 }
 
                 barHeight = Math.max(barHeight, minBarHeight);
@@ -153,8 +164,8 @@ export default function WaterfallChart({
                   : 'text-red-500';
 
                 const valueLabel = isFinalProfit && isLoss
-                  ? `-₹${Math.abs(step.value).toFixed(2)}`
-                  : `${isPositive ? '' : '-'}${formatINR(Math.abs(step.value)).replace('-', '')}`;
+                  ? `-₹${Math.abs(stepValue).toFixed(2)}`
+                  : `${isPositive ? '' : '-'}${formatINR(Math.abs(stepValue)).replace('-', '')}`;
 
                 return (
                   <div
@@ -198,7 +209,7 @@ export default function WaterfallChart({
 
                       {/* Hover tooltip */}
                       <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 whitespace-nowrap bg-slate-900 text-white text-xs font-medium rounded-lg px-2.5 py-1.5 shadow-xl">
-                        {step.label}: {isPositive ? '' : '-'}{formatINR(Math.abs(step.value)).replace('-', '')}
+                        {step.label}: {isPositive ? '' : '-'}{formatINR(Math.abs(stepValue)).replace('-', '')}
                       </div>
                     </div>
                   </div>

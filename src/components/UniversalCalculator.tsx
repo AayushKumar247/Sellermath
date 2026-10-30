@@ -80,7 +80,7 @@ const MARKETPLACES: MarketplacePreset[] = [
     shortName: 'Amazon',
     tagline: '5-15% commission',
     accent: 'amber',
-    gradient: 'from-amber-500 to-orange-600',
+    gradient: 'from-amber-400 to-orange-500',
     icon: ShoppingBag,
     defaultCategory: 'electronics',
     categories: {
@@ -98,7 +98,7 @@ const MARKETPLACES: MarketplacePreset[] = [
     shortName: 'Flipkart',
     tagline: '4-16% commission',
     accent: 'blue',
-    gradient: 'from-blue-500 to-indigo-600',
+    gradient: 'from-blue-500 to-blue-600',
     icon: Store,
     defaultCategory: 'electronics',
     categories: {
@@ -115,8 +115,8 @@ const MARKETPLACES: MarketplacePreset[] = [
     name: 'Meesho',
     shortName: 'Meesho',
     tagline: '0% commission',
-    accent: 'rose',
-    gradient: 'from-rose-500 to-pink-600',
+    accent: 'fuchsia',
+    gradient: 'from-fuchsia-600 to-fuchsia-700',
     icon: Sparkles,
     defaultCategory: 'fashion',
     categories: {
@@ -133,8 +133,8 @@ const MARKETPLACES: MarketplacePreset[] = [
     name: 'Myntra',
     shortName: 'Myntra',
     tagline: '8-18% commission',
-    accent: 'pink',
-    gradient: 'from-pink-500 to-rose-600',
+    accent: 'rose',
+    gradient: 'from-pink-400 to-rose-500',
     icon: ShoppingBag,
     defaultCategory: 'fashion',
     categories: {
@@ -152,7 +152,7 @@ const MARKETPLACES: MarketplacePreset[] = [
     shortName: 'Blinkit',
     tagline: 'Quick Commerce 15-22%',
     accent: 'yellow',
-    gradient: 'from-yellow-500 to-amber-600',
+    gradient: 'from-yellow-400 to-amber-500',
     icon: Truck,
     defaultCategory: 'grocery',
     categories: {
@@ -170,7 +170,7 @@ const MARKETPLACES: MarketplacePreset[] = [
     shortName: 'Zepto',
     tagline: 'Quick Commerce ~22%',
     accent: 'purple',
-    gradient: 'from-violet-500 to-purple-600',
+    gradient: 'from-violet-600 to-indigo-600',
     icon: Truck,
     defaultCategory: 'grocery',
     categories: {
@@ -188,7 +188,7 @@ const MARKETPLACES: MarketplacePreset[] = [
     shortName: 'Instamart',
     tagline: 'Quick Commerce ~20%',
     accent: 'orange',
-    gradient: 'from-orange-500 to-red-600',
+    gradient: 'from-orange-500 to-red-500',
     icon: Truck,
     defaultCategory: 'grocery',
     categories: {
@@ -206,7 +206,7 @@ const MARKETPLACES: MarketplacePreset[] = [
     shortName: 'Snapdeal',
     tagline: '0-12% commission',
     accent: 'red',
-    gradient: 'from-red-500 to-rose-600',
+    gradient: 'from-red-500 to-red-600',
     icon: Store,
     defaultCategory: 'fashion',
     categories: {
@@ -396,6 +396,7 @@ export default function UniversalCalculator() {
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
             {MARKETPLACES.map((mp) => {
               const isActive = state.marketplace === mp.id;
+              const isBlinkit = mp.id === 'blinkit';
               return (
                 <button
                   key={mp.id}
@@ -405,16 +406,16 @@ export default function UniversalCalculator() {
                     transition-all duration-200 group
                     ${
                       isActive
-                        ? `bg-gradient-to-br ${mp.gradient} text-white border-transparent shadow-lg scale-105`
+                        ? `bg-gradient-to-br ${mp.gradient} ${isBlinkit ? 'text-slate-900' : 'text-white'} border-transparent shadow-lg scale-105`
                         : 'bg-white dark:bg-zinc-900/90 border-slate-200 dark:border-zinc-700/80 hover:border-slate-300 dark:hover:border-zinc-600 hover:shadow-md'
                     }
                   `}
                 >
                   <MarketplaceLogo id={mp.id} size="lg" />
-                  <span className={`text-xs font-bold ${isActive ? 'text-white' : 'text-slate-700 dark:text-zinc-50'}`}>
+                  <span className={`text-xs font-bold ${isActive ? (isBlinkit ? 'text-slate-900' : 'text-white') : 'text-slate-700 dark:text-zinc-50'}`}>
                     {mp.shortName}
                   </span>
-                  <span className={`text-[10px] leading-tight text-center ${isActive ? 'text-white/80' : 'text-slate-400 dark:text-zinc-300'}`}>
+                  <span className={`text-[10px] leading-tight text-center ${isActive ? (isBlinkit ? 'text-slate-900/80' : 'text-white/80') : 'text-slate-400 dark:text-zinc-300'}`}>
                     {mp.tagline}
                   </span>
                 </button>
@@ -440,6 +441,7 @@ export default function UniversalCalculator() {
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {CATEGORIES.map((cat) => {
                   const isActive = state.category === cat.id;
+                  const isBlinkit = activeMarketplace.id === 'blinkit';
                   return (
                     <button
                       key={cat.id}
@@ -448,7 +450,7 @@ export default function UniversalCalculator() {
                         px-3 py-2.5 rounded-lg text-sm font-medium transition-all
                         ${
                           isActive
-                            ? `bg-gradient-to-r ${activeMarketplace.gradient} text-white shadow-md`
+                            ? `bg-gradient-to-r ${activeMarketplace.gradient} ${isBlinkit ? 'text-slate-900' : 'text-white'} shadow-md`
                             : 'bg-slate-50 dark:bg-zinc-900/90 text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-700/80'
                         }
                       `}
@@ -516,6 +518,7 @@ export default function UniversalCalculator() {
                   <div className="flex flex-wrap gap-2 mt-3">
                     {[250, 500, 1000, 2000, 5000].map((weight) => {
                       const isSelected = state.shippingWeight === weight;
+                      const isBlinkit = activeMarketplace.id === 'blinkit';
                       return (
                         <button
                           key={weight}
@@ -524,7 +527,7 @@ export default function UniversalCalculator() {
                             px-3 py-1.5 rounded-lg text-xs font-medium transition-all
                             ${
                               isSelected
-                                ? `bg-gradient-to-r ${activeMarketplace.gradient} text-white shadow-md`
+                                ? `bg-gradient-to-r ${activeMarketplace.gradient} ${isBlinkit ? 'text-slate-900' : 'text-white'} shadow-md`
                                 : 'bg-slate-50 dark:bg-zinc-900/90 text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-700/80'
                             }
                           `}
@@ -545,6 +548,7 @@ export default function UniversalCalculator() {
                   <div className="grid grid-cols-3 gap-2">
                     {ZONES.map((z) => {
                       const isActive = state.zone === z.id;
+                      const isBlinkit = activeMarketplace.id === 'blinkit';
                       return (
                         <button
                           key={z.id}
@@ -553,7 +557,7 @@ export default function UniversalCalculator() {
                             px-3 py-2.5 rounded-lg text-sm font-medium transition-all
                             ${
                               isActive
-                                ? `bg-gradient-to-r ${activeMarketplace.gradient} text-white shadow-md`
+                                ? `bg-gradient-to-r ${activeMarketplace.gradient} ${isBlinkit ? 'text-slate-900' : 'text-white'} shadow-md`
                                 : 'bg-slate-50 dark:bg-zinc-900/90 text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-700/80'
                             }
                           `}
@@ -676,6 +680,7 @@ export default function UniversalCalculator() {
               result={result}
               onPrint={handlePrint}
               onUpdateSellingPrice={(price) => update('sellingPrice', price)}
+              marketplaceId={activeMarketplace.id}
             />
           </div>
         </div>
@@ -692,6 +697,7 @@ export default function UniversalCalculator() {
           marketplaceName={activeMarketplace.name}
           categoryName={CATEGORIES.find((c) => c.id === state.category)?.label || state.category}
           marketplaceGradient={activeMarketplace.gradient}
+          marketplaceId={activeMarketplace.id}
         />
 
         {/* AI Strategic Insights */}
@@ -700,6 +706,7 @@ export default function UniversalCalculator() {
           marketplaceName={activeMarketplace.name}
           categoryName={CATEGORIES.find((c) => c.id === state.category)?.label || state.category}
           marketplaceGradient={activeMarketplace.gradient}
+          marketplaceId={activeMarketplace.id}
           sellingPrice={state.sellingPrice}
           commissionRate={state.commissionRate}
           shippingFee={result.shippingFee}
@@ -755,7 +762,7 @@ export default function UniversalCalculator() {
 
         {/* Print-only Tax Ledger */}
         <div className="print-only">
-          <PrintTaxLedger marketplace={activeMarketplace} state={state} result={result} />
+          <PrintTaxLedger marketplace={activeMarketplace} state={state} result={result} marketplaceId={activeMarketplace.id} />
         </div>
       </div>
     </>
@@ -829,9 +836,11 @@ interface TaxLedgerProps {
   result: CalcResult;
   onPrint: () => void;
   onUpdateSellingPrice: (price: number) => void;
+  marketplaceId?: string;
 }
 
-function TaxLedger({ marketplace, state, result, onPrint, onUpdateSellingPrice }: TaxLedgerProps) {
+function TaxLedger({ marketplace, state, result, onPrint, onUpdateSellingPrice, marketplaceId }: TaxLedgerProps) {
+  const isBlinkit = marketplaceId === 'blinkit';
   const isProfit = result.netProfit >= 0;
   const Icon = marketplace.icon;
   const categoryName = CATEGORIES.find((c) => c.id === state.category)?.label || state.category;
@@ -860,15 +869,15 @@ function TaxLedger({ marketplace, state, result, onPrint, onUpdateSellingPrice }
       <div className={`bg-gradient-to-r ${marketplace.gradient} p-4`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-lg bg-white/20 flex items-center justify-center backdrop-blur-sm">
-              <Icon className="w-5 h-5 text-white" strokeWidth={2.5} />
+            <div className={`w-9 h-9 rounded-lg ${isBlinkit ? 'bg-slate-900/20' : 'bg-white/20'} flex items-center justify-center backdrop-blur-sm`}>
+              <Icon className={`w-5 h-5 ${isBlinkit ? 'text-slate-900' : 'text-white'}`} strokeWidth={2.5} />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-white">CA Tax Ledger</h3>
-              <p className="text-xs text-white/80">{marketplace.name} Settlement Receipt</p>
+              <h3 className={`text-sm font-bold ${isBlinkit ? 'text-slate-900' : 'text-white'}`}>CA Tax Ledger</h3>
+              <p className={`text-xs ${isBlinkit ? 'text-slate-900/80' : 'text-white/80'}`}>{marketplace.name} Settlement Receipt</p>
             </div>
           </div>
-          <div className="bg-white/20 backdrop-blur-sm text-white text-xs font-semibold px-3 py-1 rounded-full border border-white/30">
+          <div className={`${isBlinkit ? 'bg-slate-900/20 text-slate-900 border-slate-900/30' : 'bg-white/20 backdrop-blur-sm text-white border-white/30'} text-xs font-semibold px-3 py-1 rounded-full border`}>
             {marketplace.name} ({categoryName})
           </div>
         </div>
@@ -1320,9 +1329,11 @@ interface PrintTaxLedgerProps {
   marketplace: MarketplacePreset;
   state: CalcState;
   result: CalcResult;
+  marketplaceId?: string;
 }
 
-function PrintTaxLedger({ marketplace, state, result }: PrintTaxLedgerProps) {
+function PrintTaxLedger({ marketplace, state, result, marketplaceId }: PrintTaxLedgerProps) {
+  const isBlinkit = marketplaceId === 'blinkit';
   const isProfit = result.netProfit >= 0;
   const Icon = marketplace.icon;
   const today = new Date().toLocaleDateString('en-IN', {
@@ -1336,7 +1347,7 @@ function PrintTaxLedger({ marketplace, state, result }: PrintTaxLedgerProps) {
       <div className="flex items-center justify-between mb-6 border-b-2 border-slate-800 pb-4">
         <div className="flex items-center gap-3">
           <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${marketplace.gradient} flex items-center justify-center`}>
-            <Icon className="w-5 h-5 text-white" />
+            <Icon className={`w-5 h-5 ${isBlinkit ? 'text-slate-900' : 'text-white'}`} />
           </div>
           <div>
             <h1 className="text-xl font-bold text-slate-900">SellerMath — CA Tax Ledger</h1>

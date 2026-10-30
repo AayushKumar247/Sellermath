@@ -8,17 +8,18 @@ interface NavItem {
   label: string;
   icon?: React.ElementType;
   logoId?: string;
+  imageSrc?: string;
 }
 
 const navItems: NavItem[] = [
-  { id: 'universal', label: 'Universal Profit Calculator', icon: Globe },
+  { id: 'universal', label: 'Universal Profit Calculator', imageSrc: '/universal-logo.png' },
   { id: 'meesho', label: 'Meesho Calculator', logoId: 'meesho' },
   { id: 'flipkart', label: 'Flipkart Calculator', logoId: 'flipkart' },
   { id: 'blinkit', label: 'Blinkit Margin', logoId: 'blinkit' },
   { id: 'amazon-fba', label: 'Amazon FBA Calculator', logoId: 'amazon' },
-  { id: 'roas', label: 'ROAS / Break-Even Tool', icon: Target },
-  { id: 'gst-invoice', label: 'GST Invoice Generator', icon: FileText },
-  { id: 'ai-listing', label: 'AI Listing Writer', icon: Sparkles },
+  { id: 'roas', label: 'ROAS / Break-Even Tool', imageSrc: '/roas-logo.png' },
+  { id: 'gst-invoice', label: 'GST Invoice Generator', imageSrc: '/gst-logo.png' },
+  { id: 'ai-listing', label: 'AI Listing Writer', imageSrc: '/ai-writer-logo.png' },
 ];
 
 interface SidebarProps {
@@ -47,9 +48,11 @@ export default function Sidebar({ activePage, onNavigate, isOpen, onClose }: Sid
       >
         <div className="flex items-center justify-between px-6 h-20 border-b border-slate-200 dark:border-zinc-800/80">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-              <Calculator className="w-5 h-5 text-white" strokeWidth={2.5} />
-            </div>
+            <img
+              src="/sellermath-logo.png"
+              alt="SellerMath"
+              className="w-10 h-10 rounded-xl overflow-hidden object-cover drop-shadow-md shrink-0"
+            />
             <div>
               <h1 className="text-xl font-bold text-slate-900 dark:text-zinc-50 tracking-tight">SellerMath</h1>
               <p className="text-xs text-slate-500 dark:text-zinc-300 font-medium">Profit Intelligence</p>
@@ -86,6 +89,12 @@ export default function Sidebar({ activePage, onNavigate, isOpen, onClose }: Sid
               >
                 {item.logoId ? (
                   <MarketplaceLogo id={item.logoId} size="sm" />
+                ) : item.imageSrc ? (
+                  <img
+                    src={item.imageSrc}
+                    alt={item.label}
+                    className="w-7 h-7 rounded-full overflow-hidden object-cover drop-shadow-sm shrink-0"
+                  />
                 ) : (
                   <Icon
                     className={`w-5 h-5 transition-transform group-hover:scale-110 ${
@@ -94,7 +103,7 @@ export default function Sidebar({ activePage, onNavigate, isOpen, onClose }: Sid
                     strokeWidth={2}
                   />
                 )}
-                <span>{item.label}</span>
+                <span className="whitespace-nowrap truncate">{item.label}</span>
                 {isActive && (
                   <span className="ml-auto w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
                 )}

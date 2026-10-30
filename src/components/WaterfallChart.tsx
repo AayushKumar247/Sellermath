@@ -9,6 +9,8 @@ interface WaterfallChartProps {
   cogs: number;
   netProfit: number;
   marketplaceName: string;
+  categoryName: string;
+  marketplaceGradient: string;
 }
 
 interface WaterfallStep {
@@ -36,6 +38,8 @@ export default function WaterfallChart({
   cogs,
   netProfit,
   marketplaceName,
+  categoryName,
+  marketplaceGradient,
 }: WaterfallChartProps) {
   const isProfit = netProfit >= 0;
   const isLoss = !isProfit;
@@ -70,14 +74,19 @@ export default function WaterfallChart({
   return (
     <div className="bg-white rounded-2xl border-2 border-slate-200 overflow-hidden shadow-lg">
       {/* Header */}
-      <div className="bg-gradient-to-r from-slate-900 to-slate-800 p-5">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-            <BarChart3 className="w-5 h-5 text-white" strokeWidth={2.5} />
+      <div className={`bg-gradient-to-r ${marketplaceGradient} p-5`}>
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-sm">
+              <BarChart3 className="w-5 h-5 text-white" strokeWidth={2.5} />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white">Real Earnings Breakdown</h3>
+              <p className="text-sm text-white/80">Waterfall view — {marketplaceName} profit structure</p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-lg font-bold text-white">Real Earnings Breakdown</h3>
-            <p className="text-sm text-slate-400">Waterfall view — {marketplaceName} profit structure</p>
+          <div className="bg-white/15 backdrop-blur-sm text-white text-xs font-semibold px-3.5 py-1.5 rounded-full border border-white/25 shadow-sm">
+            {marketplaceName} ({categoryName})
           </div>
         </div>
       </div>

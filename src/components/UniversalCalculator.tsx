@@ -690,11 +690,16 @@ export default function UniversalCalculator() {
           cogs={state.cogs}
           netProfit={result.netProfit}
           marketplaceName={activeMarketplace.name}
+          categoryName={CATEGORIES.find((c) => c.id === state.category)?.label || state.category}
+          marketplaceGradient={activeMarketplace.gradient}
         />
 
         {/* AI Strategic Insights */}
         <AIInsights
+          key={`${activeMarketplace.name}-${state.sellingPrice}-${state.cogs}-${state.commissionRate}`}
           marketplaceName={activeMarketplace.name}
+          categoryName={CATEGORIES.find((c) => c.id === state.category)?.label || state.category}
+          marketplaceGradient={activeMarketplace.gradient}
           sellingPrice={state.sellingPrice}
           commissionRate={state.commissionRate}
           shippingFee={result.shippingFee}

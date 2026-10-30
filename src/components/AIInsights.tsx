@@ -24,6 +24,8 @@ import {
 
 interface AIInsightsProps {
   marketplaceName: string;
+  categoryName: string;
+  marketplaceGradient: string;
   sellingPrice: number;
   commissionRate: number;
   shippingFee: number;
@@ -73,6 +75,8 @@ function formatINR(val: number): string {
 
 export default function AIInsights({
   marketplaceName,
+  categoryName,
+  marketplaceGradient,
   sellingPrice,
   commissionRate,
   shippingFee,
@@ -91,57 +95,33 @@ export default function AIInsights({
     setError(null);
     setInsights(null);
 
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-
-    if (!apiKey) {
-      setLoading(false);
-      setError(
-        'AI analysis requires a Gemini API key. Add VITE_GEMINI_API_KEY to your .env file to enable this feature.',
-      );
-      return;
-    }
-
-    const metrics = [
-      `Marketplace: ${marketplaceName}`,
-      `Selling Price (incl. GST): ${formatINR(sellingPrice)}`,
-      `Commission Rate: ${commissionRate}%`,
-      `Shipping / Pick & Pack Fee: ${formatINR(shippingFee)}`,
-      `GST + TCS/TDS Deductions: ${formatINR(gstAmount)}`,
-      `RTO / Return Rate: ${returnRate}%`,
-      `Cost of Goods (COGS): ${formatINR(cogs)}`,
-      `Current Net Profit: ${formatINR(netProfit)}`,
-      `Calculated Break-Even Price: ${formatINR(breakEvenPrice)}`,
-    ].join('\n');
-
-    const prompt = `You are an expert Indian e-commerce financial strategist. Analyze these metrics:\n${metrics}\n\nReturn a concise, 3-part strategic report formatted nicely.\nPart 1: Break-Even Pricing (Calculate exact minimum selling price to avoid a net loss).\nPart 2: RTO Strategy (Analyze the impact of the current RTO % and suggest one specific mitigation tactic).\nPart 3: Inventory Viability (Final verdict on whether this margin is healthy enough to scale with paid ads).\n\nFormat each part with a clear heading and keep the response under 300 words total.`;
-
     try {
-      const response = await fetchWith503Retry(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: {
-              temperature: 0.7,
-              maxOutputTokens: 1024,
-            },
-          }),
-        },
-      );
+      const response = await fetch('/api/ai-analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          marketplaceName,
+          sellingPrice,
+          commissionRate,
+          shippingFee,
+          gstAmount,
+          returnRate,
+          cogs,
+          netProfit,
+          breakEvenPrice,
+        }),
+      });
 
       if (!response.ok) {
         const errData = await response.json().catch(() => null);
         const msg =
-          errData?.error?.message ||
-          `Gemini API returned status ${response.status}. Check your API key and try again.`;
+          errData?.error ||
+          'AI analysis temporarily unavailable. Please try again later.';
         throw new Error(msg);
       }
 
       const data = await response.json();
-      const text: string =
-        data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+      const text = data.text ?? '';
 
       if (!text) {
         throw new Error('The AI returned an empty response. Please try again.');
@@ -153,7 +133,7 @@ export default function AIInsights({
       const message =
         err instanceof Error
           ? err.message
-          : 'Something went wrong while contacting the AI service.';
+          : 'AI analysis temporarily unavailable. Please try again later.';
       setError(message);
     } finally {
       setLoading(false);
@@ -163,20 +143,25 @@ export default function AIInsights({
   return (
     <div className="bg-white rounded-2xl border-2 border-slate-200 overflow-hidden shadow-lg">
       {/* Header */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 p-5 sm:p-6 relative overflow-hidden">
+      <div className={`bg-gradient-to-r ${marketplaceGradient} p-5 sm:p-6 relative overflow-hidden`}>
         <div className="absolute top-0 right-0 w-48 h-48 rounded-full blur-3xl opacity-20 bg-emerald-500" />
-        <div className="relative z-10 flex items-center gap-3">
-          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/30">
-            <Sparkles className="w-6 h-6 text-white" strokeWidth={2.5} />
+        <div className="relative z-10 flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-sm">
+              <Sparkles className="w-6 h-6 text-white" strokeWidth={2.5} />
+            </div>
+            <div>
+              <h3 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+                AI Strategic Insights
+                <span className="text-emerald-400">✨</span>
+              </h3>
+              <p className="text-sm text-white/80">
+                Get an AI-powered profitability report for your {marketplaceName} listing
+              </p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
-              AI Strategic Insights
-              <span className="text-emerald-400">✨</span>
-            </h3>
-            <p className="text-sm text-slate-400">
-              Get an AI-powered profitability report for your {marketplaceName} listing
-            </p>
+          <div className="bg-white/15 backdrop-blur-sm text-white text-xs font-semibold px-3.5 py-1.5 rounded-full border border-white/25 shadow-sm">
+            {marketplaceName} ({categoryName})
           </div>
         </div>
       </div>

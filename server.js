@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
@@ -344,6 +345,77 @@ app.post('/api/calculate/roas', handleCalc(calculateRoas));
 app.post('/api/calculate/blinkit', handleCalc(calculateBlinkit));
 app.post('/api/calculate/target-price', handleCalc(calculateTargetPrice));
 app.post('/api/calculate/cross-platform', handleCalc(calculateCrossPlatformComparison));
+
+// AI Analysis endpoint
+app.post('/api/ai-analyze', async (req, res) => {
+  console.log('AI Route Hit');
+  console.log('API Key Exists:', !!process.env.GEMINI_API_KEY);
+
+  try {
+    const { marketplaceName, sellingPrice, commissionRate, shippingFee, gstAmount, returnRate, cogs, netProfit, breakEvenPrice } = req.body;
+
+    const apiKey = process.env.GEMINI_API_KEY;
+
+    if (!apiKey) {
+      console.warn('⚠️  GEMINI_API_KEY not found in environment variables. AI analysis will be unavailable.');
+      return res.status(500).json({
+        error: 'AI analysis is not configured. Please add GEMINI_API_KEY to your environment variables.'
+      });
+    }
+
+    const metrics = [
+      `Marketplace: ${marketplaceName}`,
+      `Selling Price (incl. GST): ₹${sellingPrice}`,
+      `Commission Rate: ${commissionRate}%`,
+      `Shipping / Pick & Pack Fee: ₹${shippingFee}`,
+      `GST + TCS/TDS Deductions: ₹${gstAmount}`,
+      `RTO / Return Rate: ${returnRate}%`,
+      `Cost of Goods (COGS): ₹${cogs}`,
+      `Current Net Profit: ₹${netProfit}`,
+      `Calculated Break-Even Price: ₹${breakEvenPrice}`,
+    ].join('\n');
+
+    const prompt = `You are an expert Indian e-commerce financial strategist. Analyze these metrics:\n${metrics}\n\nReturn a concise, 3-part strategic report formatted nicely.\nPart 1: Break-Even Pricing (Calculate exact minimum selling price to avoid a net loss).\nPart 2: RTO Strategy (Analyze the impact of the current RTO % and suggest one specific mitigation tactic).\nPart 3: Inventory Viability (Final verdict on whether this margin is healthy enough to scale with paid ads).\n\nFormat each part with a clear heading and keep the response under 300 words total.`;
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 1024,
+          },
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errData = await response.json().catch(() => null);
+      const msg =
+        errData?.error?.message ||
+        `Gemini API returned status ${response.status}. Check your API key and try again.`;
+      console.error('AI Analysis Error:', msg);
+      return res.status(500).json({ error: msg });
+    }
+
+    const data = await response.json();
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+
+    if (!text) {
+      return res.status(500).json({ error: 'The AI returned an empty response. Please try again.' });
+    }
+
+    res.json({ text });
+  } catch (err) {
+    console.error('AI Request Failed:', err.message || err);
+    res.status(500).json({
+      error: err instanceof Error ? err.message : 'Something went wrong while contacting the AI service.'
+    });
+  }
+});
 
 // For Vercel serverless deployment
 export default app;

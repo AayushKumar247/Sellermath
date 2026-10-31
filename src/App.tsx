@@ -2,11 +2,7 @@ import { useState, useEffect } from 'react';
 import { Menu, Sun, Moon, Globe } from 'lucide-react';
 import { Analytics } from '@vercel/analytics/react';
 import Sidebar, { type PageId } from '@/components/Sidebar';
-import MeeshoCalculator from '@/components/MeeshoCalculator';
-import FlipkartCalculator from '@/components/FlipkartCalculator';
-import BlinkitCalculator from '@/components/BlinkitCalculator';
 import AIListingWriter from '@/components/AIListingWriter';
-import AmazonFBACalculator from '@/components/AmazonFBACalculator';
 import ROASBreakEven from '@/components/ROASBreakEven';
 import GSTInvoiceGenerator from '@/components/GSTInvoiceGenerator';
 import UniversalCalculator from '@/components/UniversalCalculator';
@@ -14,7 +10,6 @@ import Footer from '@/components/Footer';
 import InfoPages from '@/components/InfoPages';
 import { ProfileDropdown } from '@/components/HeaderMenus';
 import ScrollToTop from '@/components/ScrollToTop';
-import MarketplaceLogo from '@/components/MarketplaceLogo';
 
 const THEME_KEY = 'sellermath_theme';
 
@@ -48,10 +43,6 @@ export default function App() {
   const getActivePageName = () => {
     const pageNames: Record<PageId, string> = {
       'universal': 'Universal Profit Calculator',
-      'meesho': 'Meesho Calculator',
-      'flipkart': 'Flipkart Calculator',
-      'blinkit': 'Blinkit Margin',
-      'amazon-fba': 'Amazon FBA Calculator',
       'roas': 'ROAS / Break-Even Tool',
       'gst-invoice': 'GST Invoice Generator',
       'ai-listing': 'AI Listing Writer',
@@ -64,12 +55,8 @@ export default function App() {
   };
 
   const getActivePageIcon = () => {
-    const pageIcons: Record<PageId, { type: 'image' | 'logo' | 'icon'; value?: string; logoId?: string }> = {
+    const pageIcons: Record<PageId, { type: 'image' | 'icon'; value?: string }> = {
       'universal': { type: 'image', value: '/universal-logo.png' },
-      'meesho': { type: 'logo', logoId: 'meesho' },
-      'flipkart': { type: 'logo', logoId: 'flipkart' },
-      'blinkit': { type: 'logo', logoId: 'blinkit' },
-      'amazon-fba': { type: 'logo', logoId: 'amazon' },
       'roas': { type: 'image', value: '/roas-logo.png' },
       'gst-invoice': { type: 'image', value: '/gst-logo.png' },
       'ai-listing': { type: 'image', value: '/ai-writer-logo.png' },
@@ -83,16 +70,8 @@ export default function App() {
 
   const renderPage = () => {
     switch (activePage) {
-      case 'meesho':
-        return <MeeshoCalculator />;
-      case 'flipkart':
-        return <FlipkartCalculator />;
-      case 'blinkit':
-        return <BlinkitCalculator />;
       case 'ai-listing':
         return <AIListingWriter />;
-      case 'amazon-fba':
-        return <AmazonFBACalculator />;
       case 'roas':
         return <ROASBreakEven />;
       case 'gst-invoice':
@@ -145,9 +124,6 @@ export default function App() {
                       className="w-7 h-7 rounded-full overflow-hidden object-cover drop-shadow-sm shrink-0"
                     />
                   );
-                }
-                if (iconData.type === 'logo' && iconData.logoId) {
-                  return <MarketplaceLogo id={iconData.logoId} size="sm" />;
                 }
                 return (
                   <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center text-white shadow-sm shadow-emerald-500/20">

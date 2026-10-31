@@ -26,6 +26,7 @@ import {
 import WaterfallChart from '@/components/WaterfallChart';
 import AIInsights from '@/components/AIInsights';
 import MarketplaceLogo from '@/components/MarketplaceLogo';
+import ShippingRateEstimator from '@/components/ShippingRateEstimator';
 
 type MarketplaceId =
   | 'amazon'
@@ -313,6 +314,7 @@ function loadState(): CalcState {
 
 export default function UniversalCalculator() {
   const [state, setState] = useState<CalcState>(() => loadState());
+  const [shippingEstimatorOpen, setShippingEstimatorOpen] = useState(false);
 
   useEffect(() => {
     try {
@@ -351,6 +353,14 @@ export default function UniversalCalculator() {
 
   const update = <K extends keyof CalcState>(key: K, value: CalcState[K]) => {
     setState((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleApplyShippingFee = (fee: number, courierName: string) => {
+    // Convert shipping fee (₹) to approximate weight (grams)
+    // Using rough conversion of ~₹50 per kg for estimation
+    // This is a limitation - the calculator uses weight, not direct fee
+    const estimatedWeightGrams = Math.round((fee / 50) * 1000);
+    update('shippingWeight', estimatedWeightGrams);
   };
 
   const { result, error } = useRemoteCalc<CalcResult>(
@@ -743,13 +753,16 @@ export default function UniversalCalculator() {
                   Losing money on RTO shipping?
                 </h3>
                 <p className="text-sm text-zinc-300 mt-0.5">
-                  Check Shiprocket discounted shipping rates — save up to 40% on forward & RTO logistics
+                  Compare shipping costs and understand forward and RTO charges before shipping your orders.
                 </p>
               </div>
             </div>
-            <button className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 hover:bg-emerald-400 transition-all whitespace-nowrap flex-shrink-0">
+            <button
+              onClick={() => setShippingEstimatorOpen(true)}
+              className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 hover:bg-emerald-400 transition-all whitespace-nowrap flex-shrink-0"
+            >
               <TruckIcon className="w-4 h-4" />
-              Check Shiprocket Rates
+              Check Shipping Rates
             </button>
           </div>
         </div>
@@ -765,6 +778,13 @@ export default function UniversalCalculator() {
           <PrintTaxLedger marketplace={activeMarketplace} state={state} result={result} marketplaceId={activeMarketplace.id} />
         </div>
       </div>
+
+      {/* Shipping Rate Estimator Modal */}
+      <ShippingRateEstimator
+        isOpen={shippingEstimatorOpen}
+        onClose={() => setShippingEstimatorOpen(false)}
+        onApplyShippingFee={handleApplyShippingFee}
+      />
     </>
   );
 }

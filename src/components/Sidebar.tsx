@@ -1,22 +1,15 @@
-import { Calculator, Store, Truck, Sparkles, ShoppingBag, Target, FileText, Globe, X } from 'lucide-react';
-import MarketplaceLogo from './MarketplaceLogo';
+import { X } from 'lucide-react';
 
-export type PageId = 'meesho' | 'flipkart' | 'blinkit' | 'ai-listing' | 'amazon-fba' | 'roas' | 'gst-invoice' | 'universal' | 'about' | 'contact' | 'privacy' | 'terms';
+export type PageId = 'ai-listing' | 'roas' | 'gst-invoice' | 'universal' | 'about' | 'contact' | 'privacy' | 'terms';
 
 interface NavItem {
   id: PageId;
   label: string;
-  icon?: React.ElementType;
-  logoId?: string;
-  imageSrc?: string;
+  imageSrc: string;
 }
 
 const navItems: NavItem[] = [
   { id: 'universal', label: 'Universal Profit Calculator', imageSrc: '/universal-logo.png' },
-  { id: 'meesho', label: 'Meesho Calculator', logoId: 'meesho' },
-  { id: 'flipkart', label: 'Flipkart Calculator', logoId: 'flipkart' },
-  { id: 'blinkit', label: 'Blinkit Margin', logoId: 'blinkit' },
-  { id: 'amazon-fba', label: 'Amazon FBA Calculator', logoId: 'amazon' },
   { id: 'roas', label: 'ROAS / Break-Even Tool', imageSrc: '/roas-logo.png' },
   { id: 'gst-invoice', label: 'GST Invoice Generator', imageSrc: '/gst-logo.png' },
   { id: 'ai-listing', label: 'AI Listing Writer', imageSrc: '/ai-writer-logo.png' },
@@ -71,7 +64,6 @@ export default function Sidebar({ activePage, onNavigate, isOpen, onClose }: Sid
             Tools
           </p>
           {navItems.map((item) => {
-            const Icon = item.icon;
             const isActive = activePage === item.id;
             return (
               <button
@@ -87,22 +79,11 @@ export default function Sidebar({ activePage, onNavigate, isOpen, onClose }: Sid
                   }
                 `}
               >
-                {item.logoId ? (
-                  <MarketplaceLogo id={item.logoId} size="sm" />
-                ) : item.imageSrc ? (
-                  <img
-                    src={item.imageSrc}
-                    alt={item.label}
-                    className="w-7 h-7 rounded-full overflow-hidden object-cover drop-shadow-sm shrink-0"
-                  />
-                ) : (
-                  <Icon
-                    className={`w-5 h-5 transition-transform group-hover:scale-110 ${
-                      isActive ? 'text-emerald-600 dark:text-emerald-400' : ''
-                    }`}
-                    strokeWidth={2}
-                  />
-                )}
+                <img
+                  src={item.imageSrc}
+                  alt={item.label}
+                  className="w-7 h-7 rounded-full overflow-hidden object-cover drop-shadow-sm shrink-0"
+                />
                 <span className="whitespace-nowrap truncate">{item.label}</span>
                 {isActive && (
                   <span className="ml-auto w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />

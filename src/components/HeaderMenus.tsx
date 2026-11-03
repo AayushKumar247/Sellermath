@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { Share2, LifeBuoy, Sparkles } from 'lucide-react';
+import { Share2, LifeBuoy, FileSpreadsheet } from 'lucide-react';
 import { type PageId } from '@/components/Sidebar';
 
 interface ProfileDropdownProps {
@@ -70,22 +70,22 @@ export function ProfileDropdown({ isOpen, onClose, onNavigate }: ProfileDropdown
             <LifeBuoy className="w-4 h-4 text-slate-400 dark:text-zinc-300" />
             Contact Support &amp; Feedback
           </button>
+
+          <button
+            onClick={() => {
+              onNavigate('bulk-csv');
+              onClose();
+            }}
+            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800/50 transition-colors border-t border-slate-100 dark:border-zinc-800"
+          >
+            <div className="w-4 h-4 rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center shrink-0">
+              <FileSpreadsheet className="w-2.5 h-2.5 text-white" />
+            </div>
+            Bulk SKU Calculator
+          </button>
         </div>
 
-        <div className="px-3 pb-3">
-          <div className="rounded-xl bg-gradient-to-br from-zinc-950 to-zinc-900 p-4 border border-zinc-800 overflow-hidden relative">
-            <div className="absolute top-0 right-0 w-24 h-24 rounded-full blur-2xl opacity-20 bg-emerald-500" />
-            <div className="relative z-10">
-              <div className="flex items-center gap-2 mb-1">
-                <Sparkles className="w-4 h-4 text-emerald-400" />
-                <span className="text-sm font-bold text-zinc-50">Get Pro Insights</span>
-              </div>
-              <p className="text-xs text-zinc-300 leading-relaxed">
-                Automated bulk SKU calculations coming soon
-              </p>
-            </div>
-          </div>
-        </div>
+        
       </div>
     </>
   );

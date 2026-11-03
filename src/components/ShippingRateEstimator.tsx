@@ -24,9 +24,9 @@ const DEFAULT_RATE_CARDS: CourierRateCard[] = [
   {
     id: 'delhivery',
     name: 'Delhivery',
-    local: { baseWeight: 0.5, baseCharge: 42, additionalWeightCharge: 28, rtoCharge: 45 },
-    regional: { baseWeight: 0.5, baseCharge: 55, additionalWeightCharge: 32, rtoCharge: 58 },
-    national: { baseWeight: 0.5, baseCharge: 68, additionalWeightCharge: 38, rtoCharge: 72 },
+    local: { baseWeight: 0.5, baseCharge: 0, additionalWeightCharge: 0, rtoCharge: 0 },
+    regional: { baseWeight: 0.5, baseCharge: 0, additionalWeightCharge: 0, rtoCharge: 0 },
+    national: { baseWeight: 0.5, baseCharge: 0, additionalWeightCharge: 0, rtoCharge: 0 },
     volumetricDivisor: 5000,
     includesGST: false,
     roundingRule: 'ceil',
@@ -34,9 +34,9 @@ const DEFAULT_RATE_CARDS: CourierRateCard[] = [
   {
     id: 'bluedart',
     name: 'Blue Dart',
-    local: { baseWeight: 0.5, baseCharge: 48, additionalWeightCharge: 35, rtoCharge: 52 },
-    regional: { baseWeight: 0.5, baseCharge: 62, additionalWeightCharge: 40, rtoCharge: 68 },
-    national: { baseWeight: 0.5, baseCharge: 85, additionalWeightCharge: 48, rtoCharge: 92 },
+    local: { baseWeight: 0.5, baseCharge: 0, additionalWeightCharge: 0, rtoCharge: 0 },
+    regional: { baseWeight: 0.5, baseCharge: 0, additionalWeightCharge: 0, rtoCharge: 0 },
+    national: { baseWeight: 0.5, baseCharge: 0, additionalWeightCharge: 0, rtoCharge: 0 },
     volumetricDivisor: 5000,
     includesGST: false,
     roundingRule: 'ceil',
@@ -44,9 +44,9 @@ const DEFAULT_RATE_CARDS: CourierRateCard[] = [
   {
     id: 'xpressbees',
     name: 'Xpressbees',
-    local: { baseWeight: 0.5, baseCharge: 40, additionalWeightCharge: 26, rtoCharge: 42 },
-    regional: { baseWeight: 0.5, baseCharge: 52, additionalWeightCharge: 30, rtoCharge: 55 },
-    national: { baseWeight: 0.5, baseCharge: 65, additionalWeightCharge: 36, rtoCharge: 70 },
+    local: { baseWeight: 0.5, baseCharge: 0, additionalWeightCharge: 0, rtoCharge: 0 },
+    regional: { baseWeight: 0.5, baseCharge: 0, additionalWeightCharge: 0, rtoCharge: 0 },
+    national: { baseWeight: 0.5, baseCharge: 0, additionalWeightCharge: 0, rtoCharge: 0 },
     volumetricDivisor: 5000,
     includesGST: false,
     roundingRule: 'ceil',
@@ -54,9 +54,9 @@ const DEFAULT_RATE_CARDS: CourierRateCard[] = [
   {
     id: 'ecomexpress',
     name: 'Ecom Express',
-    local: { baseWeight: 0.5, baseCharge: 38, additionalWeightCharge: 25, rtoCharge: 40 },
-    regional: { baseWeight: 0.5, baseCharge: 50, additionalWeightCharge: 29, rtoCharge: 53 },
-    national: { baseWeight: 0.5, baseCharge: 62, additionalWeightCharge: 34, rtoCharge: 67 },
+    local: { baseWeight: 0.5, baseCharge: 0, additionalWeightCharge: 0, rtoCharge: 0 },
+    regional: { baseWeight: 0.5, baseCharge: 0, additionalWeightCharge: 0, rtoCharge: 0 },
+    national: { baseWeight: 0.5, baseCharge: 0, additionalWeightCharge: 0, rtoCharge: 0 },
     volumetricDivisor: 5000,
     includesGST: false,
     roundingRule: 'ceil',
@@ -64,9 +64,9 @@ const DEFAULT_RATE_CARDS: CourierRateCard[] = [
   {
     id: 'shiprocket',
     name: 'Shiprocket Discounted Rates',
-    local: { baseWeight: 0.5, baseCharge: 35, additionalWeightCharge: 22, rtoCharge: 38 },
-    regional: { baseWeight: 0.5, baseCharge: 45, additionalWeightCharge: 26, rtoCharge: 48 },
-    national: { baseWeight: 0.5, baseCharge: 55, additionalWeightCharge: 30, rtoCharge: 58 },
+    local: { baseWeight: 0.5, baseCharge: 0, additionalWeightCharge: 0, rtoCharge: 0 },
+    regional: { baseWeight: 0.5, baseCharge: 0, additionalWeightCharge: 0, rtoCharge: 0 },
+    national: { baseWeight: 0.5, baseCharge: 0, additionalWeightCharge: 0, rtoCharge: 0 },
     volumetricDivisor: 5000,
     includesGST: false,
     roundingRule: 'ceil',
@@ -111,15 +111,30 @@ function applyRounding(value: number, rule: 'ceil' | 'round' | 'floor'): number 
 }
 
 export default function ShippingRateEstimator({ isOpen, onClose, onApplyShippingFee }: ShippingRateEstimatorProps) {
-  const [deadWeight, setDeadWeight] = useState<number>(1);
-  const [length, setLength] = useState<number>(30);
-  const [width, setWidth] = useState<number>(20);
-  const [height, setHeight] = useState<number>(10);
+  const [deadWeight, setDeadWeight] = useState<string>('1');
+  const [length, setLength] = useState<string>('30');
+  const [width, setWidth] = useState<string>('20');
+  const [height, setHeight] = useState<string>('10');
   const [zone, setZone] = useState<ZoneId>('national');
   const [showConfig, setShowConfig] = useState(false);
   const [rateCards, setRateCards] = useState<CourierRateCard[]>(() => loadRateCards());
   const [editingCard, setEditingCard] = useState<CourierRateCard | null>(null);
   const [appliedFee, setAppliedFee] = useState<{ fee: number; courier: string } | null>(null);
+
+  // Parse string to number for calculations
+  const deadWeightNum = deadWeight === '' ? 0 : parseFloat(deadWeight) || 0;
+  const lengthNum = length === '' ? 0 : parseFloat(length) || 0;
+  const widthNum = width === '' ? 0 : parseFloat(width) || 0;
+  const heightNum = height === '' ? 0 : parseFloat(height) || 0;
+
+  // Validation state
+  const validationErrors = {
+    deadWeight: deadWeight === '' || deadWeightNum <= 0,
+    length: length === '' || lengthNum <= 0,
+    width: width === '' || widthNum <= 0,
+    height: height === '' || heightNum <= 0,
+  };
+  const hasErrors = Object.values(validationErrors).some(Boolean);
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -135,15 +150,32 @@ export default function ShippingRateEstimator({ isOpen, onClose, onApplyShipping
     };
   }, [isOpen, onClose]);
 
-  const volumetricWeight = (length * width * height) / 5000;
-  const billableWeight = Math.max(deadWeight, volumetricWeight);
+  const volumetricWeight = (lengthNum * widthNum * heightNum) / 5000;
+  const billableWeight = Math.max(deadWeightNum, volumetricWeight);
 
   const calculateCharge = (card: CourierRateCard, zoneId: ZoneId): { forward: number; rto: number; combined: number; status: string } => {
     if (!card) {
       return { forward: 0, rto: 0, combined: 0, status: 'Rate not configured' };
     }
 
+    // Check for validation errors in input fields
+    if (hasErrors) {
+      return { forward: 0, rto: 0, combined: 0, status: 'Invalid input' };
+    }
+
     const zoneRates = card[zoneId];
+
+    // Check if required fields are configured
+    // baseCharge must be > 0 (required), additionalWeightCharge can be 0 (legitimate), rtoCharge can be 0 (legitimate)
+    if (zoneRates.baseCharge <= 0) {
+      return { forward: 0, rto: 0, combined: 0, status: 'Rate not configured' };
+    }
+
+    // Validate no negative charges
+    if (zoneRates.baseCharge < 0 || zoneRates.additionalWeightCharge < 0 || zoneRates.rtoCharge < 0) {
+      return { forward: 0, rto: 0, combined: 0, status: 'Invalid rates' };
+    }
+
     const roundedWeight = applyRounding(billableWeight, card.roundingRule);
     const additionalWeight = Math.max(0, roundedWeight - zoneRates.baseWeight);
     const forwardCharge = zoneRates.baseCharge + (additionalWeight * zoneRates.additionalWeightCharge);
@@ -167,7 +199,21 @@ export default function ShippingRateEstimator({ isOpen, onClose, onApplyShipping
   };
 
   const handleSaveRateCard = (updatedCard: CourierRateCard) => {
-    const updatedCards = rateCards.map(card => 
+    // Validate all zones before saving
+    for (const zoneId of ['local', 'regional', 'national'] as ZoneId[]) {
+      const zoneRates = updatedCard[zoneId];
+      if (zoneRates.baseWeight < 0 || zoneRates.baseCharge < 0 ||
+          zoneRates.additionalWeightCharge < 0 || zoneRates.rtoCharge < 0) {
+        alert('All rate values must be non-negative. Please correct the values before saving.');
+        return;
+      }
+    }
+    if (updatedCard.volumetricDivisor < 1000) {
+      alert('Volumetric divisor must be at least 1000.');
+      return;
+    }
+
+    const updatedCards = rateCards.map(card =>
       card.id === updatedCard.id ? updatedCard : card
     );
     setRateCards(updatedCards);
@@ -203,7 +249,7 @@ export default function ShippingRateEstimator({ isOpen, onClose, onApplyShipping
               </div>
               <div>
                 <h2 className="text-xl font-bold text-slate-900 dark:text-zinc-50">
-                  Courier & Volumetric Shipping Rate Estimator
+                  Volumetric Weight & Courier Rate Estimator
                 </h2>
                 <p className="text-sm text-slate-500 dark:text-zinc-400">
                   Compare forward and RTO charges across couriers
@@ -247,9 +293,11 @@ export default function ShippingRateEstimator({ isOpen, onClose, onApplyShipping
                     <div className="text-sm text-amber-800 dark:text-amber-200">
                       <p className="font-semibold mb-1">Important Notes</p>
                       <ul className="list-disc list-inside space-y-1">
-                        <li>These are indicative estimates based on your configured rates</li>
+                        <li>All couriers start unconfigured — you must enter your actual negotiated rates</li>
+                        <li>These are indicative estimates based on your configured rates only</li>
                         <li>Actual courier charges may vary based on your account, pickup location, and courier policies</li>
-                        <li>Rate cards are stored locally in your browser</li>
+                        <li>Rate cards are stored locally in your browser (not synced across devices)</li>
+                        <li>GST inclusion is informational only — configure whether your rates include GST</li>
                         <li>Do not present these as official courier quotes</li>
                       </ul>
                     </div>
@@ -305,10 +353,15 @@ export default function ShippingRateEstimator({ isOpen, onClose, onApplyShipping
                         min="0.01"
                         step="0.01"
                         value={deadWeight}
-                        onChange={(e) => setDeadWeight(Math.max(0.01, parseFloat(e.target.value) || 0.01))}
-                        className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-50 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
+                        onChange={(e) => setDeadWeight(e.target.value)}
+                        className={`w-full px-3 py-2 rounded-lg border bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-50 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all ${
+                          validationErrors.deadWeight ? 'border-red-300 dark:border-red-700' : 'border-slate-200 dark:border-zinc-700'
+                        }`}
                         placeholder="e.g., 1.5"
                       />
+                      {validationErrors.deadWeight && deadWeight !== '' && (
+                        <p className="text-xs text-red-600 dark:text-red-400 mt-1">Enter a valid dead weight (&gt; 0)</p>
+                      )}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1.5">
@@ -316,13 +369,18 @@ export default function ShippingRateEstimator({ isOpen, onClose, onApplyShipping
                       </label>
                       <input
                         type="number"
-                        min="1"
+                        min="0.1"
                         step="0.1"
                         value={length}
-                        onChange={(e) => setLength(Math.max(1, parseFloat(e.target.value) || 1))}
-                        className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-50 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
+                        onChange={(e) => setLength(e.target.value)}
+                        className={`w-full px-3 py-2 rounded-lg border bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-50 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all ${
+                          validationErrors.length ? 'border-red-300 dark:border-red-700' : 'border-slate-200 dark:border-zinc-700'
+                        }`}
                         placeholder="e.g., 30"
                       />
+                      {validationErrors.length && length !== '' && (
+                        <p className="text-xs text-red-600 dark:text-red-400 mt-1">Package length must be greater than zero</p>
+                      )}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1.5">
@@ -330,13 +388,18 @@ export default function ShippingRateEstimator({ isOpen, onClose, onApplyShipping
                       </label>
                       <input
                         type="number"
-                        min="1"
+                        min="0.1"
                         step="0.1"
                         value={width}
-                        onChange={(e) => setWidth(Math.max(1, parseFloat(e.target.value) || 1))}
-                        className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-50 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
+                        onChange={(e) => setWidth(e.target.value)}
+                        className={`w-full px-3 py-2 rounded-lg border bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-50 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all ${
+                          validationErrors.width ? 'border-red-300 dark:border-red-700' : 'border-slate-200 dark:border-zinc-700'
+                        }`}
                         placeholder="e.g., 20"
                       />
+                      {validationErrors.width && width !== '' && (
+                        <p className="text-xs text-red-600 dark:text-red-400 mt-1">Package width must be greater than zero</p>
+                      )}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1.5">
@@ -344,13 +407,18 @@ export default function ShippingRateEstimator({ isOpen, onClose, onApplyShipping
                       </label>
                       <input
                         type="number"
-                        min="1"
+                        min="0.1"
                         step="0.1"
                         value={height}
-                        onChange={(e) => setHeight(Math.max(1, parseFloat(e.target.value) || 1))}
-                        className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-50 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
+                        onChange={(e) => setHeight(e.target.value)}
+                        className={`w-full px-3 py-2 rounded-lg border bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-50 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all ${
+                          validationErrors.height ? 'border-red-300 dark:border-red-700' : 'border-slate-200 dark:border-zinc-700'
+                        }`}
                         placeholder="e.g., 10"
                       />
+                      {validationErrors.height && height !== '' && (
+                        <p className="text-xs text-red-600 dark:text-red-400 mt-1">Package height must be greater than zero</p>
+                      )}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1.5">
@@ -378,16 +446,24 @@ export default function ShippingRateEstimator({ isOpen, onClose, onApplyShipping
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="bg-white dark:bg-zinc-900 rounded-lg p-3 border border-emerald-200 dark:border-emerald-800">
                       <p className="text-xs text-slate-500 dark:text-zinc-400 mb-1">Dead Weight</p>
-                      <p className="text-lg font-bold text-slate-900 dark:text-zinc-50">{deadWeight.toFixed(2)} kg</p>
+                      <p className="text-lg font-bold text-slate-900 dark:text-zinc-50">
+                        {deadWeight === '' ? '-' : deadWeightNum.toFixed(2)} kg
+                      </p>
                     </div>
                     <div className="bg-white dark:bg-zinc-900 rounded-lg p-3 border border-emerald-200 dark:border-emerald-800">
                       <p className="text-xs text-slate-500 dark:text-zinc-400 mb-1">Volumetric Weight</p>
-                      <p className="text-lg font-bold text-slate-900 dark:text-zinc-50">{volumetricWeight.toFixed(2)} kg</p>
-                      <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-1">({length}×{width}×{height})/5000</p>
+                      <p className="text-lg font-bold text-slate-900 dark:text-zinc-50">
+                        {length === '' || width === '' || height === '' ? '-' : volumetricWeight.toFixed(2)} kg
+                      </p>
+                      <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-1">
+                        ({length || 0}×{width || 0}×{height || 0})/5000
+                      </p>
                     </div>
                     <div className="bg-emerald-500 dark:bg-emerald-600 rounded-lg p-3 border border-emerald-600 dark:border-emerald-500">
                       <p className="text-xs text-emerald-100 mb-1">Billable Weight</p>
-                      <p className="text-lg font-bold text-white">{billableWeight.toFixed(2)} kg</p>
+                      <p className="text-lg font-bold text-white">
+                        {hasErrors ? '-' : billableWeight.toFixed(2)} kg
+                      </p>
                       <p className="text-[10px] text-emerald-100 mt-1">MAX of above</p>
                     </div>
                   </div>
@@ -471,7 +547,7 @@ export default function ShippingRateEstimator({ isOpen, onClose, onApplyShipping
                     <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
                     <p>
                       <strong>Indicative estimate</strong> — actual courier charges may vary based on your account, pickup location, and courier policies. 
-                      Rates exclude GST unless configured otherwise.
+                      All couriers start unconfigured — you must enter your negotiated rates. GST inclusion is informational only.
                     </p>
                   </div>
                 </div>
@@ -541,10 +617,9 @@ export default function ShippingRateEstimator({ isOpen, onClose, onApplyShipping
                           step="0.1"
                           value={editingCard[zoneId].baseWeight}
                           onChange={(e) => {
-                            const value = Math.max(0.1, parseFloat(e.target.value) || 0.1);
                             setEditingCard({
                               ...editingCard,
-                              [zoneId]: { ...editingCard[zoneId], baseWeight: value }
+                              [zoneId]: { ...editingCard[zoneId], baseWeight: parseFloat(e.target.value) || 0 }
                             });
                           }}
                           className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-50 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none"
@@ -558,10 +633,9 @@ export default function ShippingRateEstimator({ isOpen, onClose, onApplyShipping
                           step="0.01"
                           value={editingCard[zoneId].baseCharge}
                           onChange={(e) => {
-                            const value = Math.max(0, parseFloat(e.target.value) || 0);
                             setEditingCard({
                               ...editingCard,
-                              [zoneId]: { ...editingCard[zoneId], baseCharge: value }
+                              [zoneId]: { ...editingCard[zoneId], baseCharge: parseFloat(e.target.value) || 0 }
                             });
                           }}
                           className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-50 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none"
@@ -575,10 +649,9 @@ export default function ShippingRateEstimator({ isOpen, onClose, onApplyShipping
                           step="0.01"
                           value={editingCard[zoneId].additionalWeightCharge}
                           onChange={(e) => {
-                            const value = Math.max(0, parseFloat(e.target.value) || 0);
                             setEditingCard({
                               ...editingCard,
-                              [zoneId]: { ...editingCard[zoneId], additionalWeightCharge: value }
+                              [zoneId]: { ...editingCard[zoneId], additionalWeightCharge: parseFloat(e.target.value) || 0 }
                             });
                           }}
                           className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-50 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none"
@@ -592,10 +665,9 @@ export default function ShippingRateEstimator({ isOpen, onClose, onApplyShipping
                           step="0.01"
                           value={editingCard[zoneId].rtoCharge}
                           onChange={(e) => {
-                            const value = Math.max(0, parseFloat(e.target.value) || 0);
                             setEditingCard({
                               ...editingCard,
-                              [zoneId]: { ...editingCard[zoneId], rtoCharge: value }
+                              [zoneId]: { ...editingCard[zoneId], rtoCharge: parseFloat(e.target.value) || 0 }
                             });
                           }}
                           className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-50 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none"
@@ -613,8 +685,7 @@ export default function ShippingRateEstimator({ isOpen, onClose, onApplyShipping
                       step="100"
                       value={editingCard.volumetricDivisor}
                       onChange={(e) => {
-                        const value = Math.max(1000, parseFloat(e.target.value) || 5000);
-                        setEditingCard({ ...editingCard, volumetricDivisor: value });
+                        setEditingCard({ ...editingCard, volumetricDivisor: parseFloat(e.target.value) || 5000 });
                       }}
                       className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-50 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none"
                     />
@@ -641,8 +712,13 @@ export default function ShippingRateEstimator({ isOpen, onClose, onApplyShipping
                     className="w-4 h-4 rounded border-slate-300 dark:border-zinc-600 text-emerald-500 focus:ring-emerald-500"
                   />
                   <label htmlFor="includesGST" className="text-sm text-slate-700 dark:text-zinc-300">
-                    Rates include GST
+                    Rates include GST (informational only)
                   </label>
+                </div>
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                  <p className="text-xs text-blue-800 dark:text-blue-200">
+                    <strong>GST Note:</strong> This setting is informational. The estimator displays whether your configured rates include GST but does not perform GST calculations. GST amounts should be accounted for in your profit calculations separately.
+                  </p>
                 </div>
                 <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-zinc-800">
                   <button

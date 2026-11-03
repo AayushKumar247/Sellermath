@@ -454,7 +454,20 @@ function EditView({
                   type="number"
                   inputMode="numeric"
                   value={item.qty || ''}
-                  onChange={(e) => updateItem(item.id, 'qty', parseFloat(e.target.value) || 0)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '' || val === '-') {
+                      // Allow empty while editing
+                      return;
+                    }
+                    updateItem(item.id, 'qty', parseFloat(val) || 0);
+                  }}
+                  onBlur={(e) => {
+                    const val = e.target.value;
+                    if (val === '' || val === '-') {
+                      updateItem(item.id, 'qty', 1); // Default to 1 on blur if empty
+                    }
+                  }}
                   placeholder="1"
                   className="w-full text-sm font-medium text-slate-900 bg-white rounded-lg border border-slate-200 px-3 py-2 focus:outline-none focus:border-blue-500"
                 />
@@ -467,9 +480,20 @@ function EditView({
                   type="number"
                   inputMode="decimal"
                   value={item.unitPrice || ''}
-                  onChange={(e) =>
-                    updateItem(item.id, 'unitPrice', parseFloat(e.target.value) || 0)
-                  }
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '' || val === '-') {
+                      // Allow empty while editing
+                      return;
+                    }
+                    updateItem(item.id, 'unitPrice', parseFloat(val) || 0);
+                  }}
+                  onBlur={(e) => {
+                    const val = e.target.value;
+                    if (val === '' || val === '-') {
+                      updateItem(item.id, 'unitPrice', 0); // Default to 0 on blur if empty
+                    }
+                  }}
                   placeholder="0.00"
                   className="w-full text-sm font-medium text-slate-900 bg-white rounded-lg border border-slate-200 px-3 py-2 focus:outline-none focus:border-blue-500"
                 />

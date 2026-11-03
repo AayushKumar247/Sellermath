@@ -30,6 +30,20 @@ function calculateUniversal(body) {
   const commissionRate = toNumber(body.commissionRate);
   const closingFee = toNumber(body.closingFee);
   const shippingWeight = toNumber(body.shippingWeight);
+  
+  // Validate directShippingFee: must be null, undefined, or a valid non-negative finite number
+  let directShippingFee = null;
+  if (body.directShippingFee !== null && body.directShippingFee !== undefined) {
+    const feeValue = toNumber(body.directShippingFee);
+    if (!Number.isFinite(feeValue)) {
+      throw new Error('Direct shipping fee must be a valid number (not NaN or Infinity)');
+    }
+    if (feeValue < 0) {
+      throw new Error('Direct shipping fee cannot be negative');
+    }
+    directShippingFee = feeValue;
+  }
+  
   const returnRate = toNumber(body.returnRate);
   const zone = typeof body.zone === 'string' ? body.zone : 'national';
 
@@ -38,7 +52,7 @@ function calculateUniversal(body) {
   const commissionAmount = (taxableValue * commissionRate) / 100;
 
   const zoneMult = ZONE_MULTIPLIERS[zone] ?? 1;
-  const shippingFee = calcShippingFee(shippingWeight, zoneMult);
+  const shippingFee = directShippingFee !== null ? directShippingFee : calcShippingFee(shippingWeight, zoneMult);
 
   const totalMarketplaceFees = commissionAmount + closingFee + shippingFee;
   const gstOnMarketplaceFees = totalMarketplaceFees * 0.18;
@@ -346,22 +360,97 @@ app.post('/api/calculate/blinkit', handleCalc(calculateBlinkit));
 app.post('/api/calculate/target-price', handleCalc(calculateTargetPrice));
 app.post('/api/calculate/cross-platform', handleCalc(calculateCrossPlatformComparison));
 
+// Unified AI helper: Groq Cloud (primary) with Google Gemini (automatic fallback)
+async function generateAIResponse(prompt, expectJson = false) {
+  const groqKey = process.env.GROQ_API_KEY;
+  const geminiKey = process.env.GEMINI_API_KEY;
+
+  // --- Primary: Groq Cloud (llama-3.3-70b-versatile) ---
+  if (groqKey) {
+    try {
+      const groqBody = {
+        model: 'llama-3.3-70b-versatile',
+        temperature: 0.5,
+        messages: [{ role: 'user', content: prompt }],
+      };
+      if (expectJson) {
+        groqBody.response_format = { type: 'json_object' };
+      }
+
+      const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${groqKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(groqBody),
+      });
+
+      if (groqRes.ok) {
+        const groqData = await groqRes.json();
+        const text = groqData?.choices?.[0]?.message?.content ?? '';
+        if (text) return text;
+        console.warn('Groq returned empty content, falling back to Gemini.');
+      } else if (groqRes.status === 429 || groqRes.status === 500) {
+        const errData = await groqRes.json().catch(() => null);
+        console.warn(`Groq ${groqRes.status} (${errData?.error?.message || ''}), falling back to Gemini.`);
+      } else {
+        const errData = await groqRes.json().catch(() => null);
+        console.error('Groq API Error:', errData?.error?.message || `status ${groqRes.status}`);
+        throw new Error(errData?.error?.message || `Groq API returned status ${groqRes.status}`);
+      }
+    } catch (err) {
+      console.error('Groq request failed:', err.message || err);
+    }
+  }
+
+  // --- Fallback: Google Gemini ---
+  if (geminiKey) {
+    try {
+      const geminiRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${geminiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature: 0.7,
+              maxOutputTokens: 1024,
+            },
+          }),
+        }
+      );
+
+      if (!geminiRes.ok) {
+        const errData = await geminiRes.json().catch(() => null);
+        const msg = errData?.error?.message || `Gemini API returned status ${geminiRes.status}`;
+        throw new Error(msg);
+      }
+
+      const geminiData = await geminiRes.json();
+      const text = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+      if (!text) {
+        throw new Error('The AI returned an empty response. Please try again.');
+      }
+      return text;
+    } catch (err) {
+      console.error('Gemini fallback failed:', err.message || err);
+      throw err;
+    }
+  }
+
+  throw new Error('No AI API keys configured. Please add GROQ_API_KEY or GEMINI_API_KEY.');
+}
+
 // AI Analysis endpoint
 app.post('/api/ai-analyze', async (req, res) => {
   console.log('AI Route Hit');
-  console.log('API Key Exists:', !!process.env.GEMINI_API_KEY);
+  console.log('GROQ_API_KEY Exists:', !!process.env.GROQ_API_KEY);
+  console.log('GEMINI_API_KEY Exists:', !!process.env.GEMINI_API_KEY);
 
   try {
     const { marketplaceName, sellingPrice, commissionRate, shippingFee, gstAmount, returnRate, cogs, netProfit, breakEvenPrice } = req.body;
-
-    const apiKey = process.env.GEMINI_API_KEY;
-
-    if (!apiKey) {
-      console.warn('⚠️  GEMINI_API_KEY not found in environment variables. AI analysis will be unavailable.');
-      return res.status(500).json({
-        error: 'AI analysis is not configured. Please add GEMINI_API_KEY to your environment variables.'
-      });
-    }
 
     const metrics = [
       `Marketplace: ${marketplaceName}`,
@@ -377,42 +466,88 @@ app.post('/api/ai-analyze', async (req, res) => {
 
     const prompt = `You are an expert Indian e-commerce financial strategist. Analyze these metrics:\n${metrics}\n\nReturn a concise, 3-part strategic report formatted nicely.\nPart 1: Break-Even Pricing (Calculate exact minimum selling price to avoid a net loss).\nPart 2: RTO Strategy (Analyze the impact of the current RTO % and suggest one specific mitigation tactic).\nPart 3: Inventory Viability (Final verdict on whether this margin is healthy enough to scale with paid ads).\n\nFormat each part with a clear heading and keep the response under 300 words total.`;
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 1024,
-          },
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      const errData = await response.json().catch(() => null);
-      const msg =
-        errData?.error?.message ||
-        `Gemini API returned status ${response.status}. Check your API key and try again.`;
-      console.error('AI Analysis Error:', msg);
-      return res.status(500).json({ error: msg });
-    }
-
-    const data = await response.json();
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-
-    if (!text) {
-      return res.status(500).json({ error: 'The AI returned an empty response. Please try again.' });
-    }
+    const text = await generateAIResponse(prompt, false);
 
     res.json({ text });
   } catch (err) {
     console.error('AI Request Failed:', err.message || err);
     res.status(500).json({
       error: err instanceof Error ? err.message : 'Something went wrong while contacting the AI service.'
+    });
+  }
+});
+
+// AI Insights endpoint
+app.post('/api/insights', async (req, res) => {
+  try {
+    const { marketplaceName, sellingPrice, commissionRate, shippingFee, gstAmount, returnRate, cogs, netProfit, breakEvenPrice } = req.body;
+
+    const metrics = [
+      `Marketplace: ${marketplaceName}`,
+      `Selling Price (incl. GST): ₹${sellingPrice}`,
+      `Commission Rate: ${commissionRate}%`,
+      `Shipping / Pick & Pack Fee: ₹${shippingFee}`,
+      `GST + TCS/TDS Deductions: ₹${gstAmount}`,
+      `RTO / Return Rate: ${returnRate}%`,
+      `Cost of Goods (COGS): ₹${cogs}`,
+      `Current Net Profit: ₹${netProfit}`,
+      `Calculated Break-Even Price: ₹${breakEvenPrice}`,
+    ].join('\n');
+
+    const prompt = `You are an expert Indian e-commerce financial strategist. Analyze these metrics:\n${metrics}\n\nReturn a concise, 3-part strategic report formatted nicely.\nPart 1: Break-Even Pricing (Calculate exact minimum selling price to avoid a net loss).\nPart 2: RTO Strategy (Analyze the impact of the current RTO % and suggest one specific mitigation tactic).\nPart 3: Inventory Viability (Final verdict on whether this margin is healthy enough to scale with paid ads).\n\nFormat each part with a clear heading and keep the response under 300 words total.`;
+
+    const text = await generateAIResponse(prompt, false);
+
+    res.json({ text });
+  } catch (err) {
+    console.error('AI Insights Request Failed:', err.message || err);
+    res.status(500).json({
+      error: err instanceof Error ? err.message : 'Something went wrong while generating AI insights.'
+    });
+  }
+});
+
+// AI Listing Writer endpoint
+app.post('/api/ai-listing', async (req, res) => {
+  try {
+    const { productName, category, keyFeatures, targetKeywords } = req.body;
+
+    const prompt = `You are an expert e-commerce copywriter for Indian marketplaces (Meesho, Flipkart, Blinkit, Amazon). Generate a high-converting product listing in JSON format only.
+
+Product Name: ${productName || ''}
+Category: ${category || 'Generic'}
+Key Features: ${keyFeatures || ''}
+Target Keywords: ${targetKeywords || ''}
+
+Return ONLY valid JSON with these keys:
+- title: SEO-friendly product title
+- description: compelling product description
+- highlights: array of bullet-point highlights
+- keywords: array of search keywords
+- category: suggested category
+
+No markdown code fences, no extra text outside the JSON.`;
+
+    const text = await generateAIResponse(prompt, true);
+
+    let parsed;
+    try {
+      parsed = JSON.parse(text);
+    } catch (parseErr) {
+      parsed = {
+        title: productName || 'Your Product',
+        description: text,
+        highlights: [],
+        keywords: [],
+        category: category || 'Generic',
+      };
+    }
+
+    res.json(parsed);
+  } catch (err) {
+    console.error('AI Listing Writer Request Failed:', err.message || err);
+    res.status(500).json({
+      error: err instanceof Error ? err.message : 'Something went wrong while generating the listing.'
     });
   }
 });

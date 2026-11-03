@@ -1,11 +1,14 @@
-import { X } from 'lucide-react';
+import { X, FileSpreadsheet, Truck } from 'lucide-react';
 
-export type PageId = 'ai-listing' | 'roas' | 'gst-invoice' | 'universal' | 'about' | 'contact' | 'privacy' | 'terms';
+export type PageId = 'bulk-csv' | 'ai-listing' | 'roas' | 'gst-invoice' | 'universal' | 'shipping-rto' | 'about' | 'contact' | 'privacy' | 'terms';
 
 interface NavItem {
   id: PageId;
   label: string;
-  imageSrc: string;
+  imageSrc?: string;
+  icon?: React.ElementType;
+  isNew?: boolean;
+  badgeGradient?: boolean;
 }
 
 const navItems: NavItem[] = [
@@ -13,6 +16,8 @@ const navItems: NavItem[] = [
   { id: 'roas', label: 'ROAS / Break-Even Tool', imageSrc: '/roas-logo.png' },
   { id: 'gst-invoice', label: 'GST Invoice Generator', imageSrc: '/gst-logo.png' },
   { id: 'ai-listing', label: 'AI Listing Writer', imageSrc: '/ai-writer-logo.png' },
+  { id: 'bulk-csv', label: 'Bulk CSV Calculator', icon: FileSpreadsheet, isNew: true, badgeGradient: true },
+  { id: 'shipping-rto', label: 'Shipping & RTO Calculator', icon: Truck, badgeGradient: true },
 ];
 
 interface SidebarProps {
@@ -70,7 +75,7 @@ export default function Sidebar({ activePage, onNavigate, isOpen, onClose }: Sid
                 key={item.id}
                 onClick={() => onNavigate(item.id)}
                 className={`
-                  w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium
+                  w-full flex items-center justify-start gap-3.5 px-3.5 py-2.5 text-left rounded-xl text-sm font-medium
                   transition-all duration-200 group
                   ${
                     isActive
@@ -79,13 +84,35 @@ export default function Sidebar({ activePage, onNavigate, isOpen, onClose }: Sid
                   }
                 `}
               >
-                <img
-                  src={item.imageSrc}
-                  alt={item.label}
-                  className="w-7 h-7 rounded-full overflow-hidden object-cover drop-shadow-sm shrink-0"
-                />
-                <span className="whitespace-nowrap truncate">{item.label}</span>
-                {isActive && (
+                {item.imageSrc ? (
+                  <img
+                    src={item.imageSrc}
+                    alt={item.label}
+                    className="w-7 h-7 rounded-full overflow-hidden object-cover drop-shadow-sm shrink-0"
+                  />
+                ) : item.icon ? (
+                  <div
+                    className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
+                      item.badgeGradient
+                        ? 'bg-gradient-to-br from-cyan-400 to-blue-600 shadow-lg shadow-cyan-400/20'
+                        : 'bg-emerald-500/10 dark:bg-emerald-500/20'
+                    }`}
+                  >
+                    <item.icon
+                      className={`w-4.5 h-4.5 ${
+                        item.badgeGradient ? 'text-white' : 'text-emerald-600 dark:text-emerald-400'
+                      }`}
+                      strokeWidth={2.5}
+                    />
+                  </div>
+                ) : null}
+                <span className="whitespace-nowrap flex-1">{item.label}</span>
+                {item.isNew && (
+                  <span className="ml-auto px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full bg-emerald-500 text-white animate-pulse">
+                    NEW
+                  </span>
+                )}
+                {isActive && !item.isNew && (
                   <span className="ml-auto w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
                 )}
               </button>

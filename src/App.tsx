@@ -6,6 +6,8 @@ import AIListingWriter from '@/components/AIListingWriter';
 import ROASBreakEven from '@/components/ROASBreakEven';
 import GSTInvoiceGenerator from '@/components/GSTInvoiceGenerator';
 import UniversalCalculator from '@/components/UniversalCalculator';
+import BulkCsvCalculator from '@/components/BulkCsvCalculator';
+import ShippingRtoCalculator from '@/components/ShippingRtoCalculator';
 import Footer from '@/components/Footer';
 import InfoPages from '@/components/InfoPages';
 import { ProfileDropdown } from '@/components/HeaderMenus';
@@ -42,10 +44,12 @@ export default function App() {
 
   const getActivePageName = () => {
     const pageNames: Record<PageId, string> = {
+      'bulk-csv': 'Bulk CSV Profit Calculator',
       'universal': 'Universal Profit Calculator',
       'roas': 'ROAS / Break-Even Tool',
       'gst-invoice': 'GST Invoice Generator',
       'ai-listing': 'AI Listing Writer',
+      'shipping-rto': 'Shipping & RTO Calculator',
       'about': 'About Us',
       'contact': 'Contact Us',
       'privacy': 'Privacy Policy',
@@ -56,10 +60,12 @@ export default function App() {
 
   const getActivePageIcon = () => {
     const pageIcons: Record<PageId, { type: 'image' | 'icon'; value?: string }> = {
+      'bulk-csv': { type: 'icon' },
       'universal': { type: 'image', value: '/universal-logo.png' },
       'roas': { type: 'image', value: '/roas-logo.png' },
       'gst-invoice': { type: 'image', value: '/gst-logo.png' },
       'ai-listing': { type: 'image', value: '/ai-writer-logo.png' },
+      'shipping-rto': { type: 'icon' },
       'about': { type: 'icon' },
       'contact': { type: 'icon' },
       'privacy': { type: 'icon' },
@@ -70,6 +76,8 @@ export default function App() {
 
   const renderPage = () => {
     switch (activePage) {
+      case 'bulk-csv':
+        return <BulkCsvCalculator />;
       case 'ai-listing':
         return <AIListingWriter />;
       case 'roas':
@@ -77,7 +85,9 @@ export default function App() {
       case 'gst-invoice':
         return <GSTInvoiceGenerator />;
       case 'universal':
-        return <UniversalCalculator />;
+        return <UniversalCalculator onNavigate={handleNavigate} />;
+      case 'shipping-rto':
+        return <ShippingRtoCalculator />;
       case 'about':
         return <InfoPages page="about" onNavigate={handleNavigate} />;
       case 'contact':

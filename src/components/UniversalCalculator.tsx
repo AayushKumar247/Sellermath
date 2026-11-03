@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useRemoteCalc } from '@/lib/calculateApi';
 import {
   ShoppingBag,
@@ -22,6 +22,8 @@ import {
   Calculator,
   Info,
   Target,
+  Share2,
+  MessageSquare,
 } from 'lucide-react';
 import WaterfallChart from '@/components/WaterfallChart';
 import AIInsights from '@/components/AIInsights';
@@ -235,6 +237,7 @@ interface CalcState {
   sellingPrice: number;
   cogs: number;
   shippingWeight: number;
+  directShippingFee: number | null;
   zone: ZoneId;
   productGstRate: number;
   returnRate: number;
@@ -292,6 +295,7 @@ const DEFAULT_STATE: CalcState = {
   sellingPrice: 1500,
   cogs: 600,
   shippingWeight: 500,
+  directShippingFee: null,
   zone: 'national',
   productGstRate: 18,
   returnRate: 15,
@@ -312,7 +316,11 @@ function loadState(): CalcState {
   return DEFAULT_STATE;
 }
 
-export default function UniversalCalculator() {
+interface UniversalCalculatorProps {
+  onNavigate?: (page: string) => void;
+}
+
+export default function UniversalCalculator({ onNavigate }: UniversalCalculatorProps) {
   const [state, setState] = useState<CalcState>(() => loadState());
   const [shippingEstimatorOpen, setShippingEstimatorOpen] = useState(false);
 
@@ -330,14 +338,9 @@ export default function UniversalCalculator() {
   );
 
   const selectMarketplace = (id: MarketplaceId) => {
-    const mp = MARKETPLACES.find((m) => m.id === id)!;
-    const cat = mp.categories[mp.defaultCategory];
     setState((prev) => ({
       ...prev,
       marketplace: id,
-      category: mp.defaultCategory,
-      commissionRate: cat.commission,
-      closingFee: cat.closingFee,
     }));
   };
 
@@ -356,11 +359,18 @@ export default function UniversalCalculator() {
   };
 
   const handleApplyShippingFee = (fee: number, courierName: string) => {
-    // Convert shipping fee (₹) to approximate weight (grams)
-    // Using rough conversion of ~₹50 per kg for estimation
-    // This is a limitation - the calculator uses weight, not direct fee
-    const estimatedWeightGrams = Math.round((fee / 50) * 1000);
-    update('shippingWeight', estimatedWeightGrams);
+    // Apply direct shipping fee without converting to weight
+    // Preserve actual parcel weight separately
+    if (state.directShippingFee !== null && state.directShippingFee !== fee) {
+      if (!confirm(`Replace existing shipping fee of ₹${state.directShippingFee.toFixed(2)} with ₹${fee.toFixed(2)} from ${courierName}?`)) {
+        return;
+      }
+    }
+    update('directShippingFee', fee);
+  };
+
+  const handleClearShippingFee = () => {
+    update('directShippingFee', null);
   };
 
   const { result, error } = useRemoteCalc<CalcResult>(
@@ -372,6 +382,7 @@ export default function UniversalCalculator() {
       commissionRate: state.commissionRate,
       closingFee: state.closingFee,
       shippingWeight: state.shippingWeight,
+      directShippingFee: state.directShippingFee,
       zone: state.zone,
       returnRate: state.returnRate,
     },
@@ -393,9 +404,18 @@ export default function UniversalCalculator() {
         </div>
 
         {error && (
-          <p className="no-print text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-2">
-            {error} Start the API with `npm run server`.
-          </p>
+          <div className="no-print bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-red-800 dark:text-red-200 mb-1">Calculation Error</p>
+                <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
+                {error.includes('Start the API') && (
+                  <p className="text-xs text-red-600 dark:text-red-400 mt-2">Start the API with `npm run server`</p>
+                )}
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Marketplace Selector */}
@@ -505,7 +525,20 @@ export default function UniversalCalculator() {
                       <input
                         type="number"
                         value={state.shippingWeight || ''}
-                        onChange={(e) => update('shippingWeight', parseInt(e.target.value) || 0)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === '' || val === '-') {
+                            // Allow empty while editing
+                            return;
+                          }
+                          update('shippingWeight', parseInt(val) || 0);
+                        }}
+                        onBlur={(e) => {
+                          const val = e.target.value;
+                          if (val === '' || val === '-') {
+                            update('shippingWeight', 100); // Default to 100g on blur if empty
+                          }
+                        }}
                         placeholder="0"
                         className="w-20 text-sm font-bold text-slate-900 dark:text-zinc-50 bg-slate-50 dark:bg-zinc-900/90 rounded-lg border-2 border-slate-200 dark:border-zinc-700/80 px-2 py-1 text-right focus:outline-none focus:border-emerald-500"
                       />
@@ -579,6 +612,32 @@ export default function UniversalCalculator() {
                   </div>
                 </div>
               </div>
+
+              {/* Direct Shipping Fee Override */}
+              {state.directShippingFee !== null && (
+                <div className="mt-4 pt-4 border-t border-slate-200 dark:border-zinc-700">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Truck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                      <div>
+                        <p className="text-sm font-semibold text-slate-700 dark:text-zinc-50">Applied Shipping Fee</p>
+                        <p className="text-xs text-slate-500 dark:text-zinc-400">Override from courier estimator</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
+                        {formatINR(state.directShippingFee)}
+                      </span>
+                      <button
+                        onClick={handleClearShippingFee}
+                        className="text-xs text-slate-500 dark:text-zinc-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* GST Rate & Return Rate */}
@@ -708,6 +767,7 @@ export default function UniversalCalculator() {
           categoryName={CATEGORIES.find((c) => c.id === state.category)?.label || state.category}
           marketplaceGradient={activeMarketplace.gradient}
           marketplaceId={activeMarketplace.id}
+          commissionRate={state.commissionRate}
         />
 
         {/* AI Strategic Insights */}
@@ -758,11 +818,11 @@ export default function UniversalCalculator() {
               </div>
             </div>
             <button
-              onClick={() => setShippingEstimatorOpen(true)}
+              onClick={() => onNavigate?.('shipping-rto')}
               className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 hover:bg-emerald-400 transition-all whitespace-nowrap flex-shrink-0"
             >
               <TruckIcon className="w-4 h-4" />
-              Check Shipping Rates
+              Check Shiprocket Rates
             </button>
           </div>
         </div>
@@ -812,6 +872,43 @@ function NumberInput({
   compact,
   tooltip,
 }: NumberInputProps) {
+  const [inputValue, setInputValue] = useState<string>(value.toString());
+
+  // Sync input value when prop value changes from outside
+  useEffect(() => {
+    setInputValue(value.toString());
+  }, [value]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setInputValue(newValue);
+
+    // Only update parent state with valid numbers
+    if (newValue === '' || newValue === '-') {
+      // Don't update parent yet - allow empty while editing
+      return;
+    }
+
+    const parsed = parseFloat(newValue);
+    if (!isNaN(parsed)) {
+      onChange(parsed);
+    }
+  };
+
+  const handleBlur = () => {
+    // On blur, ensure we have a valid number
+    if (inputValue === '' || inputValue === '-') {
+      setInputValue('0');
+      onChange(0);
+    } else {
+      const parsed = parseFloat(inputValue);
+      if (!isNaN(parsed)) {
+        setInputValue(parsed.toString());
+        onChange(parsed);
+      }
+    }
+  };
+
   return (
     <div className={`bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 ${compact ? 'p-4' : 'p-5'}`}>
       <div className="flex items-center gap-2 mb-2">
@@ -833,8 +930,9 @@ function NumberInput({
         <input
           type="number"
           inputMode="decimal"
-          value={value || ''}
-          onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+          value={inputValue}
+          onChange={handleChange}
+          onBlur={handleBlur}
           placeholder="0"
           className={`w-full font-semibold text-slate-900 dark:text-zinc-50 bg-slate-50 dark:bg-zinc-900/90 rounded-xl border-2 border-slate-200 dark:border-zinc-700/80 transition-all focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-zinc-900/90 ${
             prefix ? 'pl-8' : 'pl-3'
@@ -865,6 +963,42 @@ function TaxLedger({ marketplace, state, result, onPrint, onUpdateSellingPrice, 
   const Icon = marketplace.icon;
   const categoryName = CATEGORIES.find((c) => c.id === state.category)?.label || state.category;
   const [targetProfit, setTargetProfit] = useState(500);
+  const [shareSuccess, setShareSuccess] = useState(false);
+
+  const handleShareSummary = async () => {
+    const summary = `
+📦 ${marketplace.name} - SKU Profit Summary
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Category: ${categoryName}
+Selling Price: ${formatINR(state.sellingPrice)}
+Total Deductions: ${formatINR(result.totalDeductions + result.effectiveReturnCost)}
+Net Settlement: ${formatINR(result.netSettlement)}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ Net Profit: ${formatINR(result.netProfit)}
+📊 Margin: ${result.netProfitMargin.toFixed(2)}%
+${isProfit ? '🎉 PROFITABLE' : '⚠️ LOSS'}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Generated by SellerMath
+    `.trim();
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `${marketplace.name} SKU Profit Summary`,
+          text: summary,
+        });
+      } catch (err) {
+        if ((err as Error).name !== 'AbortError') {
+          console.log('Share failed', err);
+        }
+      }
+    } else {
+      navigator.clipboard.writeText(summary).then(() => {
+        setShareSuccess(true);
+        setTimeout(() => setShareSuccess(false), 3000);
+      });
+    }
+  };
 
   const { result: targetPriceResult } = useRemoteCalc<{ recommendedPrice: number }>(
     '/api/calculate/target-price',
@@ -1028,14 +1162,34 @@ function TaxLedger({ marketplace, state, result, onPrint, onUpdateSellingPrice, 
           </div>
         </div>
 
-        {/* Print Button */}
-        <button
-          onClick={onPrint}
-          className="no-print w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold bg-zinc-950 dark:bg-zinc-950 text-white shadow-md hover:bg-zinc-900 dark:hover:bg-zinc-800 transition-all mt-2"
-        >
-          <Printer className="w-4 h-4" />
-          Download / Print Tax Breakdown
-        </button>
+        {/* Action Buttons */}
+        <div className="flex gap-2 mt-2">
+          <button
+            onClick={handleShareSummary}
+            className="no-print flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md hover:from-emerald-600 hover:to-teal-700 transition-all"
+          >
+            <Share2 className="w-4 h-4" />
+            Share Summary
+          </button>
+          <button
+            onClick={onPrint}
+            className="no-print flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold bg-zinc-950 dark:bg-zinc-950 text-white shadow-md hover:bg-zinc-900 dark:hover:bg-zinc-800 transition-all"
+          >
+            <Printer className="w-4 h-4" />
+            Print
+          </button>
+        </div>
+
+        {/* Share Success Toast */}
+        {shareSuccess && (
+          <div className="fixed bottom-6 right-6 bg-emerald-500 text-white px-6 py-3 rounded-xl shadow-lg flex items-center gap-3 animate-bounce">
+            <CheckCircle2 className="w-5 h-5" />
+            <div>
+              <p className="font-semibold">Summary Copied!</p>
+              <p className="text-sm opacity-90">Ready to share with your CA</p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1246,18 +1400,45 @@ function CrossPlatformComparison({
             const isBest = index === 0;
             const isCurrent = item.marketplace.id === currentMarketplace;
 
+            // Map accent to ring color class
+            const accentRingColor: Record<string, string> = {
+              amber: 'ring-amber-500',
+              blue: 'ring-blue-500',
+              fuchsia: 'ring-fuchsia-500',
+              rose: 'ring-rose-500',
+              yellow: 'ring-yellow-500',
+              purple: 'ring-violet-500',
+              orange: 'ring-orange-500',
+              red: 'ring-red-500',
+            };
+            const ringColor = accentRingColor[item.marketplace.accent] || 'ring-zinc-500';
+
+            // Map accent to badge bg/text color
+            const accentBadgeColor: Record<string, { bg: string; text: string }> = {
+              amber: { bg: 'bg-amber-100 dark:bg-amber-900/40', text: 'text-amber-700 dark:text-amber-400' },
+              blue: { bg: 'bg-blue-100 dark:bg-blue-900/40', text: 'text-blue-700 dark:text-blue-400' },
+              fuchsia: { bg: 'bg-fuchsia-100 dark:bg-fuchsia-900/40', text: 'text-fuchsia-700 dark:text-fuchsia-400' },
+              rose: { bg: 'bg-rose-100 dark:bg-rose-900/40', text: 'text-rose-700 dark:text-rose-400' },
+              yellow: { bg: 'bg-yellow-100 dark:bg-yellow-900/40', text: 'text-yellow-700 dark:text-yellow-400' },
+              purple: { bg: 'bg-violet-100 dark:bg-violet-900/40', text: 'text-violet-700 dark:text-violet-400' },
+              orange: { bg: 'bg-orange-100 dark:bg-orange-900/40', text: 'text-orange-700 dark:text-orange-400' },
+              red: { bg: 'bg-red-100 dark:bg-red-900/40', text: 'text-red-700 dark:text-red-400' },
+            };
+            const badgeColor = accentBadgeColor[item.marketplace.accent] || { bg: 'bg-zinc-100 dark:bg-zinc-800', text: 'text-zinc-700 dark:text-zinc-300' };
+
             return (
               <button
                 key={item.marketplace.id}
                 onClick={() => onMarketplaceSelect(item.marketplace.id)}
                 className={`
-                  relative p-4 rounded-xl border-2 transition-all duration-200 text-left
+                  relative p-4 rounded-xl border border-slate-200 dark:border-zinc-700 transition-all duration-200 text-left cursor-pointer
+                  hover:-translate-y-0.5 hover:border-zinc-400 dark:hover:border-zinc-600
                   ${
                     isBest
-                      ? 'bg-gradient-to-br from-emerald-50 to-green-50 border-emerald-300 shadow-md'
+                      ? 'bg-emerald-950/25 dark:bg-emerald-950/25 border-emerald-500/50 dark:border-emerald-500/50 shadow-md'
                       : isCurrent
-                      ? 'bg-slate-50 dark:bg-zinc-900/90 border-slate-300 dark:border-zinc-700/80'
-                      : 'bg-white dark:bg-zinc-900/90 border-slate-200 dark:border-zinc-700/80 hover:border-slate-300 dark:hover:border-zinc-600 hover:shadow-sm'
+                      ? `ring-2 ring-inset ${ringColor} bg-slate-50 dark:bg-zinc-900/90`
+                      : 'bg-white dark:bg-zinc-900/90 hover:shadow-sm'
                   }
                 `}
               >
@@ -1266,15 +1447,20 @@ function CrossPlatformComparison({
                     Best Margin
                   </div>
                 )}
+                {isCurrent && !isBest && (
+                  <div className={`absolute top-2 right-2 ${badgeColor.bg} ${badgeColor.text} text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1`}>
+                    Active
+                  </div>
+                )}
                 <div className="flex items-center gap-2 mb-2">
                   <MarketplaceLogo id={item.marketplace.id} size="md" />
-                  <span className={`text-sm font-bold ${isBest ? 'text-emerald-700' : 'text-slate-700 dark:text-zinc-50'}`}>
+                  <span className={`text-sm font-bold ${isBest ? 'text-emerald-400 dark:text-emerald-300' : 'text-slate-700 dark:text-zinc-50'}`}>
                     {item.marketplace.name}
                   </span>
                 </div>
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-slate-500 dark:text-zinc-300">Net Profit</span>
+                    <span className={`text-xs ${isBest ? 'text-zinc-300 dark:text-zinc-400 font-medium' : 'text-slate-500 dark:text-zinc-300'}`}>Net Profit</span>
                     <span
                       className={`text-sm font-bold ${
                         item.netProfit >= 0 ? 'text-emerald-600' : 'text-red-600'
@@ -1284,7 +1470,7 @@ function CrossPlatformComparison({
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-slate-500 dark:text-zinc-300">Margin</span>
+                    <span className={`text-xs ${isBest ? 'text-zinc-300 dark:text-zinc-400 font-medium' : 'text-slate-500 dark:text-zinc-300'}`}>Margin</span>
                     <span
                       className={`text-xs font-semibold ${
                         item.netProfitMargin >= 0 ? 'text-emerald-600' : 'text-red-600'

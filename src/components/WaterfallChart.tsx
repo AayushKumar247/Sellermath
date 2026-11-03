@@ -12,6 +12,7 @@ interface WaterfallChartProps {
   categoryName: string;
   marketplaceGradient: string;
   marketplaceId?: string;
+  commissionRate?: number;
 }
 
 interface WaterfallStep {
@@ -42,6 +43,7 @@ export default function WaterfallChart({
   categoryName,
   marketplaceGradient,
   marketplaceId,
+  commissionRate,
 }: WaterfallChartProps) {
   const isBlinkit = marketplaceId === 'blinkit';
   const isProfit = netProfit >= 0;
@@ -49,7 +51,7 @@ export default function WaterfallChart({
 
   const steps: WaterfallStep[] = [
     { label: 'Revenue', shortLabel: 'Revenue', value: revenue, type: 'start', icon: IndianRupee },
-    { label: 'Commission + Closing Fee', shortLabel: 'Commission', value: -commission, type: 'deduction', icon: Percent },
+    { label: commissionRate ? `Commission (${commissionRate}%) + Closing Fee` : 'Commission + Closing Fee', shortLabel: commissionRate ? `Commission (${commissionRate}%)` : 'Commission', value: -commission, type: 'deduction', icon: Percent },
     { label: 'Shipping Charges', shortLabel: 'Shipping', value: -shipping, type: 'deduction', icon: Truck },
     { label: 'GST + TCS/TDS', shortLabel: 'GST & Tax', value: -gst, type: 'deduction', icon: Receipt },
     { label: 'RTO / Return Charges', shortLabel: 'RTO', value: -rto, type: 'deduction', icon: RotateCcw },
@@ -59,9 +61,11 @@ export default function WaterfallChart({
 
   // Calculate maxValue to accommodate all deductions without overflow
   // Use the maximum of revenue and the absolute sum of all negative values (deductions)
+  // Add 15% padding to prevent clipping of top labels
   const safeNum = (val: number) => (typeof val === 'number' && !isNaN(val) ? val : 0);
   const totalDeductions = safeNum(commission) + safeNum(shipping) + safeNum(gst) + safeNum(rto) + safeNum(cogs);
-  const maxValue = Math.max(safeNum(revenue), totalDeductions, Math.abs(safeNum(netProfit)), 1);
+  const baseMaxValue = Math.max(safeNum(revenue), totalDeductions, Math.abs(safeNum(netProfit)), 1);
+  const maxValue = baseMaxValue * 1.15;
   const chartHeight = 280;
   const minBarHeight = 4;
 
@@ -80,9 +84,9 @@ export default function WaterfallChart({
   }
 
   return (
-    <div className="bg-white rounded-2xl border-2 border-slate-200 overflow-hidden shadow-lg">
+    <div className="bg-white rounded-2xl border-2 border-slate-200 shadow-lg">
       {/* Header */}
-      <div className={`bg-gradient-to-r ${marketplaceGradient} p-5`}>
+      <div className={`bg-gradient-to-r ${marketplaceGradient} p-5 rounded-t-2xl`}>
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
             <div className={`w-10 h-10 rounded-xl ${isBlinkit ? 'bg-slate-900/20' : 'bg-white/20'} flex items-center justify-center backdrop-blur-sm`}>
@@ -102,7 +106,7 @@ export default function WaterfallChart({
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-0">
         {/* Chart Section */}
         <div className="lg:col-span-3 p-5 sm:p-6">
-          <div className="relative" style={{ height: chartHeight + 60 }}>
+          <div className="relative pt-14 overflow-visible" style={{ height: chartHeight + 100 }}>
             {/* Y-axis grid lines */}
             <div className="absolute left-0 right-0 top-0" style={{ height: chartHeight }}>
               {[0, 25, 50, 75, 100].map((pct) => (
@@ -167,6 +171,10 @@ export default function WaterfallChart({
                   ? `-₹${Math.abs(stepValue).toFixed(2)}`
                   : `${isPositive ? '' : '-'}${formatINR(Math.abs(stepValue)).replace('-', '')}`;
 
+                // Calculate if tooltip should be positioned below the bar (when bar is near top)
+                const barTopPercent = ((barBottom + barHeight) / chartHeight) * 100;
+                const tooltipBelowBar = barTopPercent > 70;
+
                 return (
                   <div
                     key={i}
@@ -186,7 +194,7 @@ export default function WaterfallChart({
 
                     {/* The bar */}
                     <div
-                      className={`w-full max-w-[48px] sm:max-w-[56px] rounded-t-md ${barColor} shadow-sm transition-all duration-500 hover:opacity-80 relative group`}
+                      className={`w-full max-w-[48px] sm:max-w-[56px] rounded-t-md ${barColor} shadow-sm transition-all duration-500 hover:opacity-90 hover:scale-105 relative group`}
                       style={{
                         position: 'absolute',
                         bottom: barBottom,
@@ -208,8 +216,18 @@ export default function WaterfallChart({
                       )}
 
                       {/* Hover tooltip */}
-                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 whitespace-nowrap bg-slate-900 text-white text-xs font-medium rounded-lg px-2.5 py-1.5 shadow-xl">
-                        {step.label}: {isPositive ? '' : '-'}{formatINR(Math.abs(stepValue)).replace('-', '')}
+                      <div
+                        className={`absolute left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 whitespace-nowrap bg-zinc-900 dark:bg-zinc-800 text-white text-xs font-medium rounded-lg px-3 py-2 shadow-2xl border border-zinc-700 dark:border-zinc-600 ${
+                          tooltipBelowBar ? 'top-2' : 'bottom-full mb-2'
+                        }`}
+                      >
+                        <div className="font-semibold mb-0.5">{step.label}</div>
+                        <div className="text-[11px] opacity-90">{isPositive ? '' : '-'}{formatINR(Math.abs(stepValue)).replace('-', '')}</div>
+                        {revenue > 0 && (
+                          <div className="text-[10px] opacity-75 mt-0.5">
+                            {((Math.abs(stepValue) / revenue) * 100).toFixed(1)}% of revenue
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -278,7 +296,7 @@ export default function WaterfallChart({
             <div className="border-t border-slate-200 my-2" />
             <SummaryRow
               icon={Percent}
-              label="Commission + Closing Fee"
+              label={commissionRate ? `Commission (${commissionRate}%) + Closing Fee` : 'Commission + Closing Fee'}
               value={-commission}
               color="red"
               isDeduction

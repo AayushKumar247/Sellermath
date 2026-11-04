@@ -1,6 +1,6 @@
 import { X, FileSpreadsheet, Truck } from 'lucide-react';
 
-export type PageId = 'bulk-csv' | 'ai-listing' | 'roas' | 'gst-invoice' | 'universal' | 'shipping-rto' | 'about' | 'contact' | 'privacy' | 'terms';
+export type PageId = 'bulk-csv' | 'ai-listing' | 'roas' | 'gst-invoice' | 'universal' | 'shipping-rto' | 'home' | 'blogs' | 'about' | 'contact' | 'privacy' | 'terms';
 
 interface NavItem {
   id: PageId;
@@ -25,9 +25,10 @@ interface SidebarProps {
   onNavigate: (page: PageId) => void;
   isOpen: boolean;
   onClose: () => void;
+  className?: string;
 }
 
-export default function Sidebar({ activePage, onNavigate, isOpen, onClose }: SidebarProps) {
+export default function Sidebar({ activePage, onNavigate, isOpen, onClose, className = '' }: SidebarProps) {
   return (
     <>
       {isOpen && (
@@ -40,8 +41,9 @@ export default function Sidebar({ activePage, onNavigate, isOpen, onClose }: Sid
       <aside
         className={`
           fixed top-0 left-0 z-40 h-full w-72 bg-white dark:bg-[#0c0c0f] flex flex-col
-          transform transition-transform duration-300 ease-in-out lg:translate-x-0
+          transform transition-transform duration-300 ease-in-out lg:hidden
           ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+          ${className}
         `}
       >
         <div className="flex items-center justify-between px-6 h-20 border-b border-slate-200 dark:border-zinc-800/80">

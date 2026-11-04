@@ -133,11 +133,10 @@ export default function AIInsights({
       const parsed = parseInsights(text);
       setInsights(parsed);
     } catch (err) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : 'AI analysis temporarily unavailable. Please try again later.';
-      setError(message);
+      console.error('AI Insights error:', err);
+      setError(
+        'Our AI engine is currently experiencing high demand. Your profit math remains 100% accurate—please try the AI insight again in a moment.'
+      );
     } finally {
       setLoading(false);
     }

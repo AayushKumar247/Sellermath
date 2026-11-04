@@ -124,7 +124,7 @@ export default function WaterfallChart({
 
             {/* Bars */}
             <div
-              className="absolute left-12 right-0 top-0 flex items-end justify-between gap-1 sm:gap-2 overflow-hidden"
+              className="absolute left-12 right-0 top-0 flex items-end justify-between gap-1 sm:gap-2 overflow-visible"
               style={{ height: chartHeight }}
             >
               {steps.map((step, i) => {
@@ -175,10 +175,18 @@ export default function WaterfallChart({
                 const barTopPercent = ((barBottom + barHeight) / chartHeight) * 100;
                 const tooltipBelowBar = barTopPercent > 70;
 
+                // Smart tooltip alignment: left-aligned for first bars, right-aligned for last bars
+                const tooltipAlign =
+                  i < 2
+                    ? 'left-0 -translate-x-0'
+                    : i >= steps.length - 2
+                      ? 'right-0 -translate-x-0'
+                      : 'left-1/2 -translate-x-1/2';
+
                 return (
                   <div
                     key={i}
-                    className="flex-1 flex flex-col items-center justify-end relative h-full"
+                    className="flex-1 flex flex-col items-center justify-end relative h-full z-10 hover:z-50"
                   >
                     {/* Value label above bar */}
                     <div
@@ -194,7 +202,7 @@ export default function WaterfallChart({
 
                     {/* The bar */}
                     <div
-                      className={`w-full max-w-[48px] sm:max-w-[56px] rounded-t-md ${barColor} shadow-sm transition-all duration-500 hover:opacity-90 hover:scale-105 relative group`}
+                      className={`w-full max-w-[48px] sm:max-w-[56px] rounded-t-md ${barColor} shadow-sm transition-all duration-500 hover:opacity-90 hover:scale-105 relative group z-10 hover:z-50`}
                       style={{
                         position: 'absolute',
                         bottom: barBottom,
@@ -217,7 +225,7 @@ export default function WaterfallChart({
 
                       {/* Hover tooltip */}
                       <div
-                        className={`absolute left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 whitespace-nowrap bg-zinc-900 dark:bg-zinc-800 text-white text-xs font-medium rounded-lg px-3 py-2 shadow-2xl border border-zinc-700 dark:border-zinc-600 ${
+                        className={`absolute ${tooltipAlign} opacity-0 group-hover:opacity-100 pointer-events-none z-50 whitespace-nowrap bg-zinc-900 dark:bg-zinc-800 text-white text-xs font-medium rounded-lg px-3 py-2 shadow-2xl border border-zinc-700 dark:border-zinc-600 ${
                           tooltipBelowBar ? 'top-2' : 'bottom-full mb-2'
                         }`}
                       >

@@ -14,7 +14,7 @@ const footerLinks: { id: PageId; label: string }[] = [
 
 export default function Footer({ onNavigate }: FooterProps) {
   return (
-    <footer className="no-print bg-slate-900 dark:bg-zinc-950 border-t border-slate-800 dark:border-zinc-800 mt-12">
+    <footer className="no-print dark:bg-zinc-950 bg-zinc-900 border-t dark:border-zinc-800 border-zinc-800 mt-12">
       <div className="px-4 sm:px-6 lg:px-8 py-10">
         <div className="max-w-5xl mx-auto">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
@@ -41,7 +41,7 @@ export default function Footer({ onNavigate }: FooterProps) {
             </nav>
           </div>
 
-          <div className="mt-8 pt-6 border-t border-slate-800 dark:border-zinc-800">
+          <div className="mt-8 pt-6 border-t dark:border-zinc-800 border-zinc-800">
             <p className="text-xs text-slate-500 dark:text-zinc-400 text-center sm:text-left">
               © 2026 SellerMath. All rights reserved.
             </p>

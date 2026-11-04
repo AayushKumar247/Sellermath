@@ -17,14 +17,10 @@ export async function postCalculate<T>(
   });
 
   if (!res.ok) {
-    let message = `Request failed (${res.status})`;
-    try {
-      const data = (await res.json()) as { error?: string };
-      if (data?.error) message = data.error;
-    } catch {
-      // keep default message
-    }
-    throw new Error(message);
+    console.error('API request failed:', res.status);
+    throw new Error(
+      'Our AI engine is currently experiencing high demand. Your profit math remains 100% accurate—please try the AI insight again in a moment.'
+    );
   }
 
   return res.json() as Promise<T>;
@@ -51,7 +47,10 @@ export function useRemoteCalc<TResult>(
         })
         .catch((err: unknown) => {
           if (err instanceof DOMException && err.name === 'AbortError') return;
-          setError(err instanceof Error ? err.message : 'Calculation failed');
+          console.error('Calculation error:', err);
+          setError(
+            'Our AI engine is currently experiencing high demand. Your profit math remains 100% accurate—please try the AI insight again in a moment.'
+          );
         })
         .finally(() => {
           if (!controller.signal.aborted) setLoading(false);

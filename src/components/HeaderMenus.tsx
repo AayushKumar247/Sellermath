@@ -40,15 +40,15 @@ export function ProfileDropdown({ isOpen, onClose, onNavigate }: ProfileDropdown
       <div className="fixed inset-0 z-30" onClick={onClose} />
       <div
         ref={ref}
-        className="absolute right-0 top-full mt-2 w-72 bg-white dark:bg-zinc-900 rounded-xl shadow-xl border border-slate-200 dark:border-zinc-800 overflow-hidden z-40"
+        className="absolute right-0 top-full mt-2 w-72 dark:bg-zinc-900/90 bg-white/90 backdrop-blur-xl dark:border-zinc-800/80 border-zinc-200/80 shadow-2xl dark:shadow-black/80 shadow-lg rounded-2xl overflow-hidden z-40"
       >
-        <div className="px-4 py-3 border-b border-slate-100 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-950/50">
+        <div className="px-4 py-3 border-b dark:border-zinc-800/60 border-zinc-200/60 dark:bg-zinc-950/50 bg-zinc-50/50">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-bold text-slate-900 dark:text-zinc-50">SellerMath Community</p>
-              <p className="text-xs text-slate-400 dark:text-zinc-300">Free Tier Member</p>
+              <p className="text-sm font-bold dark:text-zinc-50 text-zinc-900">SellerMath Community</p>
+              <p className="text-xs dark:text-zinc-400 text-zinc-500">Free Tier Member</p>
             </div>
-            <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400">
+            <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 dark:text-emerald-400">
               FREE TIER
             </span>
           </div>
@@ -57,17 +57,17 @@ export function ProfileDropdown({ isOpen, onClose, onNavigate }: ProfileDropdown
         <div className="py-1.5">
           <button
             onClick={handleShare}
-            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800/50 transition-colors"
+            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium dark:text-zinc-300 text-zinc-700 dark:hover:bg-zinc-800/60 hover:bg-zinc-100 transition-colors"
           >
-            <Share2 className="w-4 h-4 text-slate-400 dark:text-zinc-300" />
+            <Share2 className="w-4 h-4 dark:text-zinc-400 text-zinc-500" />
             Share Tool
           </button>
 
           <button
             onClick={handleContact}
-            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800/50 transition-colors"
+            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium dark:text-zinc-300 text-zinc-700 dark:hover:bg-zinc-800/60 hover:bg-zinc-100 transition-colors"
           >
-            <LifeBuoy className="w-4 h-4 text-slate-400 dark:text-zinc-300" />
+            <LifeBuoy className="w-4 h-4 dark:text-zinc-400 text-zinc-500" />
             Contact Support &amp; Feedback
           </button>
 
@@ -76,7 +76,7 @@ export function ProfileDropdown({ isOpen, onClose, onNavigate }: ProfileDropdown
               onNavigate('bulk-csv');
               onClose();
             }}
-            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800/50 transition-colors border-t border-slate-100 dark:border-zinc-800"
+            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium dark:text-zinc-300 text-zinc-700 dark:hover:bg-zinc-800/60 hover:bg-zinc-100 transition-colors border-t dark:border-zinc-800/60 border-zinc-200/60"
           >
             <div className="w-4 h-4 rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center shrink-0">
               <FileSpreadsheet className="w-2.5 h-2.5 text-white" />
@@ -85,7 +85,7 @@ export function ProfileDropdown({ isOpen, onClose, onNavigate }: ProfileDropdown
           </button>
         </div>
 
-        
+
       </div>
     </>
   );

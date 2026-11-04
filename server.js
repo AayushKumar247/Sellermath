@@ -365,43 +365,63 @@ async function generateAIResponse(prompt, expectJson = false) {
   const groqKey = process.env.GROQ_API_KEY;
   const geminiKey = process.env.GEMINI_API_KEY;
 
-  // --- Primary: Groq Cloud (llama-3.3-70b-versatile) ---
+  // --- Primary: Groq Cloud (multi-model fallback) ---
   if (groqKey) {
-    try {
-      const groqBody = {
-        model: 'llama-3.3-70b-versatile',
-        temperature: 0.5,
-        messages: [{ role: 'user', content: prompt }],
-      };
-      if (expectJson) {
-        groqBody.response_format = { type: 'json_object' };
-      }
+    const GROQ_MODELS = [
+      'openai/gpt-oss-120b',
+      'openai/gpt-oss-20b',
+      'qwen/qwen3.8-27b',
+    ];
 
-      const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${groqKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(groqBody),
-      });
+    for (const model of GROQ_MODELS) {
+      try {
+        const groqBody = {
+          model,
+          temperature: 0.5,
+          max_tokens: 1024,
+          messages: [{ role: 'user', content: prompt }],
+        };
+        if (expectJson) {
+          groqBody.response_format = { type: 'json_object' };
+        }
 
-      if (groqRes.ok) {
-        const groqData = await groqRes.json();
-        const text = groqData?.choices?.[0]?.message?.content ?? '';
-        if (text) return text;
-        console.warn('Groq returned empty content, falling back to Gemini.');
-      } else if (groqRes.status === 429 || groqRes.status === 500) {
-        const errData = await groqRes.json().catch(() => null);
-        console.warn(`Groq ${groqRes.status} (${errData?.error?.message || ''}), falling back to Gemini.`);
-      } else {
-        const errData = await groqRes.json().catch(() => null);
-        console.error('Groq API Error:', errData?.error?.message || `status ${groqRes.status}`);
-        throw new Error(errData?.error?.message || `Groq API returned status ${groqRes.status}`);
+        const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${groqKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(groqBody),
+        });
+
+        if (groqRes.ok) {
+          const groqData = await groqRes.json();
+          const text = groqData?.choices?.[0]?.message?.content ?? '';
+          if (text) return text;
+          console.warn(`Groq (${model}) returned empty content, trying next model.`);
+          continue;
+        } else if (groqRes.status === 429 || groqRes.status === 500) {
+          const errData = await groqRes.json().catch(() => null);
+          console.warn(`Groq ${groqRes.status} on ${model} (${errData?.error?.message || ''}), trying next model.`);
+          continue;
+        } else if (groqRes.status === 400 || groqRes.status === 404) {
+          const errData = await groqRes.json().catch(() => null);
+          const msg = errData?.error?.message || `Groq API returned status ${groqRes.status}`;
+          console.warn(`Groq ${groqRes.status} on ${model} (${msg}), trying next model.`);
+          continue;
+        } else {
+          const errData = await groqRes.json().catch(() => null);
+          console.error(`Groq API Error on ${model}:`, errData?.error?.message || `status ${groqRes.status}`);
+          continue;
+        }
+      } catch (err) {
+        console.error(`Groq request failed for ${model}:`, err.message || err);
+        continue;
       }
-    } catch (err) {
-      console.error('Groq request failed:', err.message || err);
     }
+
+    // All Groq models exhausted, fall through to Gemini
+    console.warn('All Groq models exhausted, falling back to Gemini.');
   }
 
   // --- Fallback: Google Gemini ---

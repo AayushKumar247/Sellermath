@@ -532,19 +532,33 @@ app.post('/api/ai-listing', async (req, res) => {
   try {
     const { productName, category, keyFeatures, targetKeywords } = req.body;
 
-    const prompt = `You are an expert e-commerce copywriter for Indian marketplaces (Meesho, Flipkart, Blinkit, Amazon). Generate a high-converting product listing in JSON format only.
+    const marketplaceGuidance = {
+      'Amazon India':
+        'Amazon India: SEO-rich, keyword-dense title; longer, detailed benefit-led bullets (exactly 5); comprehensive description covering features, usage, and warranty.',
+      Flipkart:
+        'Flipkart: concise, scannable title and exactly 5 bullets; lead with key specifications, dimensions, and material; plain Indian-English phrasing.',
+      Meesho:
+        'Meesho: simple, plain-language exactly 5 bullets; value and affordability focused; short sentences, minimal jargon.',
+      Myntra:
+        'Myntra: fashion-focused title; exactly 5 bullets covering fabric, fit, style, care, and occasion; trendy aspirational description.',
+    };
+    const guidance = marketplaceGuidance[category] || marketplaceGuidance['Amazon India'];
+
+    const prompt = `You are an expert e-commerce copywriter for Indian marketplaces. Generate a highly optimized product listing in JSON format only, tailored specifically to ${category}.
 
 Product Name: ${productName || ''}
-Category: ${category || 'Generic'}
-Key Features: ${keyFeatures || ''}
+Marketplace: ${category || 'Generic'}
+Key Features / Specs: ${keyFeatures || ''}
 Target Keywords: ${targetKeywords || ''}
+
+Marketplace Rules:
+${guidance}
 
 Return ONLY valid JSON with these keys:
 - title: SEO-friendly product title
 - description: compelling product description
-- highlights: array of bullet-point highlights
+- highlights: array of exactly 5 bullet-point highlights
 - keywords: array of search keywords
-- category: suggested category
 
 No markdown code fences, no extra text outside the JSON.`;
 
@@ -569,6 +583,62 @@ No markdown code fences, no extra text outside the JSON.`;
     res.status(500).json({
       error: err instanceof Error ? err.message : 'Something went wrong while generating the listing.'
     });
+  }
+});
+
+// SEO Keywords Generator endpoint
+app.post('/api/seo-keywords', async (req, res) => {
+  try {
+    const { productName, keyFeatures } = req.body;
+
+    if (!productName || typeof productName !== 'string') {
+      return res.status(400).json({ error: 'Product name is required' });
+    }
+
+    const prompt = `You are an expert e-commerce SEO specialist for Amazon India and Flipkart. Generate search terms for the following product:
+
+Product Name: ${productName}
+${keyFeatures ? `Key Features/Target Audience: ${keyFeatures}` : ''}
+
+Please provide the response in this exact JSON format:
+{
+  "topSearchTerms": ["term1", "term2", ...],
+  "platinumKeywords": ["keyword1", "keyword2", ...],
+  "misspellings": ["variation1", "variation2", ...]
+}
+
+Where:
+- topSearchTerms: Top 20 high-volume backend search terms (comma-separated, focused on what customers actually search for)
+- platinumKeywords: 5 premium, high-conversion keywords that competitors might be missing
+- misspellings: Common misspellings and long-tail variations that have lower competition but high intent
+
+Focus on Indian e-commerce context (Amazon India, Flipkart). Keep terms specific and actionable for product titles and bullet points.
+
+IMPORTANT: Return ONLY raw JSON without any markdown code blocks, formatting, or extra text. Do not wrap the response in \`\`\`json or \`\`\` markers.`;
+
+    const aiResponse = await generateAIResponse(prompt, true);
+
+    try {
+      // Strip markdown code blocks if present
+      const cleanText = aiResponse.replace(/```json/gi, '').replace(/```/g, '').trim();
+      const parsed = JSON.parse(cleanText);
+      if (Array.isArray(parsed.topSearchTerms) && Array.isArray(parsed.platinumKeywords) && Array.isArray(parsed.misspellings)) {
+        res.json(parsed);
+      } else {
+        throw new Error('Invalid AI response format');
+      }
+    } catch (parseErr) {
+      console.error('Failed to parse AI response:', parseErr);
+      const fallbackResponse = {
+        topSearchTerms: productName.split(' ').slice(0, 20),
+        platinumKeywords: [productName, 'premium', 'quality'],
+        misspellings: [productName.toLowerCase(), productName.replace(/\s/g, '')],
+      };
+      res.json(fallbackResponse);
+    }
+  } catch (err) {
+    console.error('SEO Keywords error:', err);
+    res.status(500).json({ error: 'Failed to generate keywords. Please try again.' });
   }
 });
 

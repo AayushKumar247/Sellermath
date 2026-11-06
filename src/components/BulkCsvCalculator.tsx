@@ -283,10 +283,10 @@ export default function BulkCsvCalculator() {
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2 select-none">
           Bulk CSV Profit Calculator
         </h1>
-        <p className="text-gray-600 dark:text-gray-400">
+        <p className="text-gray-600 dark:text-gray-400 select-none">
           Upload your SKU catalog to calculate marketplace fees, taxes, and profits instantly
         </p>
       </div>
@@ -300,7 +300,7 @@ export default function BulkCsvCalculator() {
             <button
               key={id}
               onClick={() => setSelectedMarketplace(id as MarketplaceId)}
-              className={`p-3 rounded-lg border-2 transition-all ${
+              className={`p-3 rounded-lg border-2 transition-all select-none focus:outline-none focus:ring-0 ${
                 selectedMarketplace === id
                   ? `border-blue-500 bg-gradient-to-r ${config.color} text-white`
                   : 'text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50'
@@ -320,7 +320,7 @@ export default function BulkCsvCalculator() {
       <div className="mb-6 flex gap-3">
         <button
           onClick={downloadSampleTemplate}
-          className={`flex items-center gap-2 px-4 py-2 bg-gradient-to-r ${MARKETPLACES[selectedMarketplace].color} hover:opacity-90 text-white rounded-lg transition-all`}
+          className={`flex items-center gap-2 px-4 py-2 bg-gradient-to-r ${MARKETPLACES[selectedMarketplace].color} hover:opacity-90 text-white rounded-lg transition-all select-none focus:outline-none focus:ring-0`}
         >
           <Download size={20} />
           Download CSV Upload Format
@@ -333,7 +333,7 @@ export default function BulkCsvCalculator() {
         onDragLeave={handleDragLeave}
         className={`mb-6 p-8 border-2 border-dashed rounded-lg text-center transition-colors ${
           isDragging
-            ? `border-blue-500 bg-blue-50 dark:bg-blue-900/20`
+            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
             : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
         }`}
       >
@@ -371,7 +371,7 @@ export default function BulkCsvCalculator() {
           <div className="mb-6 flex justify-end">
             <button
               onClick={clearData}
-              className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors select-none focus:outline-none focus:ring-0"
             >
               <Trash2 size={20} />
               Clear Data
@@ -508,7 +508,7 @@ export default function BulkCsvCalculator() {
           <div className="flex justify-end">
             <button
               onClick={downloadReport}
-              className={`flex items-center gap-2 px-6 py-3 bg-gradient-to-r ${MARKETPLACES[selectedMarketplace].color} hover:opacity-90 text-white rounded-lg transition-all font-semibold`}
+              className={`flex items-center gap-2 px-6 py-3 bg-gradient-to-r ${MARKETPLACES[selectedMarketplace].color} hover:opacity-90 text-white rounded-lg transition-all font-semibold select-none focus:outline-none focus:ring-0`}
             >
               <FileSpreadsheet size={20} />
               Download Full CA Tax & Profit Report (.CSV)

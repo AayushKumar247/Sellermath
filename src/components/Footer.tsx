@@ -33,7 +33,7 @@ export default function Footer({ onNavigate }: FooterProps) {
                 <button
                   key={link.id}
                   onClick={() => onNavigate(link.id)}
-                  className="text-sm text-slate-400 dark:text-zinc-300 hover:text-emerald-400 transition-colors font-medium"
+                  className="text-sm text-slate-400 dark:text-zinc-300 hover:text-emerald-400 transition-colors font-medium select-none focus:outline-none focus:ring-0"
                 >
                   {link.label}
                 </button>

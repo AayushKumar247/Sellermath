@@ -19,7 +19,7 @@ export async function postCalculate<T>(
   if (!res.ok) {
     console.error('API request failed:', res.status);
     throw new Error(
-      'Our AI engine is currently experiencing high demand. Your profit math remains 100% accurate—please try the AI insight again in a moment.'
+      'Our AI engine is currently experiencing high demand. Please try again in a moment.'
     );
   }
 
@@ -49,7 +49,7 @@ export function useRemoteCalc<TResult>(
           if (err instanceof DOMException && err.name === 'AbortError') return;
           console.error('Calculation error:', err);
           setError(
-            'Our AI engine is currently experiencing high demand. Your profit math remains 100% accurate—please try the AI insight again in a moment.'
+            'Our AI engine is currently experiencing high demand. Please try again in a moment.'
           );
         })
         .finally(() => {

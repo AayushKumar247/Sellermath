@@ -29,8 +29,8 @@ export function InputCard({
             <Icon className="w-5 h-5 text-slate-600" strokeWidth={2} />
           </div>
           <div>
-            <label className="text-sm font-semibold text-slate-700 block">{label}</label>
-            <p className="text-xs text-slate-400">{hint}</p>
+            <label className="text-sm font-semibold text-slate-700 block select-none">{label}</label>
+            <p className="text-xs text-slate-400 select-none">{hint}</p>
           </div>
         </div>
       </div>
@@ -89,14 +89,14 @@ export function MetricCard({ label, value, subtitle, icon: Icon, variant, isLoss
           <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${iconBg} shadow-lg`}>
             <Icon className="w-5 h-5 text-white" strokeWidth={2.5} />
           </div>
-          <span className="text-sm font-semibold text-slate-600">{label}</span>
+          <span className="text-sm font-semibold text-slate-600 select-none">{label}</span>
         </div>
       </div>
       <p className={`text-3xl font-bold tracking-tight ${valueColor}`}>
         {variant === 'neutral' ? '' : isLoss ? '-' : ''}
         ₹{Math.abs(value).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       </p>
-      <p className="text-xs text-slate-400 mt-1">{subtitle}</p>
+      <p className="text-xs text-slate-400 mt-1 select-none">{subtitle}</p>
     </div>
   );
 }
@@ -137,8 +137,8 @@ export function HeroCard({ title, subtitle, value, badge, icon: Icon, children }
               <Icon className="w-6 h-6 text-white" strokeWidth={2.5} />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-white">{title}</h3>
-              <p className="text-sm text-slate-400">{subtitle}</p>
+              <h3 className="text-lg font-bold text-white select-none">{title}</h3>
+              <p className="text-sm text-slate-400 select-none">{subtitle}</p>
             </div>
           </div>
           <div className="hidden sm:flex items-center gap-2 bg-slate-800/80 px-4 py-2 rounded-lg border border-slate-700">

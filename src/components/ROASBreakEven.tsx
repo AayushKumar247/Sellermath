@@ -63,8 +63,8 @@ export default function ROASBreakEven() {
           <Target className="w-5 h-5 text-white" />
         </div>
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">ROAS &amp; Break-Even Ad Spend</h2>
-          <p className="text-sm text-slate-500">
+          <h2 className="text-2xl font-bold text-slate-900 select-none">ROAS &amp; Break-Even Ad Spend</h2>
+          <p className="text-sm text-slate-500 select-none">
             Find your break-even ROAS and maximum cost per acquisition
           </p>
         </div>
@@ -263,8 +263,8 @@ function BreakEvenROASCard({
               <AlertTriangle className="w-6 h-6 text-white" strokeWidth={2.5} />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-white">Break-Even ROAS</h3>
-              <p className="text-sm text-slate-400">
+              <h3 className="text-lg font-bold text-white select-none">Break-Even ROAS</h3>
+              <p className="text-sm text-slate-400 select-none">
                 The absolute minimum ROAS you must maintain on ads
               </p>
             </div>
@@ -272,7 +272,7 @@ function BreakEvenROASCard({
           <div className="relative">
             <button
               onClick={onToggleTooltip}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-800/80 border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-700/80 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-800/80 border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-700/80 transition-colors select-none focus:outline-none focus:ring-0"
             >
               <HelpCircle className="w-4 h-4" />
               <span className="text-xs font-semibold hidden sm:inline">Why?</span>
@@ -381,8 +381,8 @@ function MaxCPACard({ maxCPA, isProfitable }: MaxCPACardProps) {
               <Wallet className="w-6 h-6 text-white" strokeWidth={2.5} />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-white">Max CPA</h3>
-              <p className="text-sm text-slate-400">
+              <h3 className="text-lg font-bold text-white select-none">Max CPA</h3>
+              <p className="text-sm text-slate-400 select-none">
                 Max you can spend to acquire one customer
               </p>
             </div>

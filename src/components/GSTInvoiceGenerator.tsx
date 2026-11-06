@@ -222,8 +222,8 @@ export default function GSTInvoiceGenerator() {
               <FileText className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-slate-900">GST Tax Invoice Generator</h2>
-              <p className="text-sm text-slate-500">
+              <h2 className="text-2xl font-bold text-slate-900 select-none">GST Tax Invoice Generator</h2>
+              <p className="text-sm text-slate-500 select-none">
                 Create compliant Indian GST invoices with CGST/SGST/IGST logic
               </p>
             </div>
@@ -232,7 +232,7 @@ export default function GSTInvoiceGenerator() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setMode('edit')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all select-none focus:outline-none focus:ring-0 ${
                 mode === 'edit'
                   ? 'bg-slate-900 text-white shadow-lg'
                   : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
@@ -243,7 +243,7 @@ export default function GSTInvoiceGenerator() {
             </button>
             <button
               onClick={() => setMode('preview')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all select-none focus:outline-none focus:ring-0 ${
                 mode === 'preview'
                   ? 'bg-slate-900 text-white shadow-lg'
                   : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
@@ -277,7 +277,7 @@ export default function GSTInvoiceGenerator() {
           <div className="no-print mb-4 flex justify-end">
             <button
               onClick={handlePrint}
-              className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold bg-blue-600 text-white shadow-lg shadow-blue-500/30 hover:bg-blue-700 transition-all"
+              className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold bg-blue-600 text-white shadow-lg shadow-blue-500/30 hover:bg-blue-700 transition-all select-none focus:outline-none focus:ring-0"
             >
               <Printer className="w-5 h-5" />
               Download / Print Invoice (PDF)
@@ -517,7 +517,7 @@ function EditView({
               <div className="md:col-span-1 flex md:justify-end">
                 <button
                   onClick={() => removeItem(item.id)}
-                  className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                  className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors select-none focus:outline-none focus:ring-0"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -527,7 +527,7 @@ function EditView({
 
           <button
             onClick={addItem}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors select-none focus:outline-none focus:ring-0"
           >
             <Plus className="w-4 h-4" />
             Add Line Item
@@ -540,14 +540,14 @@ function EditView({
       <div className="flex flex-col sm:flex-row gap-3">
         <button
           onClick={onPreview}
-          className="flex-1 flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl text-sm font-bold bg-slate-900 text-white shadow-lg hover:bg-slate-800 transition-all"
+          className="flex-1 flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl text-sm font-bold bg-slate-900 text-white shadow-lg hover:bg-slate-800 transition-all select-none focus:outline-none focus:ring-0"
         >
           <Eye className="w-5 h-5" />
           Preview Invoice
         </button>
         <button
           onClick={onPrint}
-          className="flex-1 flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl text-sm font-bold bg-blue-600 text-white shadow-lg shadow-blue-500/30 hover:bg-blue-700 transition-all"
+          className="flex-1 flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl text-sm font-bold bg-blue-600 text-white shadow-lg shadow-blue-500/30 hover:bg-blue-700 transition-all select-none focus:outline-none focus:ring-0"
         >
           <Printer className="w-5 h-5" />
           Download / Print (PDF)
@@ -570,7 +570,7 @@ function SectionCard({ title, icon: Icon, children }: SectionCardProps) {
         <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
           <Icon className="w-4 h-4 text-slate-600" strokeWidth={2} />
         </div>
-        <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">{title}</h3>
+        <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide select-none">{title}</h3>
       </div>
       {children}
     </div>
@@ -658,7 +658,7 @@ function GSTSummary({ calcs, isInterState }: GSTSummaryProps) {
         <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
           <IndianRupee className="w-4 h-4 text-blue-600" strokeWidth={2} />
         </div>
-        <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">Summary</h3>
+        <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide select-none">Summary</h3>
       </div>
 
       <div className={`p-3 rounded-xl mb-4 text-sm font-medium ${isInterState ? 'bg-orange-50 text-orange-700 border border-orange-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}`}>
@@ -739,7 +739,7 @@ function InvoicePreview({ data, calcs, isInterState }: InvoicePreviewProps) {
             </p>
           </div>
           <div className="sm:text-right">
-            <h2 className="text-2xl font-bold text-slate-900 uppercase tracking-wide">Tax Invoice</h2>
+            <h2 className="text-2xl font-bold text-slate-900 uppercase tracking-wide select-none">Tax Invoice</h2>
             <div className="mt-2 space-y-0.5">
               <p className="text-sm text-slate-600">
                 Invoice No: <span className="font-semibold text-slate-900">{data.invoiceNumber}</span>

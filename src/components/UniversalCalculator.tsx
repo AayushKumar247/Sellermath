@@ -433,7 +433,7 @@ export default function UniversalCalculator({ onNavigate }: UniversalCalculatorP
                   onClick={() => selectMarketplace(mp.id)}
                   className={`
                     relative flex flex-col items-center gap-1.5 sm:gap-2 p-3 sm:p-4 rounded-xl border-2
-                    transition-all duration-200 group
+                    transition-all duration-200 group select-none focus:outline-none focus:ring-0
                     ${
                       isActive
                         ? `bg-gradient-to-br ${mp.gradient} ${isBlinkit ? 'text-slate-900' : 'text-white'} border-transparent shadow-lg scale-105`
@@ -464,7 +464,7 @@ export default function UniversalCalculator({ onNavigate }: UniversalCalculatorP
                 <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-zinc-800 flex items-center justify-center">
                   <Package className="w-4 h-4 text-slate-600 dark:text-zinc-300" strokeWidth={2} />
                 </div>
-                <h3 className="text-sm font-bold text-slate-700 dark:text-zinc-50 uppercase tracking-wide">
+                <h3 className="text-sm font-bold text-slate-700 dark:text-zinc-50 uppercase tracking-wide select-none">
                   Product Category
                 </h3>
               </div>
@@ -477,7 +477,7 @@ export default function UniversalCalculator({ onNavigate }: UniversalCalculatorP
                       key={cat.id}
                       onClick={() => selectCategory(cat.id)}
                       className={`
-                        px-3 py-2.5 rounded-lg text-sm font-medium transition-all
+                        px-3 py-2.5 rounded-lg text-sm font-medium transition-all select-none focus:outline-none focus:ring-0
                         ${
                           isActive
                             ? `bg-gradient-to-r ${activeMarketplace.gradient} ${isBlinkit ? 'text-slate-900' : 'text-white'} shadow-md`
@@ -567,7 +567,7 @@ export default function UniversalCalculator({ onNavigate }: UniversalCalculatorP
                           key={weight}
                           onClick={() => update('shippingWeight', weight)}
                           className={`
-                            px-3 py-1.5 rounded-lg text-xs font-medium transition-all
+                            px-3 py-1.5 rounded-lg text-xs font-medium transition-all select-none focus:outline-none focus:ring-0
                             ${
                               isSelected
                                 ? `bg-gradient-to-r ${activeMarketplace.gradient} ${isBlinkit ? 'text-slate-900' : 'text-white'} shadow-md`
@@ -597,7 +597,7 @@ export default function UniversalCalculator({ onNavigate }: UniversalCalculatorP
                           key={z.id}
                           onClick={() => update('zone', z.id)}
                           className={`
-                            px-3 py-2.5 rounded-lg text-sm font-medium transition-all
+                            px-3 py-2.5 rounded-lg text-sm font-medium transition-all select-none focus:outline-none focus:ring-0
                             ${
                               isActive
                                 ? `bg-gradient-to-r ${activeMarketplace.gradient} ${isBlinkit ? 'text-slate-900' : 'text-white'} shadow-md`
@@ -656,7 +656,7 @@ export default function UniversalCalculator({ onNavigate }: UniversalCalculatorP
                         key={r}
                         onClick={() => update('productGstRate', r)}
                         className={`
-                          py-2.5 rounded-lg text-sm font-bold transition-all
+                          py-2.5 rounded-lg text-sm font-bold transition-all select-none focus:outline-none focus:ring-0
                           ${
                             isActive
                               ? 'bg-zinc-950 dark:bg-zinc-950 text-white shadow-md'
@@ -701,7 +701,7 @@ export default function UniversalCalculator({ onNavigate }: UniversalCalculatorP
                 <div className="w-8 h-8 rounded-lg bg-slate-200 dark:bg-zinc-800 flex items-center justify-center">
                   <Receipt className="w-4 h-4 text-slate-600 dark:text-zinc-300" strokeWidth={2} />
                 </div>
-                <h3 className="text-sm font-bold text-slate-700 dark:text-zinc-50 uppercase tracking-wide">
+                <h3 className="text-sm font-bold text-slate-700 dark:text-zinc-50 uppercase tracking-wide select-none">
                   Marketplace Fees (Auto-filled, Editable)
                 </h3>
               </div>
@@ -809,17 +809,17 @@ export default function UniversalCalculator({ onNavigate }: UniversalCalculatorP
                 <TruckIcon className="w-5 h-5 text-white" strokeWidth={2.5} />
               </div>
               <div>
-                <h3 className="text-base font-bold text-zinc-50">
+                <h3 className="text-base font-bold text-zinc-50 select-none">
                   Losing money on RTO shipping?
                 </h3>
-                <p className="text-sm text-zinc-300 mt-0.5">
+                <p className="text-sm text-zinc-300 mt-0.5 select-none">
                   Compare shipping costs and understand forward and RTO charges before shipping your orders.
                 </p>
               </div>
             </div>
             <button
               onClick={() => onNavigate?.('shipping-rto')}
-              className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 hover:bg-emerald-400 transition-all whitespace-nowrap flex-shrink-0"
+              className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 hover:bg-emerald-400 transition-all whitespace-nowrap flex-shrink-0 select-none focus:outline-none focus:ring-0"
             >
               <TruckIcon className="w-4 h-4" />
               Check Shiprocket Rates
@@ -1027,8 +1027,8 @@ Generated by SellerMath
               <Icon className={`w-5 h-5 ${isBlinkit ? 'text-slate-900' : 'text-white'}`} strokeWidth={2.5} />
             </div>
             <div>
-              <h3 className={`text-sm font-bold ${isBlinkit ? 'text-slate-900' : 'text-white'}`}>CA Tax Ledger</h3>
-              <p className={`text-xs ${isBlinkit ? 'text-slate-900/80' : 'text-white/80'}`}>{marketplace.name} Settlement Receipt</p>
+              <h3 className={`text-sm font-bold ${isBlinkit ? 'text-slate-900' : 'text-white'} select-none`}>CA Tax Ledger</h3>
+              <p className={`text-xs ${isBlinkit ? 'text-slate-900/80' : 'text-white/80'} select-none`}>{marketplace.name} Settlement Receipt</p>
             </div>
           </div>
           <div className={`${isBlinkit ? 'bg-slate-900/20 text-slate-900 border-slate-900/30' : 'bg-white/20 backdrop-blur-sm text-white border-white/30'} text-xs font-semibold px-3 py-1 rounded-full border`}>
@@ -1282,10 +1282,10 @@ function FeeMatrixTable() {
   return (
     <div className="no-print bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden">
       <div className="p-5 border-b border-slate-200 dark:border-zinc-800">
-        <h3 className="text-lg font-bold text-slate-900 dark:text-zinc-50">
+        <h3 className="text-lg font-bold text-slate-900 dark:text-zinc-50 select-none">
           2026 Marketplace Fee Matrix
         </h3>
-        <p className="text-sm text-slate-500 dark:text-zinc-300 mt-1">
+        <p className="text-sm text-slate-500 dark:text-zinc-300 mt-1 select-none">
           Amazon vs Flipkart vs Meesho vs Quick Commerce — all commission rates at a glance
         </p>
       </div>
@@ -1389,8 +1389,8 @@ function CrossPlatformComparison({
             <TrendingUp className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-slate-900 dark:text-zinc-50">Cross-Platform Profit Comparison</h3>
-            <p className="text-sm text-slate-500 dark:text-zinc-300">Which marketplace pays best for your product?</p>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-zinc-50 select-none">Cross-Platform Profit Comparison</h3>
+            <p className="text-sm text-slate-500 dark:text-zinc-300 select-none">Which marketplace pays best for your product?</p>
           </div>
         </div>
       </div>
@@ -1495,10 +1495,10 @@ function FAQAccordion() {
   return (
     <div className="no-print bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden">
       <div className="p-5 border-b border-slate-200 dark:border-zinc-800">
-        <h3 className="text-lg font-bold text-slate-900 dark:text-zinc-50">
+        <h3 className="text-lg font-bold text-slate-900 dark:text-zinc-50 select-none">
           Frequently Asked Questions
         </h3>
-        <p className="text-sm text-slate-500 dark:text-zinc-300 mt-1">
+        <p className="text-sm text-slate-500 dark:text-zinc-300 mt-1 select-none">
           Everything Indian e-commerce sellers need to know about fees, GST, and profitability
         </p>
       </div>
@@ -1556,8 +1556,8 @@ function PrintTaxLedger({ marketplace, state, result, marketplaceId }: PrintTaxL
             <Icon className={`w-5 h-5 ${isBlinkit ? 'text-slate-900' : 'text-white'}`} />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-slate-900">SellerMath — CA Tax Ledger</h1>
-            <p className="text-xs text-slate-500">{marketplace.name} Settlement Breakdown</p>
+            <h1 className="text-xl font-bold text-slate-900 select-none">SellerMath — CA Tax Ledger</h1>
+            <p className="text-xs text-slate-500 select-none">{marketplace.name} Settlement Breakdown</p>
           </div>
         </div>
         <p className="text-xs text-slate-500">{today}</p>

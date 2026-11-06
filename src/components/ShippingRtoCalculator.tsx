@@ -113,10 +113,10 @@ export default function ShippingRtoCalculator() {
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2 select-none">
           Shipping & RTO Calculator
         </h1>
-        <p className="text-gray-600 dark:text-gray-400">
+        <p className="text-gray-600 dark:text-gray-400 select-none">
           Compare courier rates, calculate volumetric weight, and estimate blended shipping costs
         </p>
       </div>
@@ -125,7 +125,7 @@ export default function ShippingRtoCalculator() {
         {/* Input Section */}
         <div className="lg:col-span-1 space-y-6">
           <div className="bg-white dark:bg-zinc-900 rounded-2xl border-2 border-slate-200 dark:border-zinc-800 p-6">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2 select-none">
               <Package className="w-5 h-5 text-emerald-500" />
               Package Details
             </h2>
@@ -213,7 +213,7 @@ export default function ShippingRtoCalculator() {
                 <div className="flex gap-2">
                   <button
                     onClick={() => setPaymentMode('prepaid')}
-                    className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors select-none focus:outline-none focus:ring-0 ${
                       paymentMode === 'prepaid'
                         ? 'bg-emerald-500 text-white'
                         : 'bg-slate-100 dark:bg-zinc-800 text-gray-700 dark:text-gray-300 hover:bg-slate-200 dark:hover:bg-zinc-700'
@@ -223,7 +223,7 @@ export default function ShippingRtoCalculator() {
                   </button>
                   <button
                     onClick={() => setPaymentMode('cod')}
-                    className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors select-none focus:outline-none focus:ring-0 ${
                       paymentMode === 'cod'
                         ? 'bg-emerald-500 text-white'
                         : 'bg-slate-100 dark:bg-zinc-800 text-gray-700 dark:text-gray-300 hover:bg-slate-200 dark:hover:bg-zinc-700'
@@ -258,7 +258,7 @@ export default function ShippingRtoCalculator() {
               ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700'
               : 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-300 dark:border-emerald-700'
           }`}>
-            <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+            <h2 className="text-lg font-bold mb-4 flex items-center gap-2 select-none">
               <Weight className="w-5 h-5" />
               Volumetric Weight
             </h2>
@@ -307,7 +307,7 @@ export default function ShippingRtoCalculator() {
           {/* Sync Button */}
           <button
             onClick={handleSyncToCalculator}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-xl font-semibold transition-all shadow-lg"
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-xl font-semibold transition-all shadow-lg select-none focus:outline-none focus:ring-0"
           >
             <Calculator className="w-5 h-5" />
             Apply This Shipping Fee to Profit Calculator
@@ -327,7 +327,7 @@ export default function ShippingRtoCalculator() {
         {/* Results Section */}
         <div className="lg:col-span-2">
           <div className="bg-white dark:bg-zinc-900 rounded-2xl border-2 border-slate-200 dark:border-zinc-800 p-6">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2 select-none">
               <Truck className="w-5 h-5 text-emerald-500" />
               Multi-Courier Rate & RTO Loss Matrix
             </h2>

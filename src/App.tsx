@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Menu, Sun, Moon, ChevronDown, Calculator, Truck, Sparkles, FileText, FileSpreadsheet, PenTool, Image as ImageIcon, BarChart3, Rocket } from 'lucide-react';
+import { Menu, Sun, Moon, ChevronDown, Calculator, Truck, Sparkles, FileText, FileSpreadsheet, Key, PenTool, Image as ImageIcon, BarChart3, Rocket } from 'lucide-react';
 import { Analytics } from '@vercel/analytics/react';
 import Sidebar, { type PageId } from '@/components/Sidebar';
 import AIListingWriter from '@/components/AIListingWriter';
@@ -7,6 +7,7 @@ import ROASBreakEven from '@/components/ROASBreakEven';
 import GSTInvoiceGenerator from '@/components/GSTInvoiceGenerator';
 import UniversalCalculator from '@/components/UniversalCalculator';
 import BulkCsvCalculator from '@/components/BulkCsvCalculator';
+import ShippingRtoCalculator from '@/components/ShippingRtoCalculator';
 import ReturnsRTOAnalytics from '@/components/ReturnsRTOAnalytics';
 import SEOKeywords from '@/components/SEOKeywords';
 import ImageResizer from '@/components/ImageResizer';
@@ -20,7 +21,7 @@ import ScrollToTop from '@/components/ScrollToTop';
 const THEME_KEY = 'sellermath_theme';
 
 export default function App() {
-  const [activePage, setActivePage] = useState<PageId>('profit');
+  const [activePage, setActivePage] = useState<PageId>('home');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
@@ -153,81 +154,65 @@ export default function App() {
 
   const getActivePageName = () => {
     const pageNames: Record<string, string> = {
-      'bulk-csv': 'Bulk CSV Profit Calculator',
-      'csv': 'Bulk CSV Profit Calculator',
-      'universal': 'Profit Calculator',
-      'profit': 'Product Profit Calculator',
-      'roas': 'ROAS & Break-Even Calculator',
-      'gst-invoice': 'GST Invoice Generator',
-      'gst': 'GST Invoice',
-      'ai-listing': 'AI Listing Writer',
-      'listing': 'AI Product Listing Writer',
-      'seo': 'SEO Keyword Generator',
-      'rto-analytics': 'Returns & RTO Analytics',
       'home': 'Home',
-      'blogs': 'Blog',
+      'calculator': 'Product Profit Calculator',
+      'roas': 'ROAS & Break-Even Calculator',
+      'shipping': 'Shipping & RTO Calculator',
+      'listing-writer': 'AI Product Listing Writer',
+      'seo-keywords': 'SEO Keyword Generator',
+      'listing-optimizer': 'Marketplace Listing Optimizer',
+      'image-resizer': 'Product Image Resizer',
+      'bulk-csv': 'Bulk CSV Profit Calculator',
+      'rto-analytics': 'Returns & RTO Analytics',
+      'gst-invoice': 'GST Invoice Generator',
       'about': 'About Us',
       'contact': 'Contact Us',
       'privacy': 'Privacy Policy',
       'terms': 'Terms & Conditions',
-      'resize': 'Product Image Resizer',
-      'optimize': 'Marketplace Listing Optimizer',
     };
-    return pageNames[activePage] || 'Product Profit Calculator';
+    return pageNames[activePage] || 'Home';
   };
 
   const getActivePageIcon = () => {
     const pageIcons: Record<string, { type: 'image' | 'icon'; value?: string }> = {
-      'bulk-csv': { type: 'icon' },
-      'universal': { type: 'image', value: '/universal-logo.png' },
+      'home': { type: 'icon' },
+      'calculator': { type: 'image', value: '/universal-logo.png' },
       'roas': { type: 'image', value: '/roas-logo.png' },
       'gst-invoice': { type: 'image', value: '/gst-logo.png' },
-      'ai-listing': { type: 'image', value: '/ai-writer-logo.png' },
-      'home': { type: 'icon' },
-      'blogs': { type: 'icon' },
+      'listing-writer': { type: 'image', value: '/ai-writer-logo.png' },
+      'shipping': { type: 'icon' },
       'about': { type: 'icon' },
       'contact': { type: 'icon' },
       'privacy': { type: 'icon' },
       'terms': { type: 'icon' },
-      'resize': { type: 'icon' },
-      'optimize': { type: 'icon' },
     };
     return pageIcons[activePage] || { type: 'icon' };
   };
 
   const renderPage = () => {
     switch (activePage) {
-      case 'bulk-csv':
-      case 'csv':
-        return <BulkCsvCalculator />;
-      case 'ai-listing':
-      case 'listing':
-        return <AIListingWriter />;
-      case 'seo':
-        return <SEOKeywords />;
-      case 'roas':
-        return <ROASBreakEven />;
-      case 'gst-invoice':
-      case 'gst':
-        return <GSTInvoiceGenerator />;
-      case 'universal':
-      case 'profit':
-        return <UniversalCalculator onNavigate={handleNavigate} />;
-      case 'rto-analytics':
-        return <ReturnsRTOAnalytics />;
-      case 'resize':
-        return <ImageResizer />;
-      case 'optimize':
-        return <MarketplaceOptimizer />;
       case 'home':
         return <Home onNavigate={handleNavigate} />;
-      case 'blogs':
-        return (
-          <div className="p-6 max-w-5xl mx-auto">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Blog</h1>
-            <p className="text-gray-600 dark:text-gray-400">Blog section - Coming soon</p>
-          </div>
-        );
+      case 'calculator':
+        return <UniversalCalculator onNavigate={handleNavigate} />;
+      case 'roas':
+        return <ROASBreakEven />;
+      case 'shipping':
+        return <ShippingRtoCalculator />;
+      case 'listing-writer':
+        return <AIListingWriter />;
+      case 'seo-keywords':
+        return <SEOKeywords />;
+      case 'listing-optimizer':
+        return <MarketplaceOptimizer />;
+      case 'image-resizer':
+        return <ImageResizer />;
+      case 'bulk-csv':
+        return <BulkCsvCalculator />;
+      case 'rto-analytics':
+        return <ReturnsRTOAnalytics />;
+      case 'gst-invoice':
+        return <GSTInvoiceGenerator />;
       case 'about':
         return <InfoPages page="about" onNavigate={handleNavigate} />;
       case 'contact':
@@ -237,7 +222,7 @@ export default function App() {
       case 'terms':
         return <InfoPages page="terms" onNavigate={handleNavigate} />;
       default:
-        return <UniversalCalculator onNavigate={handleNavigate} />;
+        return <Home onNavigate={handleNavigate} />;
     }
   };
 
@@ -301,7 +286,7 @@ export default function App() {
               >
                 <button
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 whitespace-nowrap select-none focus:outline-none focus:ring-0 ${
-                    ['profit', 'roas'].includes(activePage)
+                    ['calculator', 'roas', 'shipping'].includes(activePage)
                       ? 'bg-emerald-500/10 text-emerald-500 dark:text-emerald-400'
                       : 'dark:text-zinc-300 text-zinc-600 dark:hover:bg-zinc-800/60 hover:bg-zinc-100'
                   }`}
@@ -315,12 +300,12 @@ export default function App() {
                     className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 pt-2 min-w-[280px]"
                   >
                     <div
-                      className="dark:bg-zinc-900/90 bg-white/90 backdrop-blur-xl dark:border-zinc-800/80 border-zinc-200/80 shadow-2xl dark:shadow-black/80 shadow-lg rounded-2xl p-2.5 space-y-1.5 z-50"
+                      className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl shadow-zinc-950/15 dark:shadow-black/60 rounded-2xl p-2 space-y-1.5 z-50"
                       onMouseEnter={handleCalculatorsMouseEnter}
                       onMouseLeave={handleCalculatorsMouseLeave}
                     >
                       <button
-                        onClick={() => handleNavigate('profit')}
+                        onClick={() => handleNavigate('calculator')}
                         className="w-full flex items-center gap-3 px-3 py-2.5 text-left border border-transparent dark:hover:bg-zinc-800/60 hover:bg-zinc-100 dark:hover:border-zinc-700/50 hover:border-zinc-300/50 dark:text-white text-zinc-900 rounded-xl transition-all duration-200 group select-none focus:outline-none focus:ring-0"
                       >
                         <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 dark:text-emerald-400 group-hover:bg-emerald-500/20 transition-all">
@@ -337,13 +322,22 @@ export default function App() {
                         </div>
                         <span className="whitespace-nowrap font-medium text-sm dark:text-zinc-200 text-zinc-700">ROAS & Break-Even Calculator</span>
                       </button>
+                      <button
+                        onClick={() => handleNavigate('shipping')}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 text-left border border-transparent dark:hover:bg-zinc-800/60 hover:bg-zinc-100 dark:hover:border-zinc-700/50 hover:border-zinc-300/50 dark:text-white text-zinc-900 rounded-xl transition-all duration-200 group select-none focus:outline-none focus:ring-0"
+                      >
+                        <div className="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 dark:text-amber-400 group-hover:bg-amber-500/20 transition-all">
+                          <Truck className="w-4 h-4" />
+                        </div>
+                        <span className="whitespace-nowrap font-medium text-sm dark:text-zinc-200 text-zinc-700">Shipping & RTO Calculator</span>
+                      </button>
 
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* 3. AI Studio Dropdown */}
+              {/* 3. AI Studio Dropdown — NOW OWNS 'listing-writer' */}
               <div
                 className="relative"
                 onMouseEnter={handleAiStudioMouseEnter}
@@ -351,7 +345,7 @@ export default function App() {
               >
                 <button
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 whitespace-nowrap select-none focus:outline-none focus:ring-0 ${
-                    false
+                    ['listing-writer', 'seo-keywords', 'listing-optimizer'].includes(activePage)
                       ? 'bg-emerald-500/10 text-emerald-500 dark:text-emerald-400'
                       : 'dark:text-zinc-300 text-zinc-600 dark:hover:bg-zinc-800/60 hover:bg-zinc-100'
                   }`}
@@ -365,41 +359,43 @@ export default function App() {
                     className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 pt-2 min-w-[280px]"
                   >
                     <div
-                      className="dark:bg-zinc-900/90 bg-white/90 backdrop-blur-xl dark:border-zinc-800/80 border-zinc-200/80 shadow-2xl dark:shadow-black/80 shadow-lg rounded-2xl p-2.5 space-y-1.5 z-50"
+                      className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl shadow-zinc-950/15 dark:shadow-black/60 rounded-2xl p-2 space-y-1.5 z-50"
                       onMouseEnter={handleAiStudioMouseEnter}
                       onMouseLeave={handleAiStudioMouseLeave}
                     >
-                      <div className="flex items-center gap-3 px-3 py-2.5 dark:text-zinc-400 text-zinc-600 cursor-not-allowed border border-transparent dark:hover:bg-zinc-800/60 hover:bg-zinc-100 dark:hover:border-zinc-700/50 hover:border-zinc-300/50 rounded-xl transition-all duration-200 group select-none">
-                        <div className="w-9 h-9 rounded-lg bg-zinc-500/10 border border-zinc-500/20 flex items-center justify-center text-zinc-500 dark:text-zinc-400 group-hover:bg-zinc-500/20 transition-all">
-                          <ImageIcon className="w-4 h-4" />
-                        </div>
-                        <span className="whitespace-nowrap font-medium text-sm dark:text-zinc-400 text-zinc-600 flex-1">AI Background Remover</span>
-                        <span className="px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase dark:bg-zinc-800 bg-zinc-200 dark:border-zinc-700/60 border-zinc-300/60 dark:text-zinc-400 text-zinc-600 rounded-full">Soon</span>
-                      </div>
-                      <div className="flex items-center gap-3 px-3 py-2.5 dark:text-zinc-400 text-zinc-600 cursor-not-allowed border border-transparent dark:hover:bg-zinc-800/60 hover:bg-zinc-100 dark:hover:border-zinc-700/50 hover:border-zinc-300/50 rounded-xl transition-all duration-200 group select-none">
-                        <div className="w-9 h-9 rounded-lg bg-zinc-500/10 border border-zinc-500/20 flex items-center justify-center text-zinc-500 dark:text-zinc-400 group-hover:bg-zinc-500/20 transition-all">
-                          <Sparkles className="w-4 h-4" />
-                        </div>
-                        <span className="whitespace-nowrap font-medium text-sm dark:text-zinc-400 text-zinc-600 flex-1">White BG & Lifestyle Generator</span>
-                        <span className="px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase dark:bg-zinc-800 bg-zinc-200 dark:border-zinc-700/60 border-zinc-300/60 dark:text-zinc-400 text-zinc-600 rounded-full">Soon</span>
-                      </div>
                       <button
-                        onClick={() => handleNavigate('resize')}
+                        onClick={() => handleNavigate('listing-writer')}
                         className="w-full flex items-center gap-3 px-3 py-2.5 text-left border border-transparent dark:hover:bg-zinc-800/60 hover:bg-zinc-100 dark:hover:border-zinc-700/50 hover:border-zinc-300/50 dark:text-white text-zinc-900 rounded-xl transition-all duration-200 group select-none focus:outline-none focus:ring-0"
                       >
                         <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 dark:text-emerald-400 group-hover:bg-emerald-500/20 transition-all">
-                          <ImageIcon className="w-4 h-4" />
+                          <PenTool className="w-4 h-4" />
                         </div>
-                        <span className="whitespace-nowrap font-medium text-sm dark:text-zinc-200 text-zinc-700">
-                          Product Image Resizer
-                        </span>
+                        <span className="whitespace-nowrap font-medium text-sm dark:text-zinc-200 text-zinc-700">AI Product Listing Writer</span>
+                      </button>
+                      <button
+                        onClick={() => handleNavigate('seo-keywords')}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 text-left border border-transparent dark:hover:bg-zinc-800/60 hover:bg-zinc-100 dark:hover:border-zinc-700/50 hover:border-zinc-300/50 dark:text-white text-zinc-900 rounded-xl transition-all duration-200 group select-none focus:outline-none focus:ring-0"
+                      >
+                        <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 dark:text-emerald-400 group-hover:bg-emerald-500/20 transition-all">
+                          <Key className="w-4 h-4" />
+                        </div>
+                        <span className="whitespace-nowrap font-medium text-sm dark:text-zinc-200 text-zinc-700">SEO Keyword Generator</span>
+                      </button>
+                      <button
+                        onClick={() => handleNavigate('listing-optimizer')}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 text-left border border-transparent dark:hover:bg-zinc-800/60 hover:bg-zinc-100 dark:hover:border-zinc-700/50 hover:border-zinc-300/50 dark:text-white text-zinc-900 rounded-xl transition-all duration-200 group select-none focus:outline-none focus:ring-0"
+                      >
+                        <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 dark:text-emerald-400 group-hover:bg-emerald-500/20 transition-all">
+                          <BarChart3 className="w-4 h-4" />
+                        </div>
+                        <span className="whitespace-nowrap font-medium text-sm dark:text-zinc-200 text-zinc-700">Marketplace Listing Optimizer</span>
                       </button>
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* 4. Product Studio Dropdown */}
+              {/* 4. Product Studio Dropdown — no longer owns 'listing-writer' */}
               <div
                 className="relative"
                 onMouseEnter={handleProductStudioMouseEnter}
@@ -407,7 +403,7 @@ export default function App() {
               >
                 <button
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 whitespace-nowrap select-none focus:outline-none focus:ring-0 ${
-                    ['listing', 'seo'].includes(activePage)
+                    ['image-resizer'].includes(activePage)
                       ? 'bg-emerald-500/10 text-emerald-500 dark:text-emerald-400'
                       : 'dark:text-zinc-300 text-zinc-600 dark:hover:bg-zinc-800/60 hover:bg-zinc-100'
                   }`}
@@ -421,37 +417,33 @@ export default function App() {
                     className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 pt-2 min-w-[280px]"
                   >
                     <div
-                      className="dark:bg-zinc-900/90 bg-white/90 backdrop-blur-xl dark:border-zinc-800/80 border-zinc-200/80 shadow-2xl dark:shadow-black/80 shadow-lg rounded-2xl p-2.5 space-y-1.5 z-50"
+                      className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl shadow-zinc-950/15 dark:shadow-black/60 rounded-2xl p-2 space-y-1.5 z-50"
                       onMouseEnter={handleProductStudioMouseEnter}
                       onMouseLeave={handleProductStudioMouseLeave}
                     >
                       <button
-                        onClick={() => handleNavigate('listing')}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 text-left border border-transparent dark:hover:bg-zinc-800/60 hover:bg-zinc-100 dark:hover:border-zinc-700/50 hover:border-zinc-300/50 dark:text-white text-zinc-900 rounded-xl transition-all duration-200 group select-none focus:outline-none focus:ring-0"
-                      >
-                        <div className="w-9 h-9 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-500 dark:text-purple-400 group-hover:bg-purple-500/20 transition-all">
-                          <PenTool className="w-4 h-4" />
-                        </div>
-                        <span className="whitespace-nowrap font-medium text-sm dark:text-zinc-200 text-zinc-700">AI Product Listing Writer</span>
-                      </button>
-                      <button
-                        onClick={() => handleNavigate('seo')}
+                        onClick={() => handleNavigate('image-resizer')}
                         className="w-full flex items-center gap-3 px-3 py-2.5 text-left border border-transparent dark:hover:bg-zinc-800/60 hover:bg-zinc-100 dark:hover:border-zinc-700/50 hover:border-zinc-300/50 dark:text-white text-zinc-900 rounded-xl transition-all duration-200 group select-none focus:outline-none focus:ring-0"
                       >
                         <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 dark:text-emerald-400 group-hover:bg-emerald-500/20 transition-all">
+                          <ImageIcon className="w-4 h-4" />
+                        </div>
+                        <span className="whitespace-nowrap font-medium text-sm dark:text-zinc-200 text-zinc-700 flex-1">Product Image Resizer</span>
+                      </button>
+                      <div className="flex items-center gap-3 px-3 py-2.5 dark:text-zinc-400 text-zinc-600 cursor-not-allowed border border-transparent dark:hover:bg-zinc-800/60 hover:bg-zinc-100 dark:hover:border-zinc-700/50 hover:border-zinc-300/50 rounded-xl transition-all duration-200 group select-none">
+                        <div className="w-9 h-9 rounded-lg bg-zinc-500/10 border border-zinc-500/20 flex items-center justify-center text-zinc-500 dark:text-zinc-400 group-hover:bg-zinc-500/20 transition-all">
                           <Sparkles className="w-4 h-4" />
                         </div>
-                        <span className="whitespace-nowrap font-medium text-sm dark:text-zinc-200 text-zinc-700">SEO Keyword Generator</span>
-                      </button>
-                      <button
-                        onClick={() => handleNavigate('optimize')}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 text-left border border-transparent dark:hover:bg-zinc-800/60 hover:bg-zinc-100 dark:hover:border-zinc-700/50 hover:border-zinc-300/50 dark:text-white text-zinc-900 rounded-xl transition-all duration-200 group select-none focus:outline-none focus:ring-0"
-                      >
-                        <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 dark:text-emerald-400 group-hover:bg-emerald-500/20 transition-all">
-                          <Rocket className="w-4 h-4" />
+                        <span className="whitespace-nowrap font-medium text-sm dark:text-zinc-400 text-zinc-600 flex-1">AI Background Remover</span>
+                        <span className="px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase dark:bg-zinc-800 bg-zinc-200 dark:border-zinc-700/60 border-zinc-300/60 dark:text-zinc-400 text-zinc-600 rounded-full">Soon</span>
+                      </div>
+                      <div className="flex items-center gap-3 px-3 py-2.5 dark:text-zinc-400 text-zinc-600 cursor-not-allowed border border-transparent dark:hover:bg-zinc-800/60 hover:bg-zinc-100 dark:hover:border-zinc-700/50 hover:border-zinc-300/50 rounded-xl transition-all duration-200 group select-none">
+                        <div className="w-9 h-9 rounded-lg bg-zinc-500/10 border border-zinc-500/20 flex items-center justify-center text-zinc-500 dark:text-zinc-400 group-hover:bg-zinc-500/20 transition-all">
+                          <Sparkles className="w-4 h-4" />
                         </div>
-                        <span className="whitespace-nowrap font-medium text-sm dark:text-zinc-200 text-zinc-700 flex-1">Marketplace Listing Optimizer</span>
-                      </button>
+                        <span className="whitespace-nowrap font-medium text-sm dark:text-zinc-400 text-zinc-600 flex-1">White BG & Lifestyle Generator</span>
+                        <span className="px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase dark:bg-zinc-800 bg-zinc-200 dark:border-zinc-700/60 border-zinc-300/60 dark:text-zinc-400 text-zinc-600 rounded-full">Soon</span>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -465,7 +457,7 @@ export default function App() {
               >
                 <button
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 whitespace-nowrap select-none focus:outline-none focus:ring-0 ${
-                    ['csv', 'rto-analytics'].includes(activePage)
+                    ['bulk-csv', 'rto-analytics'].includes(activePage)
                       ? 'bg-emerald-500/10 text-emerald-500 dark:text-emerald-400'
                       : 'dark:text-zinc-300 text-zinc-600 dark:hover:bg-zinc-800/60 hover:bg-zinc-100'
                   }`}
@@ -479,12 +471,12 @@ export default function App() {
                     className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 pt-2 min-w-[280px]"
                   >
                     <div
-                      className="dark:bg-zinc-900/90 bg-white/90 backdrop-blur-xl dark:border-zinc-800/80 border-zinc-200/80 shadow-2xl dark:shadow-black/80 shadow-lg rounded-2xl p-2.5 space-y-1.5 z-50"
+                      className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl shadow-zinc-950/15 dark:shadow-black/60 rounded-2xl p-2 space-y-1.5 z-50"
                       onMouseEnter={handleCsvIntelligenceMouseEnter}
                       onMouseLeave={handleCsvIntelligenceMouseLeave}
                     >
                       <button
-                        onClick={() => handleNavigate('csv')}
+                        onClick={() => handleNavigate('bulk-csv')}
                         className="w-full flex items-center gap-3 px-3 py-2.5 text-left border border-transparent dark:hover:bg-zinc-800/60 hover:bg-zinc-100 dark:hover:border-zinc-700/50 hover:border-zinc-300/50 dark:text-white text-zinc-900 rounded-xl transition-all duration-200 group select-none focus:outline-none focus:ring-0"
                       >
                         <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 dark:text-emerald-400 group-hover:bg-emerald-500/20 transition-all">
@@ -516,9 +508,9 @@ export default function App() {
 
               {/* 6. GST Invoice - Direct Button */}
               <button
-                onClick={() => handleNavigate('gst')}
+                onClick={() => handleNavigate('gst-invoice')}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap select-none focus:outline-none focus:ring-0 ${
-                  activePage === 'gst'
+                  activePage === 'gst-invoice'
                     ? 'bg-emerald-500/10 text-emerald-500 dark:text-emerald-400'
                     : 'dark:text-zinc-300 text-zinc-600 dark:hover:bg-zinc-800/60 hover:bg-zinc-100'
                 }`}
@@ -548,7 +540,7 @@ export default function App() {
                     className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 pt-2 min-w-[280px]"
                   >
                     <div
-                      className="dark:bg-zinc-900/90 bg-white/90 backdrop-blur-xl dark:border-zinc-800/80 border-zinc-200/80 shadow-2xl dark:shadow-black/80 shadow-lg rounded-2xl p-2.5 space-y-1.5 z-50"
+                      className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl shadow-zinc-950/15 dark:shadow-black/60 rounded-2xl p-2 space-y-1.5 z-50"
                       onMouseEnter={handleLearnMouseEnter}
                       onMouseLeave={handleLearnMouseLeave}
                     >

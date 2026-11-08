@@ -2,24 +2,21 @@ import { X, FileSpreadsheet, ChevronDown, PenTool, Sparkles, BarChart3, FileText
 import React from 'react';
 
 export type PageId =
-  | 'bulk-csv'
-  | 'ai-listing'
-  | 'roas'
-  | 'gst-invoice'
-  | 'universal'
-  | 'rto-analytics'
   | 'home'
-  | 'blogs'
+  | 'calculator'
+  | 'roas'
+  | 'shipping'
+  | 'listing-writer'
+  | 'seo-keywords'
+  | 'listing-optimizer'
+  | 'image-resizer'
+  | 'bulk-csv'
+  | 'rto-analytics'
+  | 'gst-invoice'
   | 'about'
   | 'contact'
-  | 'terms'
-  | 'profit'
-  | 'listing'
-  | 'seo'
-  | 'csv'
-  | 'gst'
-  | 'resize'
-  | 'optimize';
+  | 'privacy'
+  | 'terms';
 
 interface DropdownItem {
   id: string;
@@ -43,35 +40,36 @@ const navGroups: NavGroup[] = [
   {
     id: 'calculators', label: 'Calculators', icon: Rocket, isDropdown: true,
     items: [
-      { id: 'profit', label: 'Product Profit Calculator', status: 'active' },
+      { id: 'calculator', label: 'Product Profit Calculator', status: 'active' },
       { id: 'roas', label: 'ROAS & Break-Even Calculator', status: 'active' },
+      { id: 'shipping', label: 'Shipping & RTO Calculator', status: 'active' },
     ],
   },
   {
     id: 'ai-studio', label: 'AI Studio', icon: Sparkles, isDropdown: true,
     items: [
-      { id: 'ai-bg-remover', label: 'AI Background Remover', status: 'coming-soon' },
-      { id: 'ai-white-bg', label: 'White BG & Lifestyle Generator', status: 'coming-soon' },
-      { id: 'resize', label: 'Product Image Resizer', status: 'active' },
+      { id: 'listing-writer', label: 'AI Product Listing Writer', status: 'active' },
+      { id: 'seo-keywords', label: 'SEO Keyword Generator', status: 'active' },
+      { id: 'listing-optimizer', label: 'Marketplace Listing Optimizer', status: 'active' },
     ],
   },
   {
     id: 'product-studio', label: 'Product Studio', icon: PenTool, isDropdown: true,
     items: [
-      { id: 'listing', label: 'AI Product Listing Writer', status: 'active' },
-      { id: 'seo', label: 'SEO Keyword Generator', status: 'active' },
-      { id: 'optimize', label: 'Marketplace Listing Optimizer', status: 'active' },
+      { id: 'image-resizer', label: 'Product Image Resizer', status: 'active' },
+      { id: 'ai-bg-remover', label: 'AI Background Remover', status: 'coming-soon' },
+      { id: 'ai-white-bg', label: 'White BG & Lifestyle Generator', status: 'coming-soon' },
     ],
   },
   {
     id: 'csv-intelligence', label: 'CSV Intelligence', icon: FileSpreadsheet, isDropdown: true,
     items: [
-      { id: 'csv', label: 'Bulk CSV Profit Calculator', status: 'new' },
+      { id: 'bulk-csv', label: 'Bulk CSV Profit Calculator', status: 'new' },
       { id: 'settlement-recon', label: 'Settlement Reconciliation', status: 'coming-soon' },
       { id: 'rto-analytics', label: 'Returns & RTO Analytics', status: 'active' },
     ],
   },
-  { id: 'gst-invoice', label: 'GST Invoice', directId: 'gst', icon: FileText },
+  { id: 'gst-invoice', label: 'GST Invoice', directId: 'gst-invoice', icon: FileText },
   {
     id: 'learn', label: 'Learn', icon: BarChart3, isDropdown: true,
     items: [

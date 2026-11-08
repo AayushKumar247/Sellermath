@@ -304,6 +304,10 @@ app.set('trust proxy', 1);
 app.use(cors());
 app.use(express.json({ limit: '32kb' }));
 
+app.get('/', (req, res) => {
+  res.send('SellerMath API is running locally!');
+});
+
 const apiLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 40,

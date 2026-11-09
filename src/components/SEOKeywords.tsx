@@ -572,7 +572,7 @@ export default function SEOKeywords() {
         }
       `}</style>
 
-      <div className="mx-auto max-w-7xl space-y-6">
+      <div className="mx-auto w-full max-w-[1360px] px-3 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 space-y-6 box-border overflow-x-hidden">
         {/* Studio Header */}
         <div className="relative select-none">
           <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 mx-auto h-24 max-w-md rounded-full bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-400 opacity-20 blur-3xl" />

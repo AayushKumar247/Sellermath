@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import type { ReactNode } from 'react';
+import type { PageId } from '@/components/Sidebar';
 import {
   Calculator,
   Sparkles,
@@ -60,7 +61,7 @@ interface ToolCategory {
 }
 
 interface HomeProps {
-  onNavigate: (page: string) => void;
+  onNavigate: (page: PageId) => void;
 }
 
 interface Review {
@@ -113,7 +114,7 @@ const FEE_ALERTS = [
 ];
 
 /* ============================================================
-   TOOL LIBRARY (unchanged)
+   TOOL LIBRARY
 ============================================================ */
 const TOOL_GROUPS: ToolCategory[] = [
   {
@@ -229,11 +230,12 @@ const TOOL_GROUPS: ToolCategory[] = [
       },
       {
         icon: <FileText className="w-5 h-5" />,
-        iconBg: 'bg-zinc-500/10 border border-zinc-500/20 text-zinc-500 dark:text-zinc-400',
+        iconBg: 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 dark:text-emerald-400',
         title: 'Settlement Reconciliation',
         description: 'Reconcile marketplace settlements with your orders automatically.',
         tools: ['Settlement match', 'Order reconciliation', 'Payments'],
-        status: 'coming-soon',
+        status: 'new',
+        onClick: () => {},
       },
       {
         icon: <Truck className="w-5 h-5" />,
@@ -295,7 +297,7 @@ const TOOL_GROUPS: ToolCategory[] = [
   },
 ];
 
-const PAIN_POINTS = [
+const PAIN_POINTS: { icon: React.ElementType; problem: string; detail: string; solution: string; page: PageId }[] = [
   {
     icon: TrendingDown,
     problem: 'My margins vanish after fees',
@@ -322,7 +324,7 @@ const PAIN_POINTS = [
     problem: 'Listings & invoicing take hours',
     detail: 'Copy-pasting SKUs and making GST invoices by hand, every single time.',
     solution: 'AI Listing Writer + GST Invoice',
-    page: 'listing',
+    page: 'listing-writer',
   },
 ];
 
@@ -390,9 +392,9 @@ function MoneyInput({
 }
 
 /* ============================================================
-   1. FEE ALERT BAR — tightened, sleek
+   FEE ALERT BAR
 ============================================================ */
-function FeeAlertBar({ onNavigate }: { onNavigate: (p: string) => void }) {
+function FeeAlertBar({ onNavigate }: { onNavigate: (p: PageId) => void }) {
   const [i, setI] = useState(0);
 
   useEffect(() => {
@@ -411,7 +413,7 @@ function FeeAlertBar({ onNavigate }: { onNavigate: (p: string) => void }) {
   return (
     <button
       onClick={() => onNavigate('calculator')}
-      className="group w-full flex items-center gap-2.5 px-3.5 py-2 rounded-lg dark:bg-zinc-900/70 bg-white/80 dark:border-zinc-800/80 border-zinc-200/80 text-left transition hover:border-emerald-500/40 select-none"
+      className="group w-full flex items-center gap-2.5 px-3 py-2 sm:px-3.5 sm:py-2 rounded-lg dark:bg-zinc-900/70 bg-white/80 dark:border-zinc-800/80 border-zinc-200/80 text-left transition hover:border-emerald-500/40 select-none"
     >
       <span className="flex items-center gap-1.5 shrink-0">
         <AlertTriangle className={`w-3.5 h-3.5 ${tone[a.tone] ?? 'text-amber-500'}`} />
@@ -430,9 +432,9 @@ function FeeAlertBar({ onNavigate }: { onNavigate: (p: string) => void }) {
 }
 
 /* ============================================================
-   QUICK PROFIT CALCULATOR — unchanged logic
+   QUICK PROFIT CALCULATOR — unchanged logic, wider on mobile
 ============================================================ */
-function QuickProfitCalculator({ onNavigate }: { onNavigate: (p: string) => void }) {
+function QuickProfitCalculator({ onNavigate }: { onNavigate: (p: PageId) => void }) {
   const [price, setPrice] = useState(999);
   const [cost, setCost] = useState(400);
   const [mpId, setMpId] = useState('amazon');
@@ -457,7 +459,8 @@ function QuickProfitCalculator({ onNavigate }: { onNavigate: (p: string) => void
   const profitable = r.profit >= 0;
 
   return (
-    <div className="relative rounded-2xl dark:bg-zinc-900/80 bg-white/90 dark:border-zinc-800/80 border-zinc-200/80 shadow-2xl shadow-emerald-500/5 p-5 md:p-6">
+    // FIX: p-3.5 on mobile instead of p-5, so the card gets more horizontal room
+    <div className="relative rounded-2xl dark:bg-zinc-900/80 bg-white/90 dark:border-zinc-800/80 border-zinc-200/80 shadow-2xl shadow-emerald-500/5 p-3.5 sm:p-5 md:p-6">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
@@ -498,7 +501,7 @@ function QuickProfitCalculator({ onNavigate }: { onNavigate: (p: string) => void
       </div>
 
       <div
-        className={`rounded-xl p-4 mb-3 border ${
+        className={`rounded-xl p-3.5 sm:p-4 mb-3 border ${
           profitable ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-red-500/5 border-red-500/20'
         }`}
       >
@@ -569,23 +572,24 @@ function QuickProfitCalculator({ onNavigate }: { onNavigate: (p: string) => void
 }
 
 /* ============================================================
-   HERO — honest social proof
+   HERO — transparent on mobile (no tinted box), full-width on all screens
 ============================================================ */
-function Hero({ onNavigate }: { onNavigate: (p: string) => void }) {
+function Hero({ onNavigate }: { onNavigate: (p: PageId) => void }) {
   return (
-    <section className="relative overflow-hidden rounded-3xl dark:bg-zinc-900/60 bg-zinc-50/80 dark:border-zinc-800/80 border-zinc-200/80 px-6 md:px-10 py-8 md:py-12">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-500/5 via-transparent to-transparent pointer-events-none" />
-      <div className="absolute top-[-20%] left-[-10%] w-[45%] h-[45%] bg-emerald-500/10 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-20%] right-[-10%] w-[45%] h-[45%] bg-blue-500/10 rounded-full blur-[120px] pointer-events-none" />
+    <section className="relative overflow-hidden rounded-3xl p-0 sm:p-6 md:px-10 md:py-12 bg-transparent sm:bg-zinc-50/80 sm:dark:bg-zinc-900/60 border-0 sm:border sm:border-zinc-200/80 sm:dark:border-zinc-800/80">
+      {/* Decorative glows — hidden on mobile since the tinted box is gone there */}
+      <div className="hidden sm:block absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-500/5 via-transparent to-transparent pointer-events-none" />
+      <div className="hidden sm:block absolute top-[-20%] left-[-10%] w-[45%] h-[45%] bg-emerald-500/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="hidden sm:block absolute bottom-[-20%] right-[-10%] w-[45%] h-[45%] bg-blue-500/10 rounded-full blur-[120px] pointer-events-none" />
 
-      <div className="relative z-10 grid lg:grid-cols-[1.15fr_1fr] gap-8 lg:gap-12 items-center">
+      <div className="relative z-10 grid lg:grid-cols-[1.15fr_1fr] gap-6 sm:gap-8 lg:gap-12 items-center">
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 dark:text-emerald-400 text-xs font-medium mb-5 select-none">
             <Zap className="w-3.5 h-3.5" />
             Fee data updated: Nov 2026
           </div>
 
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.05] text-zinc-900 dark:text-white mb-4 select-none">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.05] text-zinc-900 dark:text-white mb-4 select-none">
             Know your real profit
             <br />
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-500 to-teal-400">
@@ -606,10 +610,10 @@ function Hero({ onNavigate }: { onNavigate: (p: string) => void }) {
               <Rocket className="w-5 h-5" /> Launch Calculator
             </button>
             <button
-              onClick={() => onNavigate('listing')}
+              onClick={() => onNavigate('settlement-reconciliation')}
               className="px-6 py-3 dark:bg-zinc-900 hover:dark:bg-zinc-800 bg-white hover:bg-zinc-100 dark:border-zinc-700 border-zinc-200 dark:text-zinc-100 text-zinc-900 rounded-xl font-semibold shadow-lg transition-all flex items-center justify-center gap-2 select-none"
             >
-              <Sparkles className="w-5 h-5" /> Product Studio
+              <FileText className="w-5 h-5" /> Settlement Reconciliation
             </button>
           </div>
 
@@ -626,7 +630,8 @@ function Hero({ onNavigate }: { onNavigate: (p: string) => void }) {
           </div>
         </div>
 
-        <div className="w-full max-w-md mx-auto lg:mx-0 lg:ml-auto">
+        {/* FIX: w-full, no max-w constraint on mobile/tablet, fills the grid cell on desktop */}
+        <div className="w-full lg:ml-auto">
           <QuickProfitCalculator onNavigate={onNavigate} />
         </div>
       </div>
@@ -635,19 +640,19 @@ function Hero({ onNavigate }: { onNavigate: (p: string) => void }) {
 }
 
 /* ============================================================
-   2. STATS BAR — honest, factual
+   STATS BAR — honest + full width
 ============================================================ */
 function StatsBar() {
   const stats = [
     {
       icon: Globe,
-      value: '6',
+      value: '8',
       label: 'Marketplaces',
-      detail: 'Amazon, Flipkart, Meesho, Myntra, Blinkit & Zepto',
+      detail: 'Amazon, Flipkart, Meesho, Myntra, Blinkit, Zepto, Instamart & Snapdeal',
     },
     {
       icon: Layers,
-      value: '10+',
+      value: '11+',
       label: 'Live Seller Tools',
       detail: 'Profit, ROAS, RTO, CSV, AI & GST Suite',
     },
@@ -666,17 +671,17 @@ function StatsBar() {
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 w-full">
       {stats.map((s, idx) => (
         <div
           key={idx}
-          className="rounded-xl dark:bg-zinc-900/60 bg-white/80 dark:border-zinc-800/80 border-zinc-200/80 p-4 flex items-start gap-3"
+          className="rounded-xl dark:bg-zinc-900/60 bg-white/80 dark:border-zinc-800/80 border-zinc-200/80 p-3.5 sm:p-4 flex items-start gap-3"
         >
           <div className="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
             <s.icon className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
           </div>
           <div className="min-w-0">
-            <p className="text-xl font-extrabold text-zinc-900 dark:text-zinc-50 leading-tight select-none">
+            <p className="text-lg sm:text-xl font-extrabold text-zinc-900 dark:text-zinc-50 leading-tight select-none">
               {s.value}{' '}
               <span className="text-sm font-bold text-zinc-700 dark:text-zinc-300">{s.label}</span>
             </p>
@@ -693,9 +698,9 @@ function StatsBar() {
 /* ============================================================
    PAIN POINTS
 ============================================================ */
-function PainPoints({ onNavigate }: { onNavigate: (p: string) => void }) {
+function PainPoints({ onNavigate }: { onNavigate: (p: PageId) => void }) {
   return (
-    <section className="space-y-6">
+    <section className="space-y-5 sm:space-y-6">
       <div className="text-center max-w-2xl mx-auto">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500 dark:text-amber-400 text-xs font-medium mb-3 select-none">
           <Lightbulb className="w-3.5 h-3.5" /> Sound familiar?
@@ -703,16 +708,16 @@ function PainPoints({ onNavigate }: { onNavigate: (p: string) => void }) {
         <h2 className="text-2xl md:text-4xl font-bold dark:text-zinc-50 text-zinc-900 mb-2 select-none">
           The hidden leaks every seller faces
         </h2>
-        <p className="dark:text-zinc-400 text-zinc-600 select-none">
+        <p className="dark:text-zinc-400 text-zinc-600 select-none text-sm sm:text-base">
           We built SellerMath around the exact problems that quietly drain Indian sellers' margins.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 w-full">
         {PAIN_POINTS.map((p, i) => (
           <div
             key={i}
-            className="group rounded-2xl dark:bg-zinc-900/60 bg-white/80 dark:border-zinc-800/80 border-zinc-200/80 p-5 transition hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-500/5"
+            className="group rounded-2xl dark:bg-zinc-900/60 bg-white/80 dark:border-zinc-800/80 border-zinc-200/80 p-4 sm:p-5 transition hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-500/5"
           >
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center shrink-0">
@@ -746,7 +751,7 @@ function PainPoints({ onNavigate }: { onNavigate: (p: string) => void }) {
 }
 
 /* ============================================================
-   TOOL CARD
+   TOOL CARD — tighter mobile padding
 ============================================================ */
 function ToolCard({ icon, iconBg, title, description, tools, status, onClick }: Tool) {
   const [hovered, setHovered] = useState(false);
@@ -757,7 +762,7 @@ function ToolCard({ icon, iconBg, title, description, tools, status, onClick }: 
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onClick={onClick && !isDisabled ? onClick : undefined}
-      className={`group relative dark:bg-zinc-900/80 bg-white/80 dark:border-zinc-800/80 border-zinc-200/80 rounded-2xl p-5 transition-all duration-300 ${
+      className={`group relative dark:bg-zinc-900/80 bg-white/80 dark:border-zinc-800/80 border-zinc-200/80 rounded-2xl p-4 sm:p-5 transition-all duration-300 ${
         hovered ? 'border-emerald-500/50 shadow-2xl shadow-emerald-500/15 -translate-y-1' : ''
       } ${isDisabled ? 'opacity-80 cursor-not-allowed' : 'cursor-pointer dark:hover:bg-zinc-900/90 hover:bg-zinc-100'}`}
     >
@@ -820,23 +825,24 @@ function ToolCard({ icon, iconBg, title, description, tools, status, onClick }: 
 /* ============================================================
    TOOL EXPLORER
 ============================================================ */
-function mapToolPage(title: string): string {
-  const map: Record<string, string> = {
+function mapToolPage(title: string): PageId {
+  const map: Record<string, PageId> = {
     'Product Profit Calculator': 'calculator',
     'ROAS & Break-Even Calculator': 'roas',
     'Shipping & RTO Calculator': 'shipping',
     'Product Image Resizer': 'image-resizer',
-    'AI Product Listing Writer': 'listing',
+    'AI Product Listing Writer': 'listing-writer',
     'SEO Keyword Generator': 'seo-keywords',
     'Listing Optimizer': 'listing-optimizer',
     'Bulk CSV Profit Calculator': 'bulk-csv',
+    'Settlement Reconciliation': 'settlement-reconciliation',
     'Returns & RTO Analytics': 'rto-analytics',
     'GST Invoice Generator': 'gst-invoice',
   };
   return map[title] ?? 'calculator';
 }
 
-function ToolExplorer({ onNavigate }: { onNavigate: (p: string) => void }) {
+function ToolExplorer({ onNavigate }: { onNavigate: (p: PageId) => void }) {
   const [query, setQuery] = useState('');
   const [activeCat, setActiveCat] = useState('all');
 
@@ -859,7 +865,7 @@ function ToolExplorer({ onNavigate }: { onNavigate: (p: string) => void }) {
   const totalVisible = visibleGroups.reduce((n, g) => n + g.items.length, 0);
 
   return (
-    <section className="space-y-5">
+    <section className="space-y-5 w-full">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h2 className="text-2xl md:text-3xl font-bold dark:text-zinc-50 text-zinc-900 tracking-tight select-none">
@@ -914,7 +920,7 @@ function ToolExplorer({ onNavigate }: { onNavigate: (p: string) => void }) {
           <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 select-none">Try "GST", "RTO", "listing" or clear the filter.</p>
         </div>
       ) : (
-        <div className="space-y-10">
+        <div className="space-y-8 sm:space-y-10">
           {visibleGroups.map((g) => (
             <div key={g.id} className="space-y-4">
               <div className="flex items-center gap-2">
@@ -924,7 +930,7 @@ function ToolExplorer({ onNavigate }: { onNavigate: (p: string) => void }) {
                 </span>
               </div>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 -mt-3 max-w-2xl select-none">{g.subtitle}</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 {g.items.map((item) => (
                   <ToolCard
                     key={item.title}
@@ -942,16 +948,16 @@ function ToolExplorer({ onNavigate }: { onNavigate: (p: string) => void }) {
 }
 
 /* ============================================================
-   MARKETPLACE COMPARISON — 360px safe
+   MARKETPLACE COMPARISON — 360px safe, wider on mobile
 ============================================================ */
-function MarketplaceComparison({ onNavigate }: { onNavigate: (p: string) => void }) {
+function MarketplaceComparison({ onNavigate }: { onNavigate: (p: PageId) => void }) {
   const samplePrice = 999;
   return (
-    <section className="rounded-2xl dark:bg-zinc-900/60 bg-white/80 dark:border-zinc-800/80 border-zinc-200/80 overflow-hidden">
-      <div className="p-5 md:p-6 border-b dark:border-zinc-800/60 border-zinc-200/60">
+    <section className="rounded-2xl dark:bg-zinc-900/60 bg-white/80 dark:border-zinc-800/80 border-zinc-200/80 overflow-hidden w-full">
+      <div className="p-4 sm:p-5 md:p-6 border-b dark:border-zinc-800/60 border-zinc-200/60">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h2 className="text-xl md:text-2xl font-bold text-zinc-900 dark:text-zinc-50 select-none">
+            <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-zinc-900 dark:text-zinc-50 select-none">
               Same product, wildly different payout
             </h2>
             <p className="text-xs md:text-sm text-zinc-500 dark:text-zinc-400 mt-1 select-none">
@@ -960,7 +966,7 @@ function MarketplaceComparison({ onNavigate }: { onNavigate: (p: string) => void
           </div>
           <button
             onClick={() => onNavigate('calculator')}
-            className="shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-semibold transition select-none"
+            className="shrink-0 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-semibold transition select-none"
           >
             Calculate yours <ArrowRight className="w-4 h-4" />
           </button>
@@ -1012,15 +1018,15 @@ function MarketplaceComparison({ onNavigate }: { onNavigate: (p: string) => void
 }
 
 /* ============================================================
-   3A. PROFIT LEAK CHECK — full-width 2-column diagnostic
+   PROFIT LEAK CHECK — 2-column diagnostic, wide on all screens
 ============================================================ */
-function ProfitLeakCheck({ onNavigate }: { onNavigate: (p: string) => void }) {
+function ProfitLeakCheck({ onNavigate }: { onNavigate: (p: PageId) => void }) {
   const [checked, setChecked] = useState<boolean[]>(LEAK_CHECKS.map(() => false));
   const totalLeak = LEAK_CHECKS.reduce((sum, c, i) => (checked[i] ? sum + c.leak : sum), 0);
   const gaugePct = Math.min(totalLeak * 3, 100);
 
   return (
-    <section className="rounded-2xl dark:bg-zinc-900/60 bg-white/80 dark:border-zinc-800/80 border-zinc-200/80 p-5 md:p-7">
+    <section className="rounded-2xl dark:bg-zinc-900/60 bg-white/80 dark:border-zinc-800/80 border-zinc-200/80 p-4 sm:p-6 md:p-7 w-full">
       <div className="flex items-center gap-2 mb-1">
         <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
           <Gauge className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
@@ -1031,7 +1037,7 @@ function ProfitLeakCheck({ onNavigate }: { onNavigate: (p: string) => void }) {
         Tick what applies to you — we'll estimate how much margin you may be leaving on the table.
       </p>
 
-      <div className="grid lg:grid-cols-[1.3fr_1fr] gap-5 lg:gap-6 items-start">
+      <div className="grid lg:grid-cols-[1.3fr_1fr] gap-4 sm:gap-5 lg:gap-6 items-start">
         {/* Left: checkboxes */}
         <div className="space-y-2">
           {LEAK_CHECKS.map((c, i) => (
@@ -1063,7 +1069,7 @@ function ProfitLeakCheck({ onNavigate }: { onNavigate: (p: string) => void }) {
         </div>
 
         {/* Right: gauge + CTA */}
-        <div className="rounded-xl p-5 dark:bg-zinc-950 bg-zinc-50 border dark:border-zinc-800 border-zinc-200 lg:sticky lg:top-4">
+        <div className="rounded-xl p-4 sm:p-5 dark:bg-zinc-950 bg-zinc-50 border dark:border-zinc-800 border-zinc-200 lg:sticky lg:top-4">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-2 select-none">
             Estimated margin leak
           </p>
@@ -1095,7 +1101,7 @@ function ProfitLeakCheck({ onNavigate }: { onNavigate: (p: string) => void }) {
 }
 
 /* ============================================================
-   3B. COMMUNITY REVIEWS — real, persistent, interactive
+   COMMUNITY REVIEWS — real, persistent, interactive
 ============================================================ */
 function loadReviews(): Review[] {
   if (typeof window === 'undefined') return [];
@@ -1173,7 +1179,6 @@ function CommunityReviews() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [showForm, setShowForm] = useState(false);
 
-  // form fields
   const [rating, setRating] = useState(0);
   const [name, setName] = useState('');
   const [marketplace, setMarketplace] = useState(MARKETPLACE_OPTIONS[0]);
@@ -1182,12 +1187,10 @@ function CommunityReviews() {
   const [errors, setErrors] = useState<string[]>([]);
   const [toast, setToast] = useState<string | null>(null);
 
-  // Load from localStorage on mount
   useEffect(() => {
     setReviews(loadReviews());
   }, []);
 
-  // Persist whenever reviews change
   const persist = useCallback((next: Review[]) => {
     setReviews(next);
     try {
@@ -1195,7 +1198,6 @@ function CommunityReviews() {
     } catch {
       /* storage unavailable — reviews still live in memory */
     }
-    // Optional backend sync — fails silently so static hosting still works
     fetch('/api/reviews', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1254,7 +1256,7 @@ function CommunityReviews() {
   };
 
   return (
-    <section className="space-y-5">
+    <section className="space-y-5 w-full">
       <div className="text-center max-w-2xl mx-auto">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 dark:text-emerald-400 text-xs font-medium mb-3 select-none">
           <MessageSquare className="w-3.5 h-3.5" /> Community
@@ -1267,8 +1269,7 @@ function CommunityReviews() {
         </p>
       </div>
 
-      {/* Summary header */}
-      <div className="rounded-2xl dark:bg-zinc-900/60 bg-white/80 dark:border-zinc-800/80 border-zinc-200/80 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="rounded-2xl dark:bg-zinc-900/60 bg-white/80 dark:border-zinc-800/80 border-zinc-200/80 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <div>
             <div className="flex items-baseline gap-1 select-none">
@@ -1297,18 +1298,16 @@ function CommunityReviews() {
         </button>
       </div>
 
-      {/* Toast */}
       {toast && (
         <div className="rounded-lg px-4 py-2.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-sm font-medium select-none">
           {toast}
         </div>
       )}
 
-      {/* Form */}
       {showForm && (
         <form
           onSubmit={handleSubmit}
-          className="rounded-2xl dark:bg-zinc-900/60 bg-white/80 dark:border-zinc-800/80 border-zinc-200/80 p-5 space-y-4"
+          className="rounded-2xl dark:bg-zinc-900/60 bg-white/80 dark:border-zinc-800/80 border-zinc-200/80 p-4 sm:p-5 space-y-4"
         >
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-1.5 select-none">
@@ -1396,7 +1395,6 @@ function CommunityReviews() {
         </form>
       )}
 
-      {/* Reviews grid / empty state */}
       {reviews.length === 0 ? (
         <div className="rounded-2xl dark:bg-zinc-900/40 bg-white/60 dark:border-zinc-800/80 border-zinc-200/80 p-8 text-center">
           <MessageSquare className="w-8 h-8 text-zinc-400 mx-auto mb-3" />
@@ -1414,11 +1412,11 @@ function CommunityReviews() {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {reviews.map((r) => (
             <div
               key={r.id}
-              className="rounded-2xl dark:bg-zinc-900/60 bg-white/80 dark:border-zinc-800/80 border-zinc-200/80 p-4 flex flex-col"
+              className="rounded-2xl dark:bg-zinc-900/60 bg-white/80 dark:border-zinc-800/80 border-zinc-200/80 p-3.5 sm:p-4 flex flex-col"
             >
               <div className="flex items-start justify-between gap-2 mb-2">
                 <div className="min-w-0">
@@ -1466,11 +1464,11 @@ function CommunityReviews() {
 }
 
 /* ============================================================
-   4. FINAL CTA — honest copy
+   FINAL CTA
 ============================================================ */
-function FinalCTA({ onNavigate }: { onNavigate: (p: string) => void }) {
+function FinalCTA({ onNavigate }: { onNavigate: (p: PageId) => void }) {
   return (
-    <section className="relative overflow-hidden rounded-2xl dark:bg-zinc-900/60 bg-zinc-50/80 dark:border-zinc-800/80 border-zinc-200/80 p-8 md:p-12 text-center">
+    <section className="relative overflow-hidden rounded-2xl dark:bg-zinc-900/60 bg-zinc-50/80 dark:border-zinc-800/80 border-zinc-200/80 p-5 sm:p-8 md:p-12 text-center w-full">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-emerald-500/10 via-transparent to-transparent pointer-events-none" />
       <div className="relative z-10">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 dark:text-emerald-400 text-xs font-medium mb-5 select-none">
@@ -1479,7 +1477,7 @@ function FinalCTA({ onNavigate }: { onNavigate: (p: string) => void }) {
         <h2 className="text-2xl md:text-4xl font-bold dark:text-zinc-50 text-zinc-900 mb-3 select-none">
           Stop guessing. Start knowing.
         </h2>
-        <p className="dark:text-zinc-400 text-zinc-600 mb-7 max-w-lg mx-auto select-none">
+        <p className="dark:text-zinc-400 text-zinc-600 mb-7 max-w-lg mx-auto select-none text-sm sm:text-base">
           Calculate exact margins, automate GST invoices, and scale across every Indian marketplace with SellerMath.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -1502,14 +1500,12 @@ function FinalCTA({ onNavigate }: { onNavigate: (p: string) => void }) {
 }
 
 /* ============================================================
-   HOME — tightened top spacing
+   HOME — wide SaaS container, single-layer padding, compact top
 ============================================================ */
 export default function Home({ onNavigate }: HomeProps) {
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 sm:pt-3 pb-8 space-y-6 sm:space-y-8">
-      <div className="mb-3 sm:mb-4">
-        <FeeAlertBar onNavigate={onNavigate} />
-      </div>
+    <div className="w-full max-w-[1360px] mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 space-y-4 sm:space-y-6 overflow-x-hidden box-border">
+      <FeeAlertBar onNavigate={onNavigate} />
       <Hero onNavigate={onNavigate} />
       <StatsBar />
       <PainPoints onNavigate={onNavigate} />

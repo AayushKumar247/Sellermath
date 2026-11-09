@@ -27,7 +27,6 @@
     "noFallthroughCasesInSwitch": true,
 
     /* Suppress deprecation warnings */
-    "ignoreDeprecations": "6.0"
   },
   "include": ["src"]
 }

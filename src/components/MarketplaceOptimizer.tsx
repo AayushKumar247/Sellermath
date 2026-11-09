@@ -467,7 +467,7 @@ export default function MarketplaceOptimizer() {
       className="min-h-screen w-full max-w-full overflow-x-hidden bg-zinc-50 dark:bg-zinc-950 transition-colors duration-300"
       onKeyDown={onGlobalKey}
     >
-      <div className="relative w-full max-w-7xl mx-auto px-3 sm:px-6 py-5 sm:py-10">
+      <div className="relative w-full max-w-[1360px] mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 box-border overflow-x-hidden">
         <div className="pointer-events-none absolute inset-0 overflow-hidden -z-10">
           <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-emerald-400/10 dark:bg-emerald-500/10 blur-3xl" />
           <div className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-emerald-400/10 dark:bg-emerald-500/10 blur-3xl" />

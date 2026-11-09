@@ -2,6 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Global overflow guard - prevent horizontal page drift on mobile/tablet */
+html, body, #root {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+*, *::before, *::after {
+  box-sizing: inherit;
+}
+
 /* Dark mode global overrides for component classes - Obsidian/Carbon theme */
 @layer utilities {
   .dark .bg-white {

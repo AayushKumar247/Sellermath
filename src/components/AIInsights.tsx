@@ -143,26 +143,26 @@ export default function AIInsights({
   };
 
   return (
-    <div className="bg-white rounded-2xl border-2 border-slate-200 overflow-hidden shadow-lg">
+    <div className="bg-white dark:bg-zinc-900 rounded-2xl border-2 border-slate-200 dark:border-zinc-800 overflow-hidden shadow-lg">
       {/* Header */}
       <div className={`bg-gradient-to-r ${marketplaceGradient} p-5 sm:p-6 relative overflow-hidden`}>
         <div className="absolute top-0 right-0 w-48 h-48 rounded-full blur-3xl opacity-20 bg-emerald-500" />
         <div className="relative z-10 flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
-            <div className={`w-11 h-11 rounded-xl ${isBlinkit ? 'bg-slate-900/20' : 'bg-white/20'} flex items-center justify-center backdrop-blur-sm`}>
-              <Sparkles className={`w-6 h-6 ${isBlinkit ? 'text-slate-900' : 'text-white'}`} strokeWidth={2.5} />
+            <div className={`w-11 h-11 rounded-xl ${isBlinkit ? 'bg-slate-900/20 dark:bg-slate-800/30' : 'bg-white/20 dark:bg-white/10'} flex items-center justify-center backdrop-blur-sm`}>
+              <Sparkles className={`w-6 h-6 ${isBlinkit ? 'text-slate-900 dark:text-zinc-100' : 'text-white dark:text-zinc-100'}`} strokeWidth={2.5} />
             </div>
             <div>
-              <h3 className={`text-lg sm:text-xl font-bold ${isBlinkit ? 'text-slate-900' : 'text-white'} flex items-center gap-2`}>
+              <h3 className={`text-lg sm:text-xl font-bold ${isBlinkit ? 'text-slate-900 dark:text-zinc-100' : 'text-white dark:text-zinc-100'} flex items-center gap-2`}>
                 AI Strategic Insights
-                <span className="text-emerald-400">✨</span>
+                <span className="text-emerald-400 dark:text-emerald-300">✨</span>
               </h3>
-              <p className={`text-sm ${isBlinkit ? 'text-slate-900/80' : 'text-white/80'}`}>
+              <p className={`text-sm ${isBlinkit ? 'text-slate-900/80 dark:text-zinc-400' : 'text-white/80 dark:text-zinc-300'}`}>
                 Get an AI-powered profitability report for your {marketplaceName} listing
               </p>
             </div>
           </div>
-          <div className={`${isBlinkit ? 'bg-slate-900/15 text-slate-900 border-slate-900/25' : 'bg-white/15 backdrop-blur-sm text-white border-white/25'} text-xs font-semibold px-3.5 py-1.5 rounded-full border shadow-sm`}>
+          <div className={`${isBlinkit ? 'bg-slate-900/15 text-slate-900 border-slate-900/25 dark:bg-zinc-800/50 dark:text-zinc-200 dark:border-zinc-700' : 'bg-white/15 backdrop-blur-sm text-white border-white/25 dark:bg-white/10 dark:text-zinc-200 dark:border-zinc-700'} text-xs font-semibold px-3.5 py-1.5 rounded-full border shadow-sm`}>
             {marketplaceName} ({categoryName})
           </div>
         </div>
@@ -191,7 +191,7 @@ export default function AIInsights({
             {!loading && !insights && !error && (
               <button
                 onClick={analyze}
-                className="w-full flex items-center justify-center gap-2.5 px-6 py-4 rounded-xl font-bold text-base bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:scale-[1.01] active:scale-[0.99] transition-all duration-200"
+                className="w-full flex items-center justify-center gap-2.5 px-6 py-4 rounded-xl font-bold text-base bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 select-none focus:outline-none focus:ring-0"
               >
                 <Sparkles className="w-5 h-5" />
                 Analyze Profitability with AI
@@ -201,32 +201,32 @@ export default function AIInsights({
             {loading && (
               <div className="flex flex-col items-center justify-center py-12">
                 <div className="relative">
-                  <div className="w-16 h-16 rounded-full border-4 border-slate-100" />
-                  <Loader2 className="w-16 h-16 text-emerald-500 animate-spin absolute inset-0" strokeWidth={2.5} />
+                  <div className="w-16 h-16 rounded-full border-4 border-zinc-100 dark:border-zinc-800" />
+                  <Loader2 className="w-16 h-16 text-emerald-500 animate-spin absolute inset-0 dark:text-emerald-400" strokeWidth={2.5} />
                 </div>
-                <p className="mt-4 text-sm font-semibold text-slate-600 animate-pulse">
+                <p className="mt-4 text-sm font-semibold text-zinc-600 animate-pulse dark:text-zinc-300">
                   Crunching your numbers...
                 </p>
-                <p className="text-xs text-slate-400 mt-1">
+                <p className="text-xs text-zinc-400 mt-1 dark:text-zinc-500">
                   AI is analyzing your profit metrics
                 </p>
               </div>
             )}
 
             {error && !loading && (
-              <div className="bg-red-50 border-2 border-red-200 rounded-xl p-5">
+              <div className="bg-red-50 border-2 border-red-200 rounded-xl p-5 dark:bg-red-950/30 dark:border-red-500/30">
                 <div className="flex items-start gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-red-100 flex items-center justify-center flex-shrink-0">
-                    <AlertCircle className="w-5 h-5 text-red-500" strokeWidth={2.5} />
+                  <div className="w-9 h-9 rounded-lg bg-red-100 flex items-center justify-center flex-shrink-0 dark:bg-red-900/30">
+                    <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" strokeWidth={2.5} />
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-bold text-red-700">Analysis Failed</p>
-                    <p className="text-xs text-red-600 mt-1 leading-relaxed">{error}</p>
+                    <p className="text-sm font-bold text-red-700 dark:text-red-300">Analysis Failed</p>
+                    <p className="text-xs text-red-600 mt-1 leading-relaxed dark:text-red-400">{error}</p>
                   </div>
                 </div>
                 <button
                   onClick={analyze}
-                  className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold bg-red-600 text-white hover:bg-red-700 transition-colors"
+                  className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold bg-red-600 text-white hover:bg-red-700 transition-colors select-none focus:outline-none focus:ring-0 dark:bg-red-600 dark:hover:bg-red-500"
                 >
                   <ArrowRight className="w-4 h-4 rotate-0" />
                   Try Again
@@ -241,21 +241,21 @@ export default function AIInsights({
                   return (
                     <div
                       key={i}
-                      className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden"
+                      className="bg-zinc-50 rounded-xl border border-zinc-200 overflow-hidden dark:bg-zinc-800/50 dark:border-zinc-700"
                     >
-                      <div className="flex items-center gap-2.5 px-4 py-3 bg-white border-b border-slate-200">
-                        <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                          <Icon className="w-4 h-4 text-emerald-600" strokeWidth={2.5} />
+                      <div className="flex items-center gap-2.5 px-4 py-3 bg-white border-b border-zinc-200 dark:bg-zinc-800 dark:border-zinc-700">
+                        <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0 dark:bg-emerald-900/30">
+                          <Icon className="w-4 h-4 text-emerald-600 dark:text-emerald-400" strokeWidth={2.5} />
                         </div>
-                        <h4 className="text-sm font-bold text-slate-700">
+                        <h4 className="text-sm font-bold text-zinc-700 dark:text-zinc-200">
                           {section.title}
                         </h4>
-                        <span className="ml-auto text-[10px] font-bold text-slate-300 uppercase tracking-wide">
+                        <span className="ml-auto text-[10px] font-bold text-zinc-300 uppercase tracking-wide dark:text-zinc-500">
                           Part {i + 1}
                         </span>
                       </div>
                       <div className="px-4 py-3">
-                        <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">
+                        <p className="text-sm text-zinc-600 leading-relaxed whitespace-pre-wrap dark:text-zinc-300">
                           {section.content}
                         </p>
                       </div>
@@ -265,7 +265,7 @@ export default function AIInsights({
 
                 <button
                   onClick={analyze}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold bg-zinc-100 text-zinc-600 hover:bg-zinc-200 transition-colors select-none focus:outline-none focus:ring-0 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
                 >
                   <Sparkles className="w-4 h-4" />
                   Re-Analyze with Updated Data
@@ -275,7 +275,7 @@ export default function AIInsights({
           </div>
 
           {/* Right: visual analyzer */}
-          <div className="lg:pl-6 lg:border-l lg:border-slate-200 min-w-0">
+          <div className="lg:pl-6 lg:border-l lg:border-zinc-200 min-w-0 dark:lg:border-zinc-700">
             <StrategicVisualAnalyzer
               sellingPrice={sellingPrice}
               breakEvenPrice={breakEvenPrice}
@@ -324,15 +324,15 @@ function AnalyzerTooltip({
   if (rows.length === 0) return null;
 
   return (
-    <div className="rounded-lg border border-slate-700 bg-slate-900/95 px-3 py-2 shadow-xl">
+    <div className="rounded-lg border border-zinc-200 bg-white/95 px-3 py-2 shadow-xl dark:border-zinc-700 dark:bg-zinc-900/95">
       {rows.map((row) => (
         <div key={String(row.dataKey)} className="flex items-center gap-2 py-0.5">
           <span
             className="h-2 w-2 rounded-sm flex-shrink-0"
             style={{ backgroundColor: row.color }}
           />
-          <span className="text-[11px] text-slate-300">{row.name}</span>
-          <span className="ml-auto text-[11px] font-bold text-white">
+          <span className="text-[11px] text-zinc-600 dark:text-zinc-300">{row.name}</span>
+          <span className="ml-auto text-[11px] font-bold text-zinc-900 dark:text-white">
             {formatINR(row.value ?? 0)}
           </span>
         </div>
@@ -384,37 +384,37 @@ function StrategicVisualAnalyzer({
   const xMax = Math.max(sellingPrice, breakEvenPrice, 1) * 1.08;
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-slate-700 bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 p-4 sm:p-5 h-full">
-      <div className="absolute top-0 right-0 w-40 h-40 rounded-full blur-3xl opacity-20 bg-blue-500 pointer-events-none" />
+    <div className="relative overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900/90 p-4 sm:p-5 h-full">
+      <div className="absolute top-0 right-0 w-40 h-40 rounded-full blur-3xl opacity-20 bg-blue-500 pointer-events-none dark:opacity-10" />
 
       <div className="relative z-10">
         <div className="flex items-start sm:items-center justify-between gap-4 w-full mb-4">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-lg bg-blue-500/20 border border-blue-400/20 flex items-center justify-center">
-              <BarChart3 className="w-4 h-4 text-blue-400" strokeWidth={2.5} />
+            <div className="w-9 h-9 rounded-lg bg-blue-500/20 border border-blue-400/20 flex items-center justify-center dark:bg-blue-500/10 dark:border-blue-400/30">
+              <BarChart3 className="w-4 h-4 text-blue-600 dark:text-blue-400" strokeWidth={2.5} />
             </div>
             <div>
-              <h4 className="text-sm font-bold text-white">Strategic Visual Analyzer</h4>
-              <p className="text-[11px] text-slate-400">Live price vs break-even buffer</p>
+              <h4 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Strategic Visual Analyzer</h4>
+              <p className="text-[11px] text-zinc-600 dark:text-zinc-400">Live price vs break-even buffer</p>
             </div>
           </div>
-          <div className="px-3 py-1.5 rounded-full text-[11px] font-semibold tracking-wide bg-white/10 text-slate-300 border border-white/10 whitespace-nowrap">
+          <div className="px-3 py-1.5 rounded-full text-[11px] font-semibold tracking-wide bg-zinc-100 text-zinc-800 border border-zinc-200 whitespace-nowrap dark:bg-zinc-800 dark:text-zinc-200 dark:border-zinc-700">
             {marketplaceName} ({categoryName})
           </div>
         </div>
 
         <div className="grid grid-cols-3 gap-2 mb-4">
-          <div className="rounded-lg bg-slate-800/80 border border-slate-700 px-2 py-2">
-            <p className="text-[10px] font-semibold text-blue-300 uppercase tracking-wide">Current</p>
-            <p className="text-xs font-bold text-white mt-0.5">{formatINR(sellingPrice)}</p>
+          <div className="rounded-lg bg-zinc-50 border border-zinc-200/80 px-2 py-2 dark:bg-zinc-800/80 dark:border-zinc-700/80">
+            <p className="text-[10px] font-semibold text-blue-600 uppercase tracking-wide dark:text-blue-400">Current</p>
+            <p className="text-xs font-bold text-zinc-900 mt-0.5 dark:text-zinc-100">{formatINR(sellingPrice)}</p>
           </div>
-          <div className="rounded-lg bg-slate-800/80 border border-slate-700 px-2 py-2">
-            <p className="text-[10px] font-semibold text-orange-300 uppercase tracking-wide">Break-Even</p>
-            <p className="text-xs font-bold text-white mt-0.5">{formatINR(breakEvenPrice)}</p>
+          <div className="rounded-lg bg-zinc-50 border border-zinc-200/80 px-2 py-2 dark:bg-zinc-800/80 dark:border-zinc-700/80">
+            <p className="text-[10px] font-semibold text-orange-600 uppercase tracking-wide dark:text-orange-400">Break-Even</p>
+            <p className="text-xs font-bold text-zinc-900 mt-0.5 dark:text-zinc-100">{formatINR(breakEvenPrice)}</p>
           </div>
-          <div className="rounded-lg bg-slate-800/80 border border-slate-700 px-2 py-2">
-            <p className="text-[10px] font-semibold text-emerald-300 uppercase tracking-wide">Buffer</p>
-            <p className={`text-xs font-bold mt-0.5 ${netProfit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+          <div className="rounded-lg bg-zinc-50 border border-zinc-200/80 px-2 py-2 dark:bg-zinc-800/80 dark:border-zinc-700/80">
+            <p className="text-[10px] font-semibold text-emerald-600 uppercase tracking-wide dark:text-emerald-400">Buffer</p>
+            <p className={`text-xs font-bold mt-0.5 ${netProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
               {formatINR(netProfit)}
             </p>
           </div>
@@ -428,21 +428,21 @@ function StrategicVisualAnalyzer({
               margin={{ top: 8, right: 28, left: 4, bottom: 4 }}
               barCategoryGap="28%"
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="#334155" horizontal={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
               <XAxis
                 type="number"
                 domain={[0, xMax]}
                 tickFormatter={formatAxisINR}
-                tick={{ fill: '#94a3b8', fontSize: 11 }}
-                axisLine={{ stroke: '#475569' }}
-                tickLine={{ stroke: '#475569' }}
+                tick={{ fill: '#64748b', fontSize: 11 }}
+                axisLine={{ stroke: '#cbd5e1' }}
+                tickLine={{ stroke: '#cbd5e1' }}
               />
               <YAxis
                 type="category"
                 dataKey="name"
                 width={118}
-                tick={{ fill: '#cbd5e1', fontSize: 11, fontWeight: 600 }}
-                axisLine={{ stroke: '#475569' }}
+                tick={{ fill: '#475569', fontSize: 11, fontWeight: 600 }}
+                axisLine={{ stroke: '#cbd5e1' }}
                 tickLine={false}
               />
               <Tooltip
@@ -492,41 +492,41 @@ function StrategicVisualAnalyzer({
         <div
           className={`rounded-xl border p-3 ${
             isInDanger
-              ? 'bg-red-500/10 border-red-500/40'
-              : 'bg-amber-500/10 border-amber-500/30'
+              ? 'bg-rose-50/80 border-rose-200 text-rose-800 dark:bg-rose-950/30 dark:border-rose-500/30 dark:text-rose-300'
+              : 'bg-amber-50/80 border-amber-200 text-amber-800 dark:bg-amber-950/30 dark:border-amber-500/30 dark:text-amber-300'
           }`}
         >
           <div className="flex items-start gap-2.5">
             <ShieldAlert
-              className={`w-4 h-4 mt-0.5 flex-shrink-0 ${isInDanger ? 'text-red-400' : 'text-amber-400'}`}
+              className={`w-4 h-4 mt-0.5 flex-shrink-0 ${isInDanger ? 'text-rose-600 dark:text-rose-400' : 'text-amber-600 dark:text-amber-400'}`}
               strokeWidth={2.5}
             />
             <div className="flex-1 min-w-0">
-              <p className={`text-xs font-bold ${isInDanger ? 'text-red-300' : 'text-amber-300'}`}>
+              <p className={`text-xs font-bold ${isInDanger ? 'text-rose-800 dark:text-rose-300' : 'text-amber-800 dark:text-amber-300'}`}>
                 RTO Danger Zone
               </p>
-              <p className="text-[11px] text-slate-400 mt-0.5 leading-relaxed">
+              <p className="text-[11px] text-zinc-600 dark:text-zinc-400 mt-0.5 leading-relaxed">
                 {isInDanger
                   ? `${safeReturnRate}% return rate sits in the ${RTO_DANGER_THRESHOLD}%+ risk area — RTO costs are eating into margin.`
                   : `${safeReturnRate}% return rate is below the ${RTO_DANGER_THRESHOLD}% danger threshold, but still a cost drag.`}
               </p>
-              <div className="relative mt-2.5 h-2 rounded-full bg-slate-800 overflow-hidden">
+              <div className="relative mt-2.5 h-2 rounded-full bg-zinc-200 overflow-hidden dark:bg-zinc-700">
                 <div
-                  className={`absolute inset-y-0 left-0 rounded-full ${isInDanger ? 'bg-red-500' : 'bg-amber-400'}`}
+                  className={`absolute inset-y-0 left-0 rounded-full ${isInDanger ? 'bg-rose-500 dark:bg-rose-500' : 'bg-amber-400 dark:bg-amber-400'}`}
                   style={{ width: `${currentMeterPct}%` }}
                 />
                 <div
-                  className="absolute top-[-3px] bottom-[-3px] w-0.5 bg-red-300/90"
+                  className="absolute top-[-3px] bottom-[-3px] w-0.5 bg-rose-300/90 dark:bg-rose-400/90"
                   style={{ left: `${dangerMarkerPct}%` }}
                   title={`${RTO_DANGER_THRESHOLD}% danger threshold`}
                 />
               </div>
               <div className="flex justify-between mt-1">
-                <span className="text-[10px] text-slate-500">0%</span>
-                <span className="text-[10px] font-semibold text-red-300/80">
+                <span className="text-[10px] text-zinc-500 dark:text-zinc-500">0%</span>
+                <span className={`text-[10px] font-semibold ${isInDanger ? 'text-rose-700 dark:text-rose-300' : 'text-amber-700 dark:text-amber-300'}`}>
                   {safeReturnRate}% return rate
                 </span>
-                <span className="text-[10px] text-slate-500">100%</span>
+                <span className="text-[10px] text-zinc-500 dark:text-zinc-500">100%</span>
               </div>
             </div>
           </div>
@@ -538,7 +538,7 @@ function StrategicVisualAnalyzer({
 
 function LegendDot({ color, label }: { color: string; label: string }) {
   return (
-    <span className="inline-flex items-center gap-1.5 text-[10px] font-medium text-slate-400">
+    <span className="inline-flex items-center gap-1.5 text-[10px] font-medium text-zinc-600 dark:text-zinc-400">
       <span className={`h-2 w-2 rounded-sm ${color}`} />
       {label}
     </span>
@@ -556,14 +556,14 @@ function DataChip({
 }) {
   const valueColor =
     tone === 'positive'
-      ? 'text-emerald-600'
+      ? 'text-emerald-600 dark:text-emerald-400'
       : tone === 'negative'
-      ? 'text-red-500'
-      : 'text-slate-700';
+      ? 'text-red-600 dark:text-red-400'
+      : 'text-zinc-700 dark:text-zinc-300';
 
   return (
-    <div className="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
-      <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
+    <div className="inline-flex items-center gap-1.5 bg-zinc-50 border border-zinc-200 rounded-lg px-2.5 py-1.5 dark:bg-zinc-800 dark:border-zinc-700">
+      <span className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wide dark:text-zinc-500">
         {label}
       </span>
       <span className={`text-xs font-bold ${valueColor}`}>{value}</span>

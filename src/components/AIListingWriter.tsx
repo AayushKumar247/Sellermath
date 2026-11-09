@@ -433,10 +433,10 @@ export default function AIListingWriter() {
         .animate-fade-in { animation: fadeIn 0.35s ease-out both; }
       `}</style>
 
-      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6 text-zinc-900 dark:text-zinc-100">
+      <div className="w-full max-w-[1360px] mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 space-y-6 text-zinc-900 dark:text-zinc-100 box-border overflow-x-hidden">
 
         {/* ================= Hero Header ================= */}
-        <div className="relative overflow-hidden rounded-2xl border border-emerald-200/60 dark:border-emerald-500/20 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl p-5 shadow-lg shadow-emerald-500/5">
+        <div className="relative overflow-hidden rounded-2xl border border-emerald-200/60 dark:border-emerald-500/20 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl p-3.5 sm:p-5 shadow-lg shadow-emerald-500/5 w-full max-w-full min-w-0 box-border">
           <div className="absolute -top-24 -right-24 w-64 h-64 bg-emerald-500/10 dark:bg-emerald-500/10 blur-3xl rounded-full pointer-events-none" />
           <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-teal-500/10 dark:bg-teal-500/10 blur-3xl rounded-full pointer-events-none" />
 
@@ -450,7 +450,7 @@ export default function AIListingWriter() {
                 <div className="absolute inset-0 rounded-2xl bg-emerald-500 blur-xl opacity-40 -z-10" />
               </div>
               <div className="min-w-0">
-                <h1 className="text-xl sm:text-2xl font-bold tracking-tight select-none">
+                <h1 className="text-lg sm:text-2xl lg:text-3xl font-bold tracking-tight select-none break-words">
                   AI Product Listing Writer
                 </h1>
                 <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 select-none mt-0.5 max-w-2xl">
@@ -489,7 +489,7 @@ export default function AIListingWriter() {
             {/* Platform */}
             <Card>
               <FieldLabel icon={Layers} title="Platform" hint="Title length & tone auto-tune per marketplace" />
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 w-full min-w-0">
                 {(Object.keys(PLATFORMS) as PlatformKey[]).map((p) => {
                   const cfg = PLATFORMS[p];
                   const Icon = cfg.icon;

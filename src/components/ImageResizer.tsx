@@ -631,7 +631,7 @@ export default function ImageResizer({ onNavigate }: ImageResizerProps) {
   const canDownload = !!renderedDataUrl;
 
   return (
-    <div className="space-y-10 max-w-6xl mx-auto w-full overflow-x-hidden select-none">
+    <div className="w-full max-w-[1360px] mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 space-y-10 overflow-x-hidden select-none box-border">
       {/* ALWAYS-MOUNTED hidden input — never unmounts */}
       <input
         ref={fileInputRef}
@@ -1202,25 +1202,25 @@ export default function ImageResizer({ onNavigate }: ImageResizerProps) {
       )}
 
       {/* ============ SECTION 3: HOW IT WORKS ============ */}
-      <section className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-sm p-6 md:p-10">
-        <div className="text-center mb-8 md:mb-10">
-          <h2 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">How to Resize Product Photos</h2>
+      <section className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-sm p-3.5 sm:p-5 lg:p-6 w-full max-w-full min-w-0 box-border">
+        <div className="text-center mb-6 sm:mb-8">
+          <h2 className="text-lg sm:text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-2 break-words">How to Resize Product Photos</h2>
           <p className="text-sm sm:text-base text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto">Turn any phone photo into a marketplace-compliant catalog image in three steps.</p>
         </div>
-        <div className="flex flex-col md:flex-row items-start gap-8">
-          <div className="flex-1 w-full">
+        <div className="grid grid-cols-3 gap-1.5 sm:gap-4 w-full min-w-0">
+          <div className="flex-1 w-full min-w-0">
             <div className="flex items-center justify-between gap-2 sm:gap-3 mb-2">
               {[
-                { label: 'Raw Photo', sub: 'Off-center phone shot', icon: <ImageIcon className="w-8 h-8 text-zinc-400 dark:text-zinc-600" />, bg: 'from-zinc-100 to-zinc-300 dark:from-zinc-800 dark:to-zinc-900' },
-                { label: 'Smart Fit', sub: 'Bounding-box analysis', icon: <ImageIcon className="w-10 h-10 text-zinc-400 dark:text-zinc-600" />, bg: 'from-emerald-50 to-emerald-100 dark:from-emerald-900/20 dark:to-emerald-800/20' },
-                { label: 'Compliant', sub: 'Marketplace ready', icon: <ImageIcon className="w-11 h-11 text-zinc-400 dark:text-zinc-600" />, bg: 'from-white to-white dark:from-zinc-800 dark:to-zinc-900' },
+                { label: 'Raw Photo', sub: 'Off-center phone shot', icon: <ImageIcon className="w-6 h-6 sm:w-8 sm:h-8 text-zinc-400 dark:text-zinc-600" />, bg: 'from-zinc-100 to-zinc-300 dark:from-zinc-800 dark:to-zinc-900' },
+                { label: 'Smart Fit', sub: 'Bounding-box analysis', icon: <ImageIcon className="w-6 h-6 sm:w-8 sm:h-8 text-zinc-400 dark:text-zinc-600" />, bg: 'from-emerald-50 to-emerald-100 dark:from-emerald-900/20 dark:to-emerald-800/20' },
+                { label: 'Compliant', sub: 'Marketplace ready', icon: <ImageIcon className="w-6 h-6 sm:w-8 sm:h-8 text-zinc-400 dark:text-zinc-600" />, bg: 'from-white to-white dark:from-zinc-800 dark:to-zinc-900' },
               ].map((item, i) => (
                 <div key={i} className="flex-1 min-w-0">
-                  <div className={`relative h-24 sm:h-32 w-full rounded-xl border-2 border-dashed ${i === 2 ? 'border-emerald-500 bg-white dark:bg-zinc-900' : 'border-zinc-400/60 dark:border-zinc-600/60 bg-white dark:bg-zinc-800'} flex items-center justify-center`}>
-                    <div className={`w-16 h-16 sm:w-24 sm:h-24 rounded-xl bg-gradient-to-br ${item.bg} border border-zinc-200/30 flex items-center justify-center p-2 shadow-sm`}>{item.icon}</div>
-                    <span className="absolute bottom-1 left-1/2 -translate-x-1/2 text-[9px] sm:text-[10px] font-bold text-zinc-900 dark:text-zinc-100 whitespace-nowrap">{item.label}</span>
+                  <div className={`relative h-20 sm:h-24 w-full rounded-xl border-2 border-dashed ${i === 2 ? 'border-emerald-500 bg-white dark:bg-zinc-900' : 'border-zinc-400/60 dark:border-zinc-600/60 bg-white dark:bg-zinc-800'} flex items-center justify-center p-2 sm:p-3`}>
+                    <div className={`w-12 h-12 sm:w-16 sm:h-16 rounded-xl bg-gradient-to-br ${item.bg} border border-zinc-200/30 flex items-center justify-center p-1.5 sm:p-2 shadow-sm`}>{item.icon}</div>
+                    <span className="absolute bottom-1 left-1/2 -translate-x-1/2 text-[10px] sm:text-xs font-bold text-zinc-900 dark:text-zinc-100 whitespace-nowrap">{item.label}</span>
                   </div>
-                  <p className="text-[9px] sm:text-[10px] text-zinc-500 dark:text-zinc-400 text-center mt-2 truncate">{item.sub}</p>
+                  <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 text-center mt-2 truncate">{item.sub}</p>
                 </div>
               ))}
             </div>

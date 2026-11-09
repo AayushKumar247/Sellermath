@@ -818,11 +818,11 @@ export default function GSTInvoiceGenerator() {
   const sgstLabel = calc.utgst ? 'UTGST' : 'SGST';
 
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-[1360px] mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 space-y-6 box-border overflow-x-hidden">
       <style>{PRINT_CSS}</style>
 
-      {/* Hero */}
-      <div className="no-print relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 via-white/60 to-teal-500/5 dark:via-zinc-900/60 backdrop-blur-xl p-5 sm:p-7">
+      {/* Glassmorphic studio banner — header */}
+      <div className="no-print relative overflow-hidden rounded-3xl border border-zinc-200/80 dark:border-zinc-800/80 bg-gradient-to-br from-white via-emerald-50/30 to-teal-50/20 dark:from-zinc-900/95 dark:via-zinc-900/90 dark:to-emerald-950/25 p-5 sm:p-7 shadow-sm mb-6">
         <div className="pointer-events-none absolute -top-24 -right-24 w-64 h-64 rounded-full bg-emerald-500/10 blur-3xl" />
         <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-5">
           <div className="max-w-2xl">

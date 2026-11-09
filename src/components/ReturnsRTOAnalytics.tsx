@@ -798,9 +798,9 @@ export default function ReturnsRTOAnalytics() {
 
   return (
     <div className="w-full max-w-full overflow-x-hidden bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
-      <div className="mx-auto w-full max-w-7xl p-4 sm:p-6 lg:p-8">
+      <div className="mx-auto w-full max-w-[1360px] px-3 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 box-border overflow-x-hidden">
         {/* ══════════════ GLASSMORPHIC HEADER + PRESETS ══════════════ */}
-        <div className="mb-5 min-w-0 overflow-hidden rounded-2xl border border-zinc-200/80 bg-white/70 p-4 shadow-sm backdrop-blur-xl dark:border-zinc-800/80 dark:bg-zinc-900/60">
+        <div className="rounded-3xl border border-zinc-200/80 dark:border-zinc-800/80 bg-gradient-to-br from-white via-emerald-50/30 to-teal-50/20 dark:from-zinc-900/95 dark:via-zinc-900/90 dark:to-emerald-950/25 p-5 sm:p-7 shadow-sm mb-6 min-w-0">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
               <h1 className="flex items-center gap-2 text-xl font-semibold sm:text-2xl">

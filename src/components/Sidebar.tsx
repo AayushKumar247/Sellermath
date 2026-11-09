@@ -11,6 +11,7 @@ export type PageId =
   | 'listing-optimizer'
   | 'image-resizer'
   | 'bulk-csv'
+  | 'settlement-reconciliation'
   | 'rto-analytics'
   | 'gst-invoice'
   | 'about'
@@ -30,7 +31,7 @@ interface NavGroup {
   id: string;
   label: string;
   icon?: React.ElementType;
-  items: DropdownItem[];
+  items?: DropdownItem[];
   isDropdown?: boolean;
   directId?: PageId;
 }
@@ -65,7 +66,7 @@ const navGroups: NavGroup[] = [
     id: 'csv-intelligence', label: 'CSV Intelligence', icon: FileSpreadsheet, isDropdown: true,
     items: [
       { id: 'bulk-csv', label: 'Bulk CSV Profit Calculator', status: 'new' },
-      { id: 'settlement-recon', label: 'Settlement Reconciliation', status: 'coming-soon' },
+      { id: 'settlement-reconciliation', label: 'Settlement Reconciliation', status: 'active' },
       { id: 'rto-analytics', label: 'Returns & RTO Analytics', status: 'active' },
     ],
   },
@@ -115,9 +116,10 @@ export default function Sidebar({ activePage, onNavigate, isOpen, onClose, class
           <p className="px-3 mb-3 text-xs font-semibold dark:text-zinc-300 text-slate-500 uppercase tracking-wider">Tools</p>
           {navGroups.map((group) => {
             if (!group.isDropdown && group.directId) {
-              const isActive = activePage === group.directId;
+              const directId = group.directId;
+              const isActive = activePage === directId;
               return (
-                <button key={group.id} onClick={() => onNavigate(group.directId)} className={`w-full flex items-center justify-start gap-3 px-3.5 py-2.5 text-left rounded-xl text-sm font-medium transition-all duration-200 group select-none focus:outline-none focus:ring-0 ${isActive ? 'bg-gradient-to-r from-emerald-500/20 to-teal-500/10 text-emerald-600 dark:text-emerald-300 shadow-sm' : 'dark:text-zinc-300 text-slate-600 dark:hover:text-zinc-50 hover:text-slate-900 dark:hover:bg-zinc-800/60 hover:bg-slate-50'}`}>
+                <button key={group.id} onClick={() => onNavigate(directId)} className={`w-full flex items-center justify-start gap-3 px-3.5 py-2.5 text-left rounded-xl text-sm font-medium transition-all duration-200 group select-none focus:outline-none focus:ring-0 ${isActive ? 'bg-gradient-to-r from-emerald-500/20 to-teal-500/10 text-emerald-600 dark:text-emerald-300 shadow-sm' : 'dark:text-zinc-300 text-slate-600 dark:hover:text-zinc-50 hover:text-slate-900 dark:hover:bg-zinc-800/60 hover:bg-slate-50'}`}>
                   {group.icon ? (
                     <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${group.id === 'gst-invoice' ? 'bg-emerald-500/10 dark:bg-emerald-500/20' : 'dark:bg-zinc-800 bg-zinc-100'}`}>
                       <group.icon className={`w-4 h-4 ${group.id === 'gst-invoice' ? 'text-emerald-600 dark:text-emerald-400' : 'dark:text-zinc-400 text-zinc-600'}`} strokeWidth={2.5} />
@@ -130,7 +132,7 @@ export default function Sidebar({ activePage, onNavigate, isOpen, onClose, class
               );
             }
 
-            const isActive = group.items.some((item) => item.status === 'active' && activePage === item.id);
+            const isActive = (group.items ?? []).some((item) => item.status === 'active' && activePage === item.id);
             const dropdownOpen = openDropdownId === group.id;
 
             return (
@@ -149,7 +151,7 @@ export default function Sidebar({ activePage, onNavigate, isOpen, onClose, class
 
                 {dropdownOpen && (
                   <div className="ml-2 space-y-0.5 border-l-2 border-l-emerald-500/30 pl-3">
-                    {group.items.map((item) => {
+                    {(group.items ?? []).map((item) => {
                       const isDisabled = item.status === 'coming-soon';
                       const isItemActive = activePage === item.id;
                       return (

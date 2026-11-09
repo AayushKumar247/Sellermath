@@ -255,45 +255,46 @@ export default function ROASBreakEven() {
   /* ---------------------------------- UI ---------------------------------- */
 
   return (
-    <div className="w-full max-w-full overflow-x-hidden space-y-8 text-zinc-900 dark:text-zinc-100">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-3 mb-2 flex-wrap">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center shadow-lg shadow-rose-500/20 shrink-0">
-            <Target className="w-5 h-5 text-white" />
+    <div className="w-full max-w-[1360px] mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 space-y-8 overflow-x-hidden box-border text-zinc-900 dark:text-zinc-100">
+      {/* Glassmorphic studio banner — header + quick presets */}
+      <div className="rounded-3xl border border-zinc-200/80 dark:border-zinc-800/80 bg-gradient-to-br from-white via-emerald-50/30 to-teal-50/20 dark:from-zinc-900/95 dark:via-zinc-900/90 dark:to-emerald-950/25 p-5 sm:p-7 shadow-sm mb-6">
+        <div className="flex items-start justify-between gap-3 mb-2 flex-wrap">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center shadow-lg shadow-rose-500/20 shrink-0">
+              <Target className="w-5 h-5 text-white" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-zinc-100 select-none">
+                ROAS &amp; Break-Even Ad Spend
+              </h2>
+              <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 select-none">
+                Real unit economics — COGS, returns, fees, GST, fixed costs — not just AOV
+              </p>
+            </div>
           </div>
-          <div className="min-w-0">
-            <h2 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-zinc-100 select-none">
-              ROAS &amp; Break-Even Ad Spend
-            </h2>
-            <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 select-none">
-              Real unit economics — COGS, returns, fees, GST, fixed costs — not just AOV
-            </p>
-          </div>
-        </div>
-        <button
-          onClick={copySummary}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-xs font-semibold transition-colors select-none shrink-0"
-        >
-          {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-          {copied ? 'Copied' : 'Copy Summary'}
-        </button>
-      </div>
-
-      {/* Presets */}
-      <div className="flex flex-wrap gap-2">
-        <span className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 self-center mr-1 select-none">
-          Quick presets:
-        </span>
-        {Object.entries(PRESETS).map(([key, p]) => (
           <button
-            key={key}
-            onClick={() => applyPreset(key)}
-            className="px-3 py-1.5 rounded-full border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors select-none"
+            onClick={copySummary}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-xs font-semibold transition-colors select-none shrink-0"
           >
-            {p.label}
+            {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+            {copied ? 'Copied' : 'Copy Summary'}
           </button>
-        ))}
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          <span className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 self-center mr-1 select-none">
+            Quick presets:
+          </span>
+          {Object.entries(PRESETS).map(([key, p]) => (
+            <button
+              key={key}
+              onClick={() => applyPreset(key)}
+              className="px-3 py-1.5 rounded-full border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors select-none"
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Core Inputs */}

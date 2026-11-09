@@ -18,18 +18,26 @@ interface InfoPagesProps {
 }
 
 export default function InfoPages({ page, onNavigate }: InfoPagesProps) {
-  switch (page) {
-    case 'about':
-      return <AboutPage />;
-    case 'contact':
-      return <ContactPage />;
-    case 'privacy':
-      return <PrivacyPage />;
-    case 'terms':
-      return <TermsPage />;
-    default:
-      return null;
-  }
+  const content = (() => {
+    switch (page) {
+      case 'about':
+        return <AboutPage />;
+      case 'contact':
+        return <ContactPage />;
+      case 'privacy':
+        return <PrivacyPage />;
+      case 'terms':
+        return <TermsPage />;
+      default:
+        return null;
+    }
+  })();
+
+  return (
+    <div className="w-full max-w-[1360px] mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 box-border overflow-x-hidden">
+      {content}
+    </div>
+  );
 }
 
 function PageWrapper({
@@ -44,7 +52,7 @@ function PageWrapper({
   children: React.ReactNode;
 }) {
   return (
-    <div className="max-w-3xl mx-auto">
+    <div className="w-full">
       <div className="flex items-center gap-3 mb-8">
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
           <Icon className="w-5 h-5 text-white" />

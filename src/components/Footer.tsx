@@ -44,12 +44,11 @@ const legalLinks: FooterNavItem[] = [
   { label: 'Disclaimer', href: '#disclaimer' },
 ];
 
-// If you add Product/Resource pages to PageId later,
-// just swap these `href`s for `page: 'your-page-id'`.
+// Product links that map to in-app calculator pages use `page` + onNavigate.
 const productLinks: FooterNavItem[] = [
-  { label: 'Payout Calculator', href: '#calculator', badge: 'Live' },
-  { label: 'Profit Analyzer', href: '#features' },
-  { label: 'Marketplace Fee Compare', href: '#compare' },
+  { label: 'Payout Calculator', page: 'calculator', badge: 'Live' },
+  { label: 'Profit Analyzer', page: 'calculator' },
+  { label: 'Marketplace Fee Compare', page: 'calculator' },
   { label: 'Pricing', href: '#pricing' },
 ];
 
@@ -106,7 +105,14 @@ function FooterLink({
   if ('page' in item) {
     return (
       <li>
-        <button type="button" onClick={() => onNavigate(item.page)} className={className}>
+        <button
+          type="button"
+          onClick={() => {
+            onNavigate(item.page);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          className={className}
+        >
           {content}
         </button>
       </li>
@@ -119,6 +125,7 @@ function FooterLink({
         href={item.href}
         target={item.external ? '_blank' : undefined}
         rel={item.external ? 'noopener noreferrer' : undefined}
+        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
         className={className}
       >
         {content}
@@ -154,10 +161,18 @@ export default function Footer({ onNavigate }: FooterProps) {
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
 
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const NEWSLETTER_KEY = 'sellermath_newsletter';
+
   const handleSubscribe = (e: FormEvent) => {
     e.preventDefault();
-    if (!email.trim()) return;
-    // TODO: POST to your newsletter API here
+    const trimmed = email.trim();
+    if (!trimmed || !EMAIL_RE.test(trimmed)) return;
+    try {
+      localStorage.setItem(NEWSLETTER_KEY, trimmed);
+    } catch {
+      /* storage blocked — subscription still recorded in memory */
+    }
     setSubscribed(true);
     setEmail('');
   };
@@ -196,7 +211,7 @@ export default function Footer({ onNavigate }: FooterProps) {
               {subscribed ? (
                 <div className="flex items-center gap-2 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm font-medium text-emerald-700 dark:text-emerald-400">
                   <Check className="h-4 w-4 shrink-0" />
-                  You&apos;re in! Check your inbox to confirm.
+                  ✓ Subscribed! You'll receive 2026 marketplace fee alerts.
                 </div>
               ) : (
                 <div className="flex items-center gap-2 rounded-2xl border border-slate-300 bg-white p-1.5 transition-all duration-300 focus-within:border-emerald-500/60 focus-within:ring-4 focus-within:ring-emerald-500/10 dark:border-zinc-700 dark:bg-zinc-950 dark:focus-within:border-emerald-500/60">

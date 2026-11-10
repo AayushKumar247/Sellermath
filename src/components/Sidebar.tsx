@@ -11,6 +11,8 @@ export type PageId =
   | 'listing-optimizer'
   | 'image-resizer'
   | 'bulk-csv'
+  | 'bg-remover'
+  | 'image-generator'
   | 'settlement-reconciliation'
   | 'rto-analytics'
   | 'gst-invoice'
@@ -58,8 +60,8 @@ const navGroups: NavGroup[] = [
     id: 'product-studio', label: 'Product Studio', icon: PenTool, isDropdown: true,
     items: [
       { id: 'image-resizer', label: 'Product Image Resizer', status: 'active' },
-      { id: 'ai-bg-remover', label: 'AI Background Remover', status: 'coming-soon' },
-      { id: 'ai-white-bg', label: 'White BG & Lifestyle Generator', status: 'coming-soon' },
+      { id: 'bg-remover', label: 'AI Background Remover', status: 'active' },
+      { id: 'image-generator', label: 'AI Image & Lifestyle Studio', status: 'active' },
     ],
   },
   {

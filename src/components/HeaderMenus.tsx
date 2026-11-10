@@ -63,8 +63,8 @@ const NAV: NavItem[] = [
     id: 'product-studio', label: 'Product Studio',
     children: [
       { id: P('image-resizer'), label: 'Product Image Resizer', hint: 'Compliance sizes', icon: ImageIcon },
-      { id: P('ai-bg-remover'), label: 'AI Background Remover', hint: 'Coming soon', icon: Sparkles, disabled: true },
-      { id: P('ai-white-bg'), label: 'White BG & Lifestyle Generator', hint: 'Coming soon', icon: Sparkles, disabled: true },
+      { id: P('bg-remover'), label: 'AI Background Remover', hint: 'Remove image backgrounds', icon: Sparkles },
+      { id: P('image-generator'), label: 'AI Image & Lifestyle Studio', hint: 'Generate lifestyle product images', icon: Sparkles },
     ],
   },
   {

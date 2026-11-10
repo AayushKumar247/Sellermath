@@ -646,6 +646,36 @@ IMPORTANT: Return ONLY raw JSON without any markdown code blocks, formatting, or
   }
 });
 
+// AI Image Generation endpoint (Pollinations FLUX - Zero Cost, Real Prompt Matching)
+app.post('/api/generate-image', async (req, res) => {
+  try {
+    const { prompt, width, height, seed } = req.body;
+    if (!prompt) {
+      return res.status(400).json({ error: 'Prompt is required' });
+    }
+
+    const targetWidth = width || 1024;
+    const targetHeight = height || 1024;
+    const targetSeed = seed !== undefined ? seed : Math.floor(Math.random() * 1000000);
+
+    const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${targetWidth}&height=${targetHeight}&seed=${targetSeed}&nologo=true&model=flux`;
+
+    const response = await fetch(pollinationsUrl);
+    if (!response.ok) {
+      throw new Error(`Pollinations API returned ${response.status}`);
+    }
+
+    const buffer = await response.arrayBuffer();
+    const base64 = Buffer.from(buffer).toString('base64');
+    const contentType = response.headers.get('content-type') || 'image/png';
+
+    res.json({ url: `data:${contentType};base64,${base64}` });
+  } catch (err) {
+    console.error('Generate image error:', err);
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Image generation failed' });
+  }
+});
+
 // For Vercel serverless deployment
 export default app;
 

@@ -11,6 +11,8 @@ import ReturnsRTOAnalytics from '@/components/ReturnsRTOAnalytics';
 import SettlementReconciliation from '@/components/settlement-reconciliation';
 import SEOKeywords from '@/components/SEOKeywords';
 import ImageResizer from '@/components/ImageResizer';
+import AIBackgroundRemover from '@/components/AIBackgroundRemover';
+import AIImageGenerator from '@/components/AIImageGenerator';
 import MarketplaceOptimizer from '@/components/MarketplaceOptimizer';
 import Footer from '@/components/Footer';
 import InfoPages from '@/components/InfoPages';
@@ -32,6 +34,8 @@ const PAGE_TO_PATH: Record<PageId, string> = {
   'seo-keywords': '/seo-keywords',
   'listing-optimizer': '/listing-optimizer',
   'image-resizer': '/image-resizer',
+  'bg-remover': '/bg-remover',
+  'image-generator': '/image-generator',
   'bulk-csv': '/csv-calculator',
   'rto-analytics': '/rto-analytics',
   'settlement-reconciliation': '/settlement-reconciliation',
@@ -85,6 +89,8 @@ export default function App() {
       'seo-keywords': "Marketplace SEO Keyword & 250-Byte Builder | SellerMath",
       'listing-optimizer': "Marketplace Listing Optimizer & 100-Point Audit | SellerMath",
       'image-resizer': "E-Commerce Product Image Resizer | SellerMath",
+      'bg-remover': "AI Background Remover & Pure White Studio | SellerMath",
+      'image-generator': "AI Product Lifestyle & Image Generator | SellerMath",
       'bulk-csv': "Bulk CSV Catalogue Profit Calculator | SellerMath",
       'rto-analytics': "Returns & RTO Loss Analytics | SellerMath",
       'settlement-reconciliation': "Payment Settlement & Leak Reconciliation | SellerMath",
@@ -167,6 +173,8 @@ export default function App() {
       'seo-keywords': 'SEO Keyword Generator',
       'listing-optimizer': 'Marketplace Listing Optimizer',
       'image-resizer': 'Product Image Resizer',
+      'bg-remover': 'AI Background Remover',
+      'image-generator': 'AI Image & Lifestyle Studio',
       'bulk-csv': 'Bulk CSV Profit Calculator',
       'rto-analytics': 'Returns & RTO Analytics',
       'settlement-reconciliation': 'Settlement Reconciliation',
@@ -213,6 +221,10 @@ export default function App() {
         return <MarketplaceOptimizer />;
       case 'image-resizer':
         return <ImageResizer />;
+      case 'bg-remover':
+        return <AIBackgroundRemover />;
+      case 'image-generator':
+        return <AIImageGenerator />;
       case 'bulk-csv':
         return <BulkCsvCalculator />;
       case 'rto-analytics':

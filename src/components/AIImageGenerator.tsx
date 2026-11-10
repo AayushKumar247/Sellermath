@@ -367,7 +367,13 @@ async function buildExportBlob(opts: ExportOptions): Promise<Blob> {
   const dx = (w - drawW) / 2;
   const dy = (h - drawH) / 2;
 
-  ctx.drawImage(img, dx, dy, drawW, drawH);
+  // Crop bottom strip where Pollinations logo/watermark may appear
+  const cropBottom = 35;
+  const sourceHeight = Math.max(1, img.height - cropBottom);
+  const drawHAdj = Math.max(1, drawH * (sourceHeight / img.height));
+  const dyAdj = dy + (drawH - drawHAdj) / 2;
+
+  ctx.drawImage(img, 0, 0, img.width, sourceHeight, dx, dyAdj, drawW, drawHAdj);
 
   // Warmth tint (soft-light overlay) — matches live preview
   if (opts.warmthPct !== 0) {
@@ -379,9 +385,9 @@ async function buildExportBlob(opts: ExportOptions): Promise<Blob> {
         ? `rgba(255, 180, 80, ${alpha})`
         : `rgba(80, 180, 255, ${alpha})`;
     ctx.beginPath();
-    ctx.rect(dx, dy, drawW, drawH);
+    ctx.rect(dx, dyAdj, drawW, drawHAdj);
     ctx.clip();
-    ctx.fillRect(dx, dy, drawW, drawH);
+    ctx.fillRect(dx, dyAdj, drawW, drawHAdj);
     ctx.restore();
   }
 

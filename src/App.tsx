@@ -15,10 +15,11 @@ import AIBackgroundRemover from '@/components/AIBackgroundRemover';
 import AIImageGenerator from '@/components/AIImageGenerator';
 import MarketplaceOptimizer from '@/components/MarketplaceOptimizer';
 import Footer from '@/components/Footer';
-import InfoPages from '@/components/InfoPages';
+import CompanyLegalPages from '@/components/CompanyLegalPages';
 import Home from '@/components/Home';
 import { HeaderMenus } from '@/components/HeaderMenus';
 import ScrollToTop from '@/components/ScrollToTop';
+import SellerTutorials from '@/components/SellerTutorials';
 
 const THEME_KEY = 'sellermath_theme';
 
@@ -40,10 +41,13 @@ const PAGE_TO_PATH: Record<PageId, string> = {
   'rto-analytics': '/rto-analytics',
   'settlement-reconciliation': '/settlement-reconciliation',
   'gst-invoice': '/gst-invoice',
+  'seller-tutorials': '/seller-tutorials',
   about: '/about',
   contact: '/contact',
-  privacy: '/privacy',
-  terms: '/terms',
+  privacy: '/privacy-policy',
+  terms: '/terms-and-conditions',
+  refund: '/refund-policy',
+  disclaimer: '/disclaimer',
 };
 
 const PATH_TO_PAGE: Record<string, PageId> = Object.entries(PAGE_TO_PATH).reduce(
@@ -95,10 +99,13 @@ export default function App() {
       'rto-analytics': "Returns & RTO Loss Analytics | SellerMath",
       'settlement-reconciliation': "Payment Settlement & Leak Reconciliation | SellerMath",
       'gst-invoice': "Free GST Tax Invoice Generator with UPI QR | SellerMath",
+      'seller-tutorials': "Seller Tutorials & Playbooks | SellerMath",
       about: "About Us | SellerMath",
       contact: "Contact Us | SellerMath",
       privacy: "Privacy Policy | SellerMath",
       terms: "Terms & Conditions | SellerMath",
+      refund: "Refund Policy | SellerMath",
+      disclaimer: "Financial, Tax & Marketplace Fee Disclaimer | SellerMath",
     };
     document.title = titles[activePage] ?? titles.home;
   }, [activePage]);
@@ -183,6 +190,8 @@ export default function App() {
       'contact': 'Contact Us',
       'privacy': 'Privacy Policy',
       'terms': 'Terms & Conditions',
+      'refund': 'Refund Policy',
+      'disclaimer': 'Disclaimer',
     };
     return pageNames[activePage] || 'Home';
   };
@@ -199,6 +208,8 @@ export default function App() {
       'contact': { type: 'icon' },
       'privacy': { type: 'icon' },
       'terms': { type: 'icon' },
+      'refund': { type: 'icon' },
+      'disclaimer': { type: 'icon' },
     };
     return pageIcons[activePage] || { type: 'icon' };
   };
@@ -233,14 +244,20 @@ export default function App() {
         return <SettlementReconciliation />;
       case 'gst-invoice':
         return <GSTInvoiceGenerator />;
+      case 'seller-tutorials':
+        return <SellerTutorials onNavigate={handleNavigate} />;
       case 'about':
-        return <InfoPages page="about" onNavigate={handleNavigate} />;
+        return <CompanyLegalPages activeSection="about" onNavigate={handleNavigate} />;
       case 'contact':
-        return <InfoPages page="contact" onNavigate={handleNavigate} />;
+        return <CompanyLegalPages activeSection="contact" onNavigate={handleNavigate} />;
       case 'privacy':
-        return <InfoPages page="privacy" onNavigate={handleNavigate} />;
+        return <CompanyLegalPages activeSection="privacy" onNavigate={handleNavigate} />;
       case 'terms':
-        return <InfoPages page="terms" onNavigate={handleNavigate} />;
+        return <CompanyLegalPages activeSection="terms" onNavigate={handleNavigate} />;
+      case 'refund':
+        return <CompanyLegalPages activeSection="refund" onNavigate={handleNavigate} />;
+      case 'disclaimer':
+        return <CompanyLegalPages activeSection="disclaimer" onNavigate={handleNavigate} />;
       default:
         return <Home onNavigate={handleNavigate} />;
     }

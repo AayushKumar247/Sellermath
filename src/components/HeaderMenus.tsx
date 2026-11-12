@@ -81,7 +81,7 @@ const NAV: NavItem[] = [
     children: [
       { id: P('guides'), label: 'E-Commerce Guides', hint: 'Coming soon', icon: BarChart3, disabled: true },
       { id: P('selling-guides'), label: 'Marketplace Selling Guides', hint: 'Coming soon', icon: Rocket, disabled: true },
-      { id: P('tutorials'), label: 'Seller Tutorials', hint: 'Coming soon', icon: Sparkles, disabled: true },
+      { id: P('seller-tutorials'), label: 'Seller Tutorials', hint: 'Step-by-step marketplace playbooks', icon: Sparkles, badge: 'NEW' },
     ],
   },
 ];

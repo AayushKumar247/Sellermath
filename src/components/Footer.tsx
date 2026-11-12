@@ -40,8 +40,8 @@ const companyLinks: FooterNavItem[] = [
 const legalLinks: FooterNavItem[] = [
   { label: 'Privacy Policy', page: 'privacy' },
   { label: 'Terms & Conditions', page: 'terms' },
-  { label: 'Refund Policy', href: '#refund' },
-  { label: 'Disclaimer', href: '#disclaimer' },
+  { label: 'Refund Policy', page: 'refund' },
+  { label: 'Disclaimer', page: 'disclaimer' },
 ];
 
 // Product links that map to in-app calculator pages use `page` + onNavigate.

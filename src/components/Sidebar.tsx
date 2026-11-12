@@ -16,10 +16,13 @@ export type PageId =
   | 'settlement-reconciliation'
   | 'rto-analytics'
   | 'gst-invoice'
+  | 'seller-tutorials'
   | 'about'
   | 'contact'
   | 'privacy'
-  | 'terms';
+  | 'terms'
+  | 'refund'
+  | 'disclaimer';
 
 interface DropdownItem {
   id: string;
@@ -78,7 +81,7 @@ const navGroups: NavGroup[] = [
     items: [
       { id: 'ecom-guides', label: 'E-Commerce Guides', status: 'coming-soon' },
       { id: 'marketplace-guides', label: 'Marketplace Selling Guides', status: 'coming-soon' },
-      { id: 'seller-tutorials', label: 'Seller Tutorials', status: 'coming-soon' },
+      { id: 'seller-tutorials', label: 'Seller Tutorials', status: 'new' },
     ],
   },
 ];

@@ -271,6 +271,17 @@ const TOOL_GROUPS: ToolCategory[] = [
     title: 'Learn & Grow',
     subtitle: 'Guides and strategies to scale profitably on every marketplace.',
     items: [
+      // ✅ Seller Tutorials is now FIRST + LIVE
+      {
+        icon: <GraduationCap className="w-5 h-5" />,
+        iconBg: 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 dark:text-emerald-400',
+        title: 'Seller Tutorials',
+        description: 'Step-by-step tutorials for every SellerMath tool.',
+        tools: ['Tool tutorials', 'Video guides', 'Tips & tricks'],
+        status: 'new',
+        onClick: () => {},
+      },
+      // Still coming soon
       {
         icon: <BarChart3 className="w-5 h-5" />,
         iconBg: 'bg-zinc-500/10 border border-zinc-500/20 text-zinc-500 dark:text-zinc-400',
@@ -285,14 +296,6 @@ const TOOL_GROUPS: ToolCategory[] = [
         title: 'Marketplace Selling Guides',
         description: 'Platform-specific playbooks for Amazon, Flipkart, Meesho & more.',
         tools: ['Platform strategy', 'Best practices', 'Growth tactics'],
-        status: 'coming-soon',
-      },
-      {
-        icon: <GraduationCap className="w-5 h-5" />,
-        iconBg: 'bg-zinc-500/10 border border-zinc-500/20 text-zinc-500 dark:text-zinc-400',
-        title: 'Seller Tutorials',
-        description: 'Step-by-step tutorials for every SellerMath tool.',
-        tools: ['Tool tutorials', 'Video guides', 'Tips & tricks'],
         status: 'coming-soon',
       },
     ],
@@ -373,7 +376,8 @@ function MoneyInput({
   onChange: (v: number) => void;
 }) {
   return (
-    <label className="block select-none">
+    // FIX: min-w-0 so grid children never overflow horizontally
+    <label className="block select-none min-w-0 w-full">
       <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
         {label}
       </span>
@@ -384,9 +388,10 @@ function MoneyInput({
         <input
           type="number"
           min={0}
-          value={value}
+          value={value === 0 ? '' : value}
+          placeholder="0"
           onChange={(e) => onChange(Math.max(0, Number(e.target.value) || 0))}
-          className="w-full pl-7 pr-3 py-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500/50 transition"
+          className="w-full min-w-0 pl-7 pr-3 py-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500/50 transition"
         />
       </div>
     </label>
@@ -394,7 +399,7 @@ function MoneyInput({
 }
 
 /* ============================================================
-   FEE ALERT BAR
+   FEE ALERT BAR — full message wraps on mobile, no clipping
 ============================================================ */
 function FeeAlertBar({ onNavigate }: { onNavigate: (p: PageId) => void }) {
   const [i, setI] = useState(0);
@@ -415,18 +420,20 @@ function FeeAlertBar({ onNavigate }: { onNavigate: (p: PageId) => void }) {
   return (
     <button
       onClick={() => onNavigate('calculator')}
-      className="group w-full flex items-center gap-2.5 px-3 py-2 sm:px-3.5 sm:py-2 rounded-lg dark:bg-zinc-900/70 bg-white/80 dark:border-zinc-800/80 border-zinc-200/80 text-left transition hover:border-emerald-500/40 select-none"
+      className="group w-full flex items-start sm:items-center gap-2 sm:gap-2.5 px-3 py-2.5 sm:px-4 sm:py-2.5 rounded-xl dark:bg-zinc-900/70 bg-white/80 dark:border-zinc-800/80 border-zinc-200/80 text-left transition hover:border-emerald-500/40 select-none"
     >
-      <span className="flex items-center gap-1.5 shrink-0">
+      {/* FIX: badge stays flush left, nudged down on mobile so it aligns with the wrapped text */}
+      <span className="flex items-center gap-1.5 shrink-0 mt-0.5 sm:mt-0">
         <AlertTriangle className={`w-3.5 h-3.5 ${tone[a.tone] ?? 'text-amber-500'}`} />
         <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
           Fee update
         </span>
       </span>
-      <span className="flex-1 text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 truncate">
+      {/* FIX: removed truncate — text now wraps naturally, full message visible on 360px */}
+      <span className="flex-1 min-w-0 text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 whitespace-normal break-words leading-snug">
         <span className="font-semibold text-zinc-900 dark:text-zinc-100">{a.mp}:</span> {a.text}
       </span>
-      <span className="hidden sm:inline-flex items-center gap-1 text-xs font-semibold text-emerald-500 dark:text-emerald-400 opacity-0 group-hover:opacity-100 transition">
+      <span className="hidden sm:inline-flex items-center gap-1 text-xs font-semibold text-emerald-500 dark:text-emerald-400 opacity-0 group-hover:opacity-100 transition shrink-0">
         View impact <ArrowRight className="w-3 h-3" />
       </span>
     </button>
@@ -434,7 +441,7 @@ function FeeAlertBar({ onNavigate }: { onNavigate: (p: PageId) => void }) {
 }
 
 /* ============================================================
-   QUICK PROFIT CALCULATOR — unchanged logic, wider on mobile
+   QUICK PROFIT CALCULATOR — unchanged logic, responsive layout
 ============================================================ */
 function QuickProfitCalculator({ onNavigate }: { onNavigate: (p: PageId) => void }) {
   const [price, setPrice] = useState(999);
@@ -461,26 +468,26 @@ function QuickProfitCalculator({ onNavigate }: { onNavigate: (p: PageId) => void
   const profitable = r.profit >= 0;
 
   return (
-    // FIX: p-3.5 on mobile instead of p-5, so the card gets more horizontal room
-    <div className="relative rounded-2xl dark:bg-zinc-900/80 bg-white/90 dark:border-zinc-800/80 border-zinc-200/80 shadow-2xl shadow-emerald-500/5 p-3.5 sm:p-5 md:p-6">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+    <div className="relative rounded-2xl dark:bg-zinc-900/80 bg-white/90 dark:border-zinc-800/80 border-zinc-200/80 shadow-2xl shadow-emerald-500/5 p-3.5 sm:p-5 md:p-6 min-w-0">
+      <div className="flex items-center justify-between gap-2 mb-4">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
             <Calculator className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
           </div>
-          <div>
-            <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 select-none">Quick Profit Check</h3>
-            <p className="text-[10px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400 select-none">
+          <div className="min-w-0">
+            <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 select-none truncate">Quick Profit Check</h3>
+            <p className="text-[10px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400 select-none truncate">
               Live · no signup
             </p>
           </div>
         </div>
-        <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-bold uppercase tracking-wider text-emerald-500 dark:text-emerald-400 select-none">
+        <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-bold uppercase tracking-wider text-emerald-500 dark:text-emerald-400 select-none shrink-0">
           Live
         </span>
       </div>
 
-      <div className="flex flex-wrap gap-1.5 mb-4">
+      {/* FIX: flex-wrap with responsive gap — pills wrap cleanly on 360px */}
+      <div className="flex flex-wrap gap-1.5 sm:gap-2 mb-4">
         {MARKETPLACES.map((m) => (
           <button
             key={m.id}
@@ -497,7 +504,8 @@ function QuickProfitCalculator({ onNavigate }: { onNavigate: (p: PageId) => void
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-3 mb-4">
+      {/* FIX: xs breakpoint for 360–412px phones → stack to prevent clipped inputs */}
+      <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 gap-3 mb-4">
         <MoneyInput label="Selling price" value={price} onChange={setPrice} />
         <MoneyInput label="Product cost" value={cost} onChange={setCost} />
       </div>
@@ -507,8 +515,8 @@ function QuickProfitCalculator({ onNavigate }: { onNavigate: (p: PageId) => void
           profitable ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-red-500/5 border-red-500/20'
         }`}
       >
-        <div className="flex items-end justify-between">
-          <div>
+        <div className="flex items-end justify-between gap-2">
+          <div className="min-w-0">
             <p className="text-[10px] uppercase tracking-wider font-semibold text-zinc-500 dark:text-zinc-400 select-none">
               Net profit / order
             </p>
@@ -516,7 +524,7 @@ function QuickProfitCalculator({ onNavigate }: { onNavigate: (p: PageId) => void
               {fmt(r.profit)}
             </p>
           </div>
-          <div className="text-right">
+          <div className="text-right shrink-0">
             <p className="text-[10px] uppercase tracking-wider font-semibold text-zinc-500 dark:text-zinc-400 select-none">
               Margin
             </p>
@@ -531,7 +539,7 @@ function QuickProfitCalculator({ onNavigate }: { onNavigate: (p: PageId) => void
           <div className="bg-amber-500/70" style={{ width: `${r.feePct}%` }} />
           <div className={profitable ? 'bg-emerald-500' : 'bg-red-500'} style={{ width: `${r.profitPct}%` }} />
         </div>
-        <div className="flex items-center gap-3 mt-2 text-[10px] text-zinc-500 dark:text-zinc-400 select-none">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-[10px] text-zinc-500 dark:text-zinc-400 select-none">
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500/70" />Cost</span>
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500/70" />Fees</span>
           <span className="flex items-center gap-1">
@@ -548,12 +556,12 @@ function QuickProfitCalculator({ onNavigate }: { onNavigate: (p: PageId) => void
           ['Shipping', mp.shipping],
           ['GST on fees', r.gst],
         ].map(([label, val]) => (
-          <div key={label as string} className="flex items-center justify-between select-none">
+          <div key={label as string} className="flex items-center justify-between gap-2 select-none">
             <span className="text-zinc-500 dark:text-zinc-400">{label}</span>
             <span className="font-semibold text-zinc-900 dark:text-zinc-200">{fmt(val as number)}</span>
           </div>
         ))}
-        <div className="flex items-center justify-between pt-1.5 border-t dark:border-zinc-800 border-zinc-200 select-none">
+        <div className="flex items-center justify-between gap-2 pt-1.5 border-t dark:border-zinc-800 border-zinc-200 select-none">
           <span className="font-semibold text-zinc-700 dark:text-zinc-300">Net payout</span>
           <span className="font-bold text-zinc-900 dark:text-zinc-100">{fmt(r.payout)}</span>
         </div>
@@ -574,18 +582,17 @@ function QuickProfitCalculator({ onNavigate }: { onNavigate: (p: PageId) => void
 }
 
 /* ============================================================
-   HERO — transparent on mobile (no tinted box), full-width on all screens
+   HERO — transparent on mobile, badges row wraps cleanly
 ============================================================ */
 function Hero({ onNavigate }: { onNavigate: (p: PageId) => void }) {
   return (
     <section className="relative overflow-hidden rounded-3xl p-0 sm:p-6 md:px-10 md:py-12 bg-transparent sm:bg-zinc-50/80 sm:dark:bg-zinc-900/60 border-0 sm:border sm:border-zinc-200/80 sm:dark:border-zinc-800/80">
-      {/* Decorative glows — hidden on mobile since the tinted box is gone there */}
       <div className="hidden sm:block absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-500/5 via-transparent to-transparent pointer-events-none" />
       <div className="hidden sm:block absolute top-[-20%] left-[-10%] w-[45%] h-[45%] bg-emerald-500/10 rounded-full blur-[120px] pointer-events-none" />
       <div className="hidden sm:block absolute bottom-[-20%] right-[-10%] w-[45%] h-[45%] bg-blue-500/10 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="relative z-10 grid lg:grid-cols-[1.15fr_1fr] gap-6 sm:gap-8 lg:gap-12 items-center">
-        <div>
+        <div className="min-w-0">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 dark:text-emerald-400 text-xs font-medium mb-5 select-none">
             <Zap className="w-3.5 h-3.5" />
             Fee data updated: Nov 2026
@@ -619,21 +626,21 @@ function Hero({ onNavigate }: { onNavigate: (p: PageId) => void }) {
             </button>
           </div>
 
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-6 text-xs text-zinc-500 dark:text-zinc-400 select-none">
+          {/* FIX: smaller gaps + responsive font size so pills wrap cleanly at 360px */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-6 text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 select-none">
             <span className="flex items-center gap-1.5">
-              <BadgeCheck className="w-4 h-4 text-emerald-500" /> No signup to calculate
+              <BadgeCheck className="w-4 h-4 text-emerald-500 shrink-0" /> No signup to calculate
             </span>
             <span className="flex items-center gap-1.5">
-              <Shield className="w-4 h-4 text-emerald-500" /> 2026 fee & GST compliant
+              <Shield className="w-4 h-4 text-emerald-500 shrink-0" /> 2026 fee & GST compliant
             </span>
             <span className="flex items-center gap-1.5">
-              <Users className="w-4 h-4 text-emerald-500" /> Built for Indian Marketplace Sellers • 100% Free & No Signup
+              <Users className="w-4 h-4 text-emerald-500 shrink-0" /> Built for Indian Marketplace Sellers • 100% Free & No Signup
             </span>
           </div>
         </div>
 
-        {/* FIX: w-full, no max-w constraint on mobile/tablet, fills the grid cell on desktop */}
-        <div className="w-full lg:ml-auto">
+        <div className="w-full min-w-0 lg:ml-auto">
           <QuickProfitCalculator onNavigate={onNavigate} />
         </div>
       </div>
@@ -642,7 +649,7 @@ function Hero({ onNavigate }: { onNavigate: (p: PageId) => void }) {
 }
 
 /* ============================================================
-   STATS BAR — honest + full width
+   STATS BAR
 ============================================================ */
 function StatsBar() {
   const stats = [
@@ -677,7 +684,7 @@ function StatsBar() {
       {stats.map((s, idx) => (
         <div
           key={idx}
-          className="rounded-xl dark:bg-zinc-900/60 bg-white/80 dark:border-zinc-800/80 border-zinc-200/80 p-3.5 sm:p-4 flex items-start gap-3"
+          className="rounded-xl dark:bg-zinc-900/60 bg-white/80 dark:border-zinc-800/80 border-zinc-200/80 p-3.5 sm:p-4 flex items-start gap-3 min-w-0"
         >
           <div className="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
             <s.icon className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
@@ -715,11 +722,12 @@ function PainPoints({ onNavigate }: { onNavigate: (p: PageId) => void }) {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 w-full">
+      {/* FIX: 3-col at lg, gap-4 sm:gap-6, min-w-0 on cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 w-full">
         {PAIN_POINTS.map((p, i) => (
           <div
             key={i}
-            className="group rounded-2xl dark:bg-zinc-900/60 bg-white/80 dark:border-zinc-800/80 border-zinc-200/80 p-4 sm:p-5 transition hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-500/5"
+            className="group rounded-2xl dark:bg-zinc-900/60 bg-white/80 dark:border-zinc-800/80 border-zinc-200/80 p-4 sm:p-5 transition hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-500/5 min-w-0"
           >
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center shrink-0">
@@ -732,13 +740,13 @@ function PainPoints({ onNavigate }: { onNavigate: (p: PageId) => void }) {
                 <p className="text-xs md:text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed mb-3 select-none">
                   {p.detail}
                 </p>
-                <div className="flex items-center justify-between pt-3 border-t dark:border-zinc-800/60 border-zinc-200/60">
-                  <span className="text-[11px] text-zinc-500 dark:text-zinc-400 select-none">
+                <div className="flex items-center justify-between gap-2 pt-3 border-t dark:border-zinc-800/60 border-zinc-200/60">
+                  <span className="text-[11px] text-zinc-500 dark:text-zinc-400 select-none min-w-0">
                     Fix with <span className="font-semibold text-emerald-500 dark:text-emerald-400">{p.solution}</span>
                   </span>
                   <button
                     onClick={() => onNavigate(p.page)}
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-500 dark:text-emerald-400 hover:gap-2 transition-all select-none"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-500 dark:text-emerald-400 hover:gap-2 transition-all select-none shrink-0"
                   >
                     Open <ArrowRight className="w-3.5 h-3.5" />
                   </button>
@@ -753,7 +761,7 @@ function PainPoints({ onNavigate }: { onNavigate: (p: PageId) => void }) {
 }
 
 /* ============================================================
-   TOOL CARD — tighter mobile padding
+   TOOL CARD
 ============================================================ */
 function ToolCard({ icon, iconBg, title, description, tools, status, onClick }: Tool) {
   const [hovered, setHovered] = useState(false);
@@ -764,7 +772,7 @@ function ToolCard({ icon, iconBg, title, description, tools, status, onClick }: 
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onClick={onClick && !isDisabled ? onClick : undefined}
-      className={`group relative dark:bg-zinc-900/80 bg-white/80 dark:border-zinc-800/80 border-zinc-200/80 rounded-2xl p-4 sm:p-5 transition-all duration-300 ${
+      className={`group relative dark:bg-zinc-900/80 bg-white/80 dark:border-zinc-800/80 border-zinc-200/80 rounded-2xl p-4 sm:p-5 transition-all duration-300 min-w-0 ${
         hovered ? 'border-emerald-500/50 shadow-2xl shadow-emerald-500/15 -translate-y-1' : ''
       } ${isDisabled ? 'opacity-80 cursor-not-allowed' : 'cursor-pointer dark:hover:bg-zinc-900/90 hover:bg-zinc-100'}`}
     >
@@ -842,6 +850,7 @@ function mapToolPage(title: string): PageId {
     'Settlement Reconciliation': 'settlement-reconciliation',
     'Returns & RTO Analytics': 'rto-analytics',
     'GST Invoice Generator': 'gst-invoice',
+    'Seller Tutorials': 'seller-tutorials',   // ← NEW
   };
   return map[title] ?? 'calculator';
 }
@@ -871,7 +880,7 @@ function ToolExplorer({ onNavigate }: { onNavigate: (p: PageId) => void }) {
   return (
     <section className="space-y-5 w-full">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
+        <div className="min-w-0">
           <h2 className="text-2xl md:text-3xl font-bold dark:text-zinc-50 text-zinc-900 tracking-tight select-none">
             Every tool you need to scale
           </h2>
@@ -886,7 +895,7 @@ function ToolExplorer({ onNavigate }: { onNavigate: (p: PageId) => void }) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search tools (e.g. GST, RTO, ROAS)"
-            className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500/50 transition"
+            className="w-full min-w-0 pl-9 pr-3 py-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500/50 transition"
           />
         </div>
       </div>
@@ -934,7 +943,8 @@ function ToolExplorer({ onNavigate }: { onNavigate: (p: PageId) => void }) {
                 </span>
               </div>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 -mt-3 max-w-2xl select-none">{g.subtitle}</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+              {/* FIX: gap-4 sm:gap-6 */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {g.items.map((item) => (
                   <ToolCard
                     key={item.title}
@@ -952,15 +962,15 @@ function ToolExplorer({ onNavigate }: { onNavigate: (p: PageId) => void }) {
 }
 
 /* ============================================================
-   MARKETPLACE COMPARISON — 360px safe, wider on mobile
+   MARKETPLACE COMPARISON — 360px safe
 ============================================================ */
 function MarketplaceComparison({ onNavigate }: { onNavigate: (p: PageId) => void }) {
   const samplePrice = 999;
   return (
     <section className="rounded-2xl dark:bg-zinc-900/60 bg-white/80 dark:border-zinc-800/80 border-zinc-200/80 overflow-hidden w-full">
       <div className="p-4 sm:p-5 md:p-6 border-b dark:border-zinc-800/60 border-zinc-200/60">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+          <div className="min-w-0">
             <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-zinc-900 dark:text-zinc-50 select-none">
               Same product, wildly different payout
             </h2>
@@ -970,7 +980,7 @@ function MarketplaceComparison({ onNavigate }: { onNavigate: (p: PageId) => void
           </div>
           <button
             onClick={() => onNavigate('calculator')}
-            className="shrink-0 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-semibold transition select-none"
+            className="w-full sm:w-auto shrink-0 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-semibold transition select-none"
           >
             Calculate yours <ArrowRight className="w-4 h-4" />
           </button>
@@ -1022,7 +1032,7 @@ function MarketplaceComparison({ onNavigate }: { onNavigate: (p: PageId) => void
 }
 
 /* ============================================================
-   PROFIT LEAK CHECK — 2-column diagnostic, wide on all screens
+   PROFIT LEAK CHECK
 ============================================================ */
 function ProfitLeakCheck({ onNavigate }: { onNavigate: (p: PageId) => void }) {
   const [checked, setChecked] = useState<boolean[]>(LEAK_CHECKS.map(() => false));
@@ -1032,7 +1042,7 @@ function ProfitLeakCheck({ onNavigate }: { onNavigate: (p: PageId) => void }) {
   return (
     <section className="rounded-2xl dark:bg-zinc-900/60 bg-white/80 dark:border-zinc-800/80 border-zinc-200/80 p-4 sm:p-6 md:p-7 w-full">
       <div className="flex items-center gap-2 mb-1">
-        <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+        <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
           <Gauge className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
         </div>
         <h2 className="text-xl md:text-2xl font-bold text-zinc-900 dark:text-zinc-50 select-none">Profit Leak Check</h2>
@@ -1042,8 +1052,7 @@ function ProfitLeakCheck({ onNavigate }: { onNavigate: (p: PageId) => void }) {
       </p>
 
       <div className="grid lg:grid-cols-[1.3fr_1fr] gap-4 sm:gap-5 lg:gap-6 items-start">
-        {/* Left: checkboxes */}
-        <div className="space-y-2">
+        <div className="space-y-2 min-w-0">
           {LEAK_CHECKS.map((c, i) => (
             <label
               key={i}
@@ -1060,8 +1069,8 @@ function ProfitLeakCheck({ onNavigate }: { onNavigate: (p: PageId) => void }) {
               >
                 {checked[i] && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
               </div>
-              <span className="flex-1 text-xs md:text-sm text-zinc-700 dark:text-zinc-300">{c.label}</span>
-              <span className="text-[10px] font-bold text-red-500">-{c.leak}%</span>
+              <span className="flex-1 text-xs md:text-sm text-zinc-700 dark:text-zinc-300 min-w-0">{c.label}</span>
+              <span className="text-[10px] font-bold text-red-500 shrink-0">-{c.leak}%</span>
               <input
                 type="checkbox"
                 className="hidden"
@@ -1072,8 +1081,7 @@ function ProfitLeakCheck({ onNavigate }: { onNavigate: (p: PageId) => void }) {
           ))}
         </div>
 
-        {/* Right: gauge + CTA */}
-        <div className="rounded-xl p-4 sm:p-5 dark:bg-zinc-950 bg-zinc-50 border dark:border-zinc-800 border-zinc-200 lg:sticky lg:top-4">
+        <div className="rounded-xl p-4 sm:p-5 dark:bg-zinc-950 bg-zinc-50 border dark:border-zinc-800 border-zinc-200 lg:sticky lg:top-4 min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-2 select-none">
             Estimated margin leak
           </p>
@@ -1105,7 +1113,7 @@ function ProfitLeakCheck({ onNavigate }: { onNavigate: (p: PageId) => void }) {
 }
 
 /* ============================================================
-   COMMUNITY REVIEWS — real, persistent, interactive
+   COMMUNITY REVIEWS
 ============================================================ */
 function loadReviews(): Review[] {
   if (typeof window === 'undefined') return [];
@@ -1275,7 +1283,7 @@ function CommunityReviews() {
 
       <div className="rounded-2xl dark:bg-zinc-900/60 bg-white/80 dark:border-zinc-800/80 border-zinc-200/80 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div>
+          <div className="min-w-0">
             <div className="flex items-baseline gap-1 select-none">
               <span className="text-3xl font-extrabold text-zinc-900 dark:text-zinc-50">
                 {reviews.length ? avg.toFixed(1) : '—'}
@@ -1320,8 +1328,8 @@ function CommunityReviews() {
             <StarSelector value={rating} onChange={setRating} size="lg" />
           </div>
 
-          <div className="grid sm:grid-cols-2 gap-3">
-            <label className="block select-none">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label className="block select-none min-w-0">
               <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
                 Your Name
               </span>
@@ -1330,38 +1338,38 @@ function CommunityReviews() {
                 onChange={(e) => setName(e.target.value)}
                 maxLength={60}
                 placeholder="e.g. Aayush or Verified Seller"
-                className="mt-1.5 w-full px-3 py-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500/50 transition"
+                className="mt-1.5 w-full min-w-0 px-3 py-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500/50 transition"
               />
             </label>
 
-            <label className="block select-none">
+            <label className="block select-none min-w-0">
               <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
                 Primary Marketplace
               </span>
               <select
                 value={marketplace}
                 onChange={(e) => setMarketplace(e.target.value)}
-                className="mt-1.5 w-full px-3 py-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500/50 transition"
+                className="mt-1.5 w-full min-w-0 px-3 py-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500/50 transition"
               >
                 {MARKETPLACE_OPTIONS.map((o) => <option key={o}>{o}</option>)}
               </select>
             </label>
           </div>
 
-          <label className="block select-none">
+          <label className="block select-none min-w-0">
             <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
               Favorite Tool
             </span>
             <select
               value={favoriteTool}
               onChange={(e) => setFavoriteTool(e.target.value)}
-              className="mt-1.5 w-full px-3 py-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500/50 transition"
+              className="mt-1.5 w-full min-w-0 px-3 py-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500/50 transition"
             >
               {FAVORITE_TOOL_OPTIONS.map((o) => <option key={o}>{o}</option>)}
             </select>
           </label>
 
-          <label className="block select-none">
+          <label className="block select-none min-w-0">
             <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
               Your Review / Feature Request
             </span>
@@ -1370,7 +1378,7 @@ function CommunityReviews() {
               onChange={(e) => setText(e.target.value.slice(0, MAX_REVIEW_LEN))}
               rows={4}
               placeholder="What worked for you? What should we build next?"
-              className="mt-1.5 w-full px-3 py-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500/50 transition resize-y"
+              className="mt-1.5 w-full min-w-0 px-3 py-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500/50 transition resize-y"
             />
             <span className="text-[10px] text-zinc-400 dark:text-zinc-500">{text.length}/{MAX_REVIEW_LEN}</span>
           </label>
@@ -1381,7 +1389,7 @@ function CommunityReviews() {
             </div>
           )}
 
-          <div className="flex justify-end gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
             <button
               type="button"
               onClick={() => { resetForm(); setShowForm(false); }}
@@ -1416,11 +1424,12 @@ function CommunityReviews() {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+        // FIX: gap-4 sm:gap-6, min-w-0 on cards
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {reviews.map((r) => (
             <div
               key={r.id}
-              className="rounded-2xl dark:bg-zinc-900/60 bg-white/80 dark:border-zinc-800/80 border-zinc-200/80 p-3.5 sm:p-4 flex flex-col"
+              className="rounded-2xl dark:bg-zinc-900/60 bg-white/80 dark:border-zinc-800/80 border-zinc-200/80 p-3.5 sm:p-4 flex flex-col min-w-0"
             >
               <div className="flex items-start justify-between gap-2 mb-2">
                 <div className="min-w-0">
@@ -1504,11 +1513,11 @@ function FinalCTA({ onNavigate }: { onNavigate: (p: PageId) => void }) {
 }
 
 /* ============================================================
-   HOME — wide SaaS container, single-layer padding, compact top
+   HOME — wide SaaS container, single-layer padding
 ============================================================ */
 export default function Home({ onNavigate }: HomeProps) {
   return (
-    <div className="w-full max-w-[1360px] mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 space-y-4 sm:space-y-6 overflow-x-hidden box-border">
+    <div className="w-full max-w-[1360px] mx-auto px-3.5 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 space-y-4 sm:space-y-6 overflow-x-hidden box-border">
       <FeeAlertBar onNavigate={onNavigate} />
       <Hero onNavigate={onNavigate} />
       <StatsBar />

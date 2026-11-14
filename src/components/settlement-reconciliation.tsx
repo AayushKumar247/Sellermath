@@ -3,50 +3,35 @@ import {
   ShieldCheck, UploadCloud, FileSpreadsheet, Download, RotateCcw, Plus, Trash2,
   AlertTriangle, CheckCircle2, Scale, Banknote, Receipt, Sparkles, X, Copy, Check,
   Zap, ChevronDown, ChevronRight, ClipboardList, ArrowRight, Calculator,
-  Search, ArrowUpDown, ClipboardPaste, BadgeCheck,
+  Search, ArrowUpDown, ClipboardPaste, BadgeCheck, PieChart,
 } from 'lucide-react';
+import MarketplaceLogo from '@/components/MarketplaceLogo';
 
 /* ══════════════════════════════════════════════════════════════════════════
-   TYPES  (unchanged)
+   TYPES
    ══════════════════════════════════════════════════════════════════════════ */
 
 type Marketplace = 'Amazon' | 'Flipkart' | 'Meesho' | 'Myntra';
 
 interface RawOrder {
-  orderId: string;
-  sku: string;
-  status: string;
-  sellingPrice: number;
-  expectedCommission: number;
-  chargedCommission: number;
-  declaredWeightG: number;
-  billedWeightG: number;
-  expectedShipping: number;
-  chargedShipping: number;
-  bankUtrSettled: number;
-  warehouseReturnReceived: string;
-  utr?: string;
-  settlementDate?: string;
+  orderId: string; sku: string; status: string;
+  sellingPrice: number; expectedCommission: number; chargedCommission: number;
+  declaredWeightG: number; billedWeightG: number;
+  expectedShipping: number; chargedShipping: number;
+  bankUtrSettled: number; warehouseReturnReceived: string;
+  utr?: string; settlementDate?: string;
 }
 
-interface OrderRow extends RawOrder {
-  uid: string;
-}
+interface OrderRow extends RawOrder { uid: string; }
 
 type FlagKey = 'weight' | 'commission' | 'missingReturn' | 'pending';
 
 interface ComputedRow extends OrderRow {
-  expectedFees: number;
-  chargedFees: number;
-  gstOnExpectedFees: number;
-  gstOnChargedFees: number;
-  tcs: number;
-  expectedSettlement: number;
-  leak: number;
-  matched: boolean;
-  actionable: boolean;
-  flags: FlagKey[];
-  primary: FlagKey | 'matched';
+  expectedFees: number; chargedFees: number;
+  gstOnExpectedFees: number; gstOnChargedFees: number;
+  tcs: number; expectedSettlement: number; leak: number;
+  matched: boolean; actionable: boolean;
+  flags: FlagKey[]; primary: FlagKey | 'matched';
   split: { weight: number; commission: number; missingReturn: number; pending: number };
 }
 
@@ -55,7 +40,7 @@ type SortKey = 'leak' | 'value' | 'weight' | 'orderId';
 type ClaimTarget = { mode: 'single'; row: ComputedRow } | { mode: 'bulk' } | null;
 
 /* ══════════════════════════════════════════════════════════════════════════
-   CONSTANTS  (unchanged)
+   CONSTANTS
    ══════════════════════════════════════════════════════════════════════════ */
 
 const GST_RATE = 0.18;
@@ -92,63 +77,48 @@ const FLAG_META: Record<FlagKey, { label: string; short: string; chip: string; d
 };
 
 /* ══════════════════════════════════════════════════════════════════════════
-   HELPERS  (unchanged)
+   HELPERS
    ══════════════════════════════════════════════════════════════════════════ */
 
 let uidCounter = 0;
 const uid = () => `row_${Date.now()}_${uidCounter++}`;
 
 function fmtShort(n: number): string {
-  const sign = n < 0 ? '-' : '';
-  const abs = Math.abs(n);
+  const sign = n < 0 ? '-' : ''; const abs = Math.abs(n);
   if (abs >= 1e7) return `${sign}₹${(abs / 1e7).toFixed(2)}Cr`;
   if (abs >= 1e5) return `${sign}₹${(abs / 1e5).toFixed(2)}L`;
   if (abs >= 1e3) return `${sign}₹${(abs / 1e3).toFixed(1)}K`;
   return `${sign}₹${abs.toFixed(0)}`;
 }
-
 function fmtFull(n: number): string {
   const sign = n < 0 ? '-' : '';
   return `${sign}₹${Math.abs(n).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
 }
-
 function fmtMoney(n: number): string {
   const sign = n < 0 ? '-' : '';
   return `${sign}₹${Math.abs(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
-
 function num(v: unknown): number {
   if (typeof v === 'number') return Number.isFinite(v) ? v : 0;
   const cleaned = String(v ?? '').replace(/[₹,\s]/g, '').trim();
   const parsed = Number(cleaned);
   return Number.isFinite(parsed) ? parsed : 0;
 }
-
 function normKey(s: string): string {
   return s.trim().toLowerCase().replace(/[\s\-.]+/g, '_').replace(/_+/g, '_');
 }
 
 function parseCsv(text: string): string[][] {
-  const rows: string[][] = [];
-  let cur: string[] = [];
-  let field = '';
-  let inQuotes = false;
+  const rows: string[][] = []; let cur: string[] = []; let field = ''; let inQuotes = false;
   for (let i = 0; i < text.length; i++) {
     const ch = text[i];
     if (inQuotes) {
-      if (ch === '"') {
-        if (text[i + 1] === '"') { field += '"'; i++; }
-        else inQuotes = false;
-      } else field += ch;
-    } else if (ch === '"') {
-      inQuotes = true;
-    } else if (ch === ',') {
-      cur.push(field); field = '';
-    } else if (ch === '\n') {
-      cur.push(field); rows.push(cur); cur = []; field = '';
-    } else if (ch !== '\r') {
-      field += ch;
-    }
+      if (ch === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else inQuotes = false; }
+      else field += ch;
+    } else if (ch === '"') { inQuotes = true; }
+    else if (ch === ',') { cur.push(field); field = ''; }
+    else if (ch === '\n') { cur.push(field); rows.push(cur); cur = []; field = ''; }
+    else if (ch !== '\r') { field += ch; }
   }
   if (field.length > 0 || cur.length > 0) { cur.push(field); rows.push(cur); }
   return rows.filter((r) => r.some((c) => c.trim() !== ''));
@@ -164,13 +134,12 @@ function mapGridToOrders(grid: string[][]): { orders: RawOrder[]; error: string 
   const orders = grid.slice(1).map((cells) => {
     const rec: Record<string, string | number> = {};
     headers.forEach((h, i) => {
-      const field = HEADER_MAP[h];
-      if (!field) return;
+      const field = HEADER_MAP[h]; if (!field) return;
       const raw = cells[i] ?? '';
       const isStringField = ['orderId', 'sku', 'status', 'warehouseReturnReceived', 'utr', 'settlementDate'].includes(field);
       rec[field] = isStringField ? String(raw).trim() : num(raw);
     });
-    const result: RawOrder = {
+    return {
       orderId: String(rec.orderId ?? ''),
       sku: String(rec.sku ?? ''),
       status: String(rec.status ?? 'Delivered') || 'Delivered',
@@ -185,15 +154,14 @@ function mapGridToOrders(grid: string[][]): { orders: RawOrder[]; error: string 
       warehouseReturnReceived: String(rec.warehouseReturnReceived ?? 'Yes') || 'Yes',
       utr: rec.utr ? String(rec.utr) : undefined,
       settlementDate: rec.settlementDate ? String(rec.settlementDate) : undefined,
-    };
-    return result;
+    } as RawOrder;
   }).filter((r) => r.orderId.length > 0);
   if (!orders.length) return { orders: [], error: 'No valid order rows found. Please check the column headers.' };
   return { orders, error: null };
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   RECONCILIATION MATH ENGINE  (UNCHANGED)
+   RECONCILIATION MATH ENGINE  — UNCHANGED
    ══════════════════════════════════════════════════════════════════════════ */
 
 function computeRow(row: OrderRow): ComputedRow {
@@ -201,26 +169,18 @@ function computeRow(row: OrderRow): ComputedRow {
   const isReturn = status.includes('rto') || status.includes('return');
   const isCancelled = status.includes('cancel');
   const returned = (row.warehouseReturnReceived || '').toLowerCase().startsWith('y');
-
   const expectedFees = row.expectedCommission + row.expectedShipping;
   const chargedFees = row.chargedCommission + row.chargedShipping;
   const gstOnExpectedFees = expectedFees * GST_RATE;
   const gstOnChargedFees = chargedFees * GST_RATE;
-
   const taxableValue = Math.max(0, row.sellingPrice - row.expectedCommission);
   const tcs = taxableValue * TCS_RATE;
 
   let expectedSettlement = 0;
   if (!isCancelled) {
-    if (isReturn) {
-      expectedSettlement = returned
-        ? 0
-        : Math.max(0, row.sellingPrice - expectedFees - gstOnExpectedFees - tcs);
-    } else {
-      expectedSettlement = row.sellingPrice - expectedFees - gstOnExpectedFees - tcs;
-    }
+    if (isReturn) expectedSettlement = returned ? 0 : Math.max(0, row.sellingPrice - expectedFees - gstOnExpectedFees - tcs);
+    else expectedSettlement = row.sellingPrice - expectedFees - gstOnExpectedFees - tcs;
   }
-
   const leak = expectedSettlement - row.bankUtrSettled;
   const matched = Math.abs(leak) <= MATCH_TOLERANCE;
 
@@ -256,18 +216,15 @@ function computeRow(row: OrderRow): ComputedRow {
         : flags.includes('weight') ? 'weight'
           : 'commission';
 
-  return {
-    ...row, expectedFees, chargedFees, gstOnExpectedFees, gstOnChargedFees, tcs,
-    expectedSettlement, leak, matched, actionable: !matched, flags, primary, split,
-  };
+  return { ...row, expectedFees, chargedFees, gstOnExpectedFees, gstOnChargedFees, tcs,
+    expectedSettlement, leak, matched, actionable: !matched, flags, primary, split };
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   SAMPLE PRESETS  (UNCHANGED)
+   SAMPLE PRESETS  — UNCHANGED
    ══════════════════════════════════════════════════════════════════════════ */
 
 type SampleKey = 'apparel' | 'electronics' | 'beauty';
-
 interface SampleDef {
   key: SampleKey; label: string; emoji: string; descriptor: string;
   marketplace: Marketplace; batchName: string; utr: string; date: string; rows: RawOrder[];
@@ -330,7 +287,7 @@ const SAMPLE_DEFS: SampleDef[] = [
 ];
 
 /* ══════════════════════════════════════════════════════════════════════════
-   CLAIM TEXT BUILDER  (UNCHANGED)
+   CLAIM TEXT BUILDER  — UNCHANGED
    ══════════════════════════════════════════════════════════════════════════ */
 
 function buildClaimText(row: ComputedRow, mkt: Marketplace, claimLabel: string): string {
@@ -339,24 +296,15 @@ function buildClaimText(row: ComputedRow, mkt: Marketplace, claimLabel: string):
   const gstDiff = feeDiff * GST_RATE;
 
   const causes: string[] = [];
-  if (row.flags.includes('weight')) {
-    causes.push(`Weight slab overcharge — billed for ${row.billedWeightG.toLocaleString('en-IN')}g against a declared weight of ${row.declaredWeightG.toLocaleString('en-IN')}g (excess ${excessWeight.toLocaleString('en-IN')}g). Forward shipping was charged at ${fmtMoney(row.chargedShipping)} instead of ${fmtMoney(row.expectedShipping)}.`);
-  }
-  if (row.flags.includes('commission')) {
-    causes.push(`Commission overcharge — ${fmtMoney(row.chargedCommission)} deducted against a contracted commission of ${fmtMoney(row.expectedCommission)} for this category.`);
-  }
-  if (row.flags.includes('missingReturn')) {
-    causes.push(`Returned unit not received back in my warehouse (Warehouse_Return_Received = No) and no reimbursement has been credited against this order. As per the ${claimLabel} policy, the marketplace is liable to reimburse the net realisable value of the unit.`);
-  }
-  if (row.flags.includes('pending')) {
-    causes.push(`Payment on hold — the order is marked Delivered but ₹0 has been credited against this order in the current settlement cycle.`);
-  }
+  if (row.flags.includes('weight')) causes.push(`Weight slab overcharge — billed for ${row.billedWeightG.toLocaleString('en-IN')}g against a declared weight of ${row.declaredWeightG.toLocaleString('en-IN')}g (excess ${excessWeight.toLocaleString('en-IN')}g). Forward shipping was charged at ${fmtMoney(row.chargedShipping)} instead of ${fmtMoney(row.expectedShipping)}.`);
+  if (row.flags.includes('commission')) causes.push(`Commission overcharge — ${fmtMoney(row.chargedCommission)} deducted against a contracted commission of ${fmtMoney(row.expectedCommission)} for this category.`);
+  if (row.flags.includes('missingReturn')) causes.push(`Returned unit not received back in my warehouse (Warehouse_Return_Received = No) and no reimbursement has been credited against this order. As per the ${claimLabel} policy, the marketplace is liable to reimburse the net realisable value of the unit.`);
+  if (row.flags.includes('pending')) causes.push(`Payment on hold — the order is marked Delivered but ₹0 has been credited against this order in the current settlement cycle.`);
   if (causes.length === 0) causes.push('Settlement shortfall against contracted fee schedule.');
 
   return [
     `SUBJECT: ${claimLabel} — Order ${row.orderId} | SKU ${row.sku} | Refund Claim ${fmtMoney(Math.max(row.leak, 0))}`,
-    '',
-    `Dear ${mkt} Seller Support,`,
+    '', `Dear ${mkt} Seller Support,`,
     '',
     `I am filing a ${claimLabel} for the order referenced below. The bank settlement credited against this order is lower than the payout computed on my contracted seller fee schedule.`,
     '',
@@ -389,49 +337,22 @@ function buildClaimText(row: ComputedRow, mkt: Marketplace, claimLabel: string):
     '✓ Tax Invoice copy',
     '',
     `Request you to review and credit ${fmtMoney(Math.max(row.leak, 0))} to my next settlement cycle within 7 working days.`,
-    '',
-    'Regards,',
-    'Seller — Settlement Audit (SellerMath CSV Intelligence)',
+    '', 'Regards,', 'Seller — Settlement Audit (SellerMath CSV Intelligence)',
   ].join('\n');
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   PRESENTATIONAL PRIMITIVES  (restyled)
+   PRESENTATIONAL PRIMITIVES
    ══════════════════════════════════════════════════════════════════════════ */
 
 type KpiTone = 'blue' | 'teal' | 'emerald' | 'rose' | 'amber';
 
 const KPI_TONES: Record<KpiTone, { card: string; accent: string; icon: string; value: string }> = {
-  blue: {
-    card: 'border-zinc-200/80 bg-white dark:border-zinc-800/80 dark:bg-zinc-900/80',
-    accent: 'before:bg-gradient-to-r before:from-blue-500 before:to-sky-400',
-    icon: 'bg-blue-500/10 text-blue-500 border border-blue-500/20',
-    value: 'text-zinc-900 dark:text-zinc-50',
-  },
-  teal: {
-    card: 'border-zinc-200/80 bg-white dark:border-zinc-800/80 dark:bg-zinc-900/80',
-    accent: 'before:bg-gradient-to-r before:from-teal-500 before:to-cyan-400',
-    icon: 'bg-teal-500/10 text-teal-500 dark:text-teal-400 border border-teal-500/20',
-    value: 'text-zinc-900 dark:text-zinc-50',
-  },
-  emerald: {
-    card: 'border-zinc-200/80 bg-white dark:border-zinc-800/80 dark:bg-zinc-900/80',
-    accent: 'before:bg-gradient-to-r before:from-emerald-500 before:to-teal-400',
-    icon: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20',
-    value: 'text-zinc-900 dark:text-zinc-50',
-  },
-  rose: {
-    card: 'border-rose-500/40 bg-gradient-to-br from-rose-50 via-rose-100/50 to-white shadow-lg shadow-rose-500/10 dark:from-rose-500/[0.12] dark:via-rose-950/20 dark:to-zinc-900/90 dark:shadow-rose-500/5',
-    accent: 'before:bg-gradient-to-r before:from-rose-500 before:to-orange-400',
-    icon: 'bg-rose-500/15 text-rose-500 dark:text-rose-400 border border-rose-500/30',
-    value: 'text-rose-600 dark:text-rose-400',
-  },
-  amber: {
-    card: 'border-zinc-200/80 bg-white dark:border-zinc-800/80 dark:bg-zinc-900/80',
-    accent: 'before:bg-gradient-to-r before:from-amber-500 before:to-yellow-400',
-    icon: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20',
-    value: 'text-zinc-900 dark:text-zinc-50',
-  },
+  blue:    { card: 'border-zinc-200/80 bg-white dark:border-zinc-800/80 dark:bg-zinc-900/80', accent: 'before:bg-gradient-to-r before:from-blue-500 before:to-sky-400',   icon: 'bg-blue-500/10 text-blue-500 border border-blue-500/20',       value: 'text-zinc-900 dark:text-zinc-50' },
+  teal:    { card: 'border-zinc-200/80 bg-white dark:border-zinc-800/80 dark:bg-zinc-900/80', accent: 'before:bg-gradient-to-r before:from-teal-500 before:to-cyan-400',   icon: 'bg-teal-500/10 text-teal-500 dark:text-teal-400 border border-teal-500/20',       value: 'text-zinc-900 dark:text-zinc-50' },
+  emerald: { card: 'border-zinc-200/80 bg-white dark:border-zinc-800/80 dark:bg-zinc-900/80', accent: 'before:bg-gradient-to-r before:from-emerald-500 before:to-teal-400', icon: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20', value: 'text-zinc-900 dark:text-zinc-50' },
+  rose:    { card: 'border-rose-500/40 bg-gradient-to-br from-rose-50 via-rose-100/50 to-white shadow-lg shadow-rose-500/10 dark:from-rose-500/[0.12] dark:via-rose-950/20 dark:to-zinc-900/90', accent: 'before:bg-gradient-to-r before:from-rose-500 before:to-orange-400', icon: 'bg-rose-500/15 text-rose-500 dark:text-rose-400 border border-rose-500/30', value: 'text-rose-600 dark:text-rose-400' },
+  amber:   { card: 'border-zinc-200/80 bg-white dark:border-zinc-800/80 dark:bg-zinc-900/80', accent: 'before:bg-gradient-to-r before:from-amber-500 before:to-yellow-400', icon: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20', value: 'text-zinc-900 dark:text-zinc-50' },
 };
 
 function KpiCard({ label, value, raw, sub, highlight, icon, tone = 'blue', className = '' }: {
@@ -450,14 +371,14 @@ function KpiCard({ label, value, raw, sub, highlight, icon, tone = 'blue', class
     >
       <div className="flex min-w-0 items-start justify-between gap-2">
         <div className="min-w-0">
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-start gap-1.5">
             {highlight && (
-              <span className="relative flex h-2 w-2 shrink-0">
+              <span className="relative mt-1 flex h-2 w-2 shrink-0">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-500 opacity-70" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-rose-500" />
               </span>
             )}
-            <span className="select-none truncate text-[9px] font-bold uppercase leading-tight tracking-[0.12em] text-zinc-500 dark:text-zinc-400 sm:text-[10px]">
+            <span className="select-none line-clamp-2 text-[9px] font-bold uppercase leading-[1.15] tracking-[0.08em] text-zinc-500 dark:text-zinc-400 sm:text-[10px]">
               {label}
             </span>
           </div>
@@ -466,10 +387,7 @@ function KpiCard({ label, value, raw, sub, highlight, icon, tone = 'blue', class
           {icon}
         </span>
       </div>
-      <div className={[
-        'mt-3 select-none truncate text-2xl font-extrabold tracking-tight tabular-nums sm:mt-4 sm:text-3xl',
-        t.value,
-      ].join(' ')}>
+      <div className={['mt-3 select-none truncate text-2xl font-extrabold tracking-tight tabular-nums sm:mt-4 sm:text-3xl', t.value].join(' ')}>
         {value}
       </div>
       <div className="mt-1 select-none truncate text-[10px] font-medium text-zinc-500 dark:text-zinc-500 sm:text-[11px]">{sub}</div>
@@ -481,8 +399,7 @@ function Badge({ flag }: { flag: FlagKey }) {
   const meta = FLAG_META[flag];
   return (
     <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-md border px-1.5 py-0.5 text-[10px] font-semibold ${meta.chip}`}>
-      <span className={`h-1.5 w-1.5 rounded-full ${meta.dot}`} />
-      {meta.short}
+      <span className={`h-1.5 w-1.5 rounded-full ${meta.dot}`} />{meta.short}
     </span>
   );
 }
@@ -501,17 +418,13 @@ function WeightPill({ declared, billed }: { declared: number; billed: number }) 
   if (!over) {
     return (
       <span className="tabular-nums text-zinc-600 dark:text-zinc-400">
-        {declared.toLocaleString('en-IN')}g
-        <span className="mx-1 text-zinc-300 dark:text-zinc-700">→</span>
-        {billed.toLocaleString('en-IN')}g
+        {declared.toLocaleString('en-IN')}g<span className="mx-1 text-zinc-300 dark:text-zinc-700">→</span>{billed.toLocaleString('en-IN')}g
       </span>
     );
   }
   return (
     <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-amber-500/40 bg-amber-100 px-2 py-0.5 font-semibold tabular-nums text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-400">
-      {declared.toLocaleString('en-IN')}g
-      <ArrowRight className="h-2.5 w-2.5 shrink-0" />
-      {billed.toLocaleString('en-IN')}g
+      {declared.toLocaleString('en-IN')}g<ArrowRight className="h-2.5 w-2.5 shrink-0" />{billed.toLocaleString('en-IN')}g
     </span>
   );
 }
@@ -519,13 +432,7 @@ function WeightPill({ declared, billed }: { declared: number; billed: number }) 
 function AuditTile({ label, value, sub, tone = 'zinc' }: {
   label: string; value: string; sub?: string; tone?: 'zinc' | 'rose' | 'amber' | 'emerald' | 'violet';
 }) {
-  const toneCls = {
-    zinc: 'text-zinc-900 dark:text-zinc-100',
-    rose: 'text-rose-600 dark:text-rose-400',
-    amber: 'text-amber-600 dark:text-amber-400',
-    emerald: 'text-emerald-600 dark:text-emerald-400',
-    violet: 'text-violet-600 dark:text-violet-400',
-  }[tone];
+  const toneCls = { zinc: 'text-zinc-900 dark:text-zinc-100', rose: 'text-rose-600 dark:text-rose-400', amber: 'text-amber-600 dark:text-amber-400', emerald: 'text-emerald-600 dark:text-emerald-400', violet: 'text-violet-600 dark:text-violet-400' }[tone];
   return (
     <div className="min-w-0 rounded-xl border border-zinc-200/80 bg-white px-2.5 py-2 shadow-sm dark:border-zinc-800/80 dark:bg-zinc-900/70">
       <div className="select-none truncate text-[9px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-500">{label}</div>
@@ -555,58 +462,22 @@ function RowBreakdown({ row }: { row: ComputedRow }) {
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
         <AuditTile label="Selling Price (GMV)" value={fmtMoney(row.sellingPrice)} />
-        <AuditTile
-          label="Commission (Exp → Chg)"
-          value={`${fmtMoney(row.expectedCommission)} → ${fmtMoney(row.chargedCommission)}`}
-          sub={`${expCommPct.toFixed(1)}% → ${chgCommPct.toFixed(1)}% of GMV`}
-          tone={row.chargedCommission > row.expectedCommission + 0.5 ? 'rose' : 'zinc'}
-        />
-        <AuditTile
-          label="Weight (Declared → Billed)"
-          value={`${row.declaredWeightG.toLocaleString('en-IN')}g → ${row.billedWeightG.toLocaleString('en-IN')}g`}
-          sub={weightOver > 0 ? `+${weightOver.toLocaleString('en-IN')}g excess` : 'Within slab'}
-          tone={weightOver > 0 ? 'amber' : 'zinc'}
-        />
-        <AuditTile
-          label="Shipping (Exp → Chg)"
-          value={`${fmtMoney(row.expectedShipping)} → ${fmtMoney(row.chargedShipping)}`}
-          sub={shipOver > 0 ? `Overcharge ${fmtMoney(shipOver)}` : 'No overcharge'}
-          tone={shipOver > 0 ? 'amber' : 'zinc'}
-        />
-        <AuditTile
-          label="GST @18% on Fees"
-          value={`${fmtMoney(row.gstOnExpectedFees)} → ${fmtMoney(row.gstOnChargedFees)}`}
-          sub="Expected → Charged"
-        />
+        <AuditTile label="Commission (Exp → Chg)" value={`${fmtMoney(row.expectedCommission)} → ${fmtMoney(row.chargedCommission)}`} sub={`${expCommPct.toFixed(1)}% → ${chgCommPct.toFixed(1)}% of GMV`} tone={row.chargedCommission > row.expectedCommission + 0.5 ? 'rose' : 'zinc'} />
+        <AuditTile label="Weight (Declared → Billed)" value={`${row.declaredWeightG.toLocaleString('en-IN')}g → ${row.billedWeightG.toLocaleString('en-IN')}g`} sub={weightOver > 0 ? `+${weightOver.toLocaleString('en-IN')}g excess` : 'Within slab'} tone={weightOver > 0 ? 'amber' : 'zinc'} />
+        <AuditTile label="Shipping (Exp → Chg)" value={`${fmtMoney(row.expectedShipping)} → ${fmtMoney(row.chargedShipping)}`} sub={shipOver > 0 ? `Overcharge ${fmtMoney(shipOver)}` : 'No overcharge'} tone={shipOver > 0 ? 'amber' : 'zinc'} />
+        <AuditTile label="GST @18% on Fees" value={`${fmtMoney(row.gstOnExpectedFees)} → ${fmtMoney(row.gstOnChargedFees)}`} sub="Expected → Charged" />
         <AuditTile label="TCS/TDS 1% u/s 194-O" value={fmtMoney(row.tcs)} sub="Claimable on portal" />
-        <AuditTile
-          label="Warehouse Return"
-          value={returned ? 'Yes — Received' : 'No — Not Received'}
-          tone={returned ? 'emerald' : 'violet'}
-        />
-        <AuditTile
-          label="Net Leak / Discrepancy"
-          value={row.matched ? '✓ Clean' : fmtMoney(row.leak)}
-          sub={row.matched ? 'Within ±₹2 tolerance' : 'Recoverable via claim'}
-          tone={row.matched ? 'emerald' : 'rose'}
-        />
+        <AuditTile label="Warehouse Return" value={returned ? 'Yes — Received' : 'No — Not Received'} tone={returned ? 'emerald' : 'violet'} />
+        <AuditTile label="Net Leak / Discrepancy" value={row.matched ? '✓ Clean' : fmtMoney(row.leak)} sub={row.matched ? 'Within ±₹2 tolerance' : 'Recoverable via claim'} tone={row.matched ? 'emerald' : 'rose'} />
       </div>
 
       <div className="mt-2.5 flex flex-wrap items-center gap-1.5 rounded-xl border border-zinc-200/80 bg-white px-2.5 py-2 shadow-sm dark:border-zinc-800/80 dark:bg-zinc-900/70">
         <span className="select-none text-[9px] font-semibold uppercase tracking-wide text-zinc-500">Reconciliation</span>
-        <span className="select-none rounded-md bg-zinc-100 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
-          Expected {fmtMoney(row.expectedSettlement)}
-        </span>
+        <span className="select-none rounded-md bg-zinc-100 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">Expected {fmtMoney(row.expectedSettlement)}</span>
         <span className="select-none text-zinc-400">−</span>
-        <span className="select-none rounded-md bg-zinc-100 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
-          UTR {fmtMoney(row.bankUtrSettled)}
-        </span>
+        <span className="select-none rounded-md bg-zinc-100 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">UTR {fmtMoney(row.bankUtrSettled)}</span>
         <span className="select-none text-zinc-400">=</span>
-        <span className={[
-          'select-none rounded-md px-1.5 py-0.5 text-[10px] font-bold tabular-nums',
-          row.matched ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
-            : 'bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300',
-        ].join(' ')}>
+        <span className={['select-none rounded-md px-1.5 py-0.5 text-[10px] font-bold tabular-nums', row.matched ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300' : 'bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300'].join(' ')}>
           {row.matched ? 'Matched' : fmtMoney(row.leak)}
         </span>
       </div>
@@ -640,6 +511,10 @@ export default function SettlementReconciliation() {
   const [showPaste, setShowPaste] = useState(false);
   const [pasteText, setPasteText] = useState('');
 
+  const [waterfallHover, setWaterfallHover] = useState<string | null>(null);
+  const [donutHover, setDonutHover] = useState<string | null>(null);
+  const [orderHover, setOrderHover] = useState<string | null>(null);
+
   const activeMarket = MARKETPLACES.find((m) => m.id === marketplace) ?? MARKETPLACES[0];
 
   useEffect(() => {
@@ -671,6 +546,11 @@ export default function SettlementReconciliation() {
     return { grossOrderValue, expectedPayout, actualPayout, totalLeak, taxCredit, actionableCount, buckets, leakPct };
   }, [computed]);
 
+  const topLeakedOrders = useMemo(
+    () => computed.filter((r) => r.actionable && r.leak > 0).sort((a, b) => b.leak - a.leak).slice(0, 5),
+    [computed],
+  );
+
   const visible = useMemo(() => {
     switch (filter) {
       case 'actionable':    return computed.filter((r) => r.actionable);
@@ -684,9 +564,7 @@ export default function SettlementReconciliation() {
 
   const displayed = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    const searched = q
-      ? visible.filter((r) => r.orderId.toLowerCase().includes(q) || r.sku.toLowerCase().includes(q))
-      : visible;
+    const searched = q ? visible.filter((r) => r.orderId.toLowerCase().includes(q) || r.sku.toLowerCase().includes(q)) : visible;
     const sorted = [...searched];
     switch (sortBy) {
       case 'leak':    sorted.sort((a, b) => b.leak - a.leak); break;
@@ -706,14 +584,8 @@ export default function SettlementReconciliation() {
     matched: computed.filter((r) => r.matched).length,
   }), [computed]);
 
-  const claimedAmount = useMemo(
-    () => computed.reduce((s, r) => (claimedUids.has(r.uid) && r.leak > 0 ? s + r.leak : s), 0),
-    [computed, claimedUids],
-  );
-  const claimedCount = useMemo(
-    () => computed.filter((r) => claimedUids.has(r.uid) && r.actionable).length,
-    [computed, claimedUids],
-  );
+  const claimedAmount = useMemo(() => computed.reduce((s, r) => (claimedUids.has(r.uid) && r.leak > 0 ? s + r.leak : s), 0), [computed, claimedUids]);
+  const claimedCount = useMemo(() => computed.filter((r) => claimedUids.has(r.uid) && r.actionable).length, [computed, claimedUids]);
   const claimedPct = portfolio.totalLeak > 0 ? (claimedAmount / portfolio.totalLeak) * 100 : 0;
 
   const toggleClaimed = useCallback((uids: string[], mark: boolean) => {
@@ -729,19 +601,10 @@ export default function SettlementReconciliation() {
   }, []);
 
   const ingestRows = useCallback((incoming: RawOrder[], name: string, utr: string, date: string) => {
-    if (!incoming.length) {
-      setParseError('No valid order rows found. Please check the column headers against the template.');
-      return;
-    }
+    if (!incoming.length) { setParseError('No valid order rows found. Please check the column headers against the template.'); return; }
     setRows(incoming.map((r) => ({ ...r, uid: uid() })));
-    setBatchName(name);
-    setBatchUtr(utr);
-    setBatchDate(date);
-    setParseError(null);
-    setFilter('all');
-    setSearchQuery('');
-    setExpandedUid(null);
-    setClaimedUids(new Set());
+    setBatchName(name); setBatchUtr(utr); setBatchDate(date); setParseError(null);
+    setFilter('all'); setSearchQuery(''); setExpandedUid(null); setClaimedUids(new Set());
     setToast(`Parsed ${incoming.length} settlement orders`);
   }, []);
 
@@ -754,19 +617,14 @@ export default function SettlementReconciliation() {
   const handleFile = useCallback((file: File) => {
     const reader = new FileReader();
     reader.onload = () => {
-      ingestCsvText(
-        String(reader.result ?? ''),
-        file.name,
-        'Custom Batch',
-        new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
-      );
+      ingestCsvText(String(reader.result ?? ''), file.name, 'Custom Batch',
+        new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }));
     };
     reader.readAsText(file);
   }, [ingestCsvText]);
 
   const onDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setDragOver(false);
+    e.preventDefault(); setDragOver(false);
     const file = e.dataTransfer.files?.[0];
     if (file) handleFile(file);
   }, [handleFile]);
@@ -777,44 +635,26 @@ export default function SettlementReconciliation() {
   }, [ingestRows]);
 
   const resetAll = useCallback(() => {
-    setRows([]);
-    setBatchName('');
-    setBatchUtr('');
-    setBatchDate('');
-    setFilter('all');
-    setParseError(null);
-    setClaimTarget(null);
-    setShowManual(false);
-    setSearchQuery('');
-    setExpandedUid(null);
-    setClaimedUids(new Set());
-    setPasteText('');
-    setShowPaste(false);
-    setToast('Batch cleared');
+    setRows([]); setBatchName(''); setBatchUtr(''); setBatchDate(''); setFilter('all');
+    setParseError(null); setClaimTarget(null); setShowManual(false);
+    setSearchQuery(''); setExpandedUid(null); setClaimedUids(new Set());
+    setPasteText(''); setShowPaste(false); setToast('Batch cleared');
   }, []);
 
   const downloadTemplate = useCallback(() => {
     const example = ['AMZ-1001', 'TSH-BLK-M', 'Delivered', '799', '80', '80', '300', '300', '55', '55', '632', 'Yes', 'NEFT123456789', '2025-02-12'];
     const blob = new Blob([[TEMPLATE_HEADERS.join(','), example.join(',')].join('\n')], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'settlement_reconciliation_template.csv';
-    a.click();
-    URL.revokeObjectURL(url);
+    const a = document.createElement('a'); a.href = url;
+    a.download = 'settlement_reconciliation_template.csv'; a.click(); URL.revokeObjectURL(url);
     setToast('Template downloaded');
   }, []);
 
   const handlePasteParse = useCallback(() => {
     if (!pasteText.trim()) { setParseError('Paste some settlement rows first.'); return; }
-    ingestCsvText(
-      pasteText,
-      'pasted_settlement_batch.csv',
-      'Pasted Batch',
-      new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
-    );
-    setShowPaste(false);
-    setPasteText('');
+    ingestCsvText(pasteText, 'pasted_settlement_batch.csv', 'Pasted Batch',
+      new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }));
+    setShowPaste(false); setPasteText('');
   }, [pasteText, ingestCsvText]);
 
   const claimText = useMemo(() => {
@@ -829,27 +669,20 @@ export default function SettlementReconciliation() {
       `  Batch: ${batchName}`,
       `  Orders in packet: ${leaked.length}`,
       `  Total refund requested: ${fmtMoney(leaked.reduce((s, r) => s + Math.max(0, r.leak), 0))}`,
-      '═══════════════════════════════════════════════',
-      '',
+      '═══════════════════════════════════════════════', '',
     ].join('\n');
     return header + leaked.map((r, i) =>
-      `\n─────────── CLAIM ${i + 1} of ${leaked.length} ───────────\n` + buildClaimText(r, marketplace, activeMarket.claim),
-    ).join('\n\n');
+      `\n─────────── CLAIM ${i + 1} of ${leaked.length} ───────────\n` + buildClaimText(r, marketplace, activeMarket.claim)).join('\n\n');
   }, [claimTarget, computed, marketplace, activeMarket, batchName]);
 
   const copyClaim = useCallback(async () => {
     if (!claimText) return;
     try { await navigator.clipboard.writeText(claimText); }
     catch {
-      const ta = document.createElement('textarea');
-      ta.value = claimText;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
+      const ta = document.createElement('textarea'); ta.value = claimText;
+      document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
     }
-    setCopied(true);
-    setToast('Claim text copied to clipboard');
+    setCopied(true); setToast('Claim text copied to clipboard');
     window.setTimeout(() => setCopied(false), 2000);
   }, [claimText]);
 
@@ -868,22 +701,15 @@ export default function SettlementReconciliation() {
     ].map((c) => escape(String(c))).join(','));
     const blob = new Blob([[header.join(','), ...lines].join('\n')], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
+    const a = document.createElement('a'); a.href = url;
     a.download = `leaked_orders_${marketplace.toLowerCase()}_${Date.now()}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    a.click(); URL.revokeObjectURL(url);
     setToast(`Exported ${leaked.length} leaked orders`);
   }, [computed, activeMarket, marketplace]);
 
   const exportAuditCsv = useCallback(() => {
     if (!displayed.length) { setToast('Nothing to export for the current view'); return; }
-    const header = [
-      'Order_ID', 'SKU', 'Status', 'Selling_Price',
-      'Expected_Commission', 'Charged_Commission', 'Declared_Weight_g', 'Billed_Weight_g',
-      'Expected_Shipping', 'Charged_Shipping',
-      'Expected_Payout', 'Actual_UTR_Settled', 'Leak_Amount', 'Discrepancy_Reason', 'Claim_Status',
-    ];
+    const header = ['Order_ID', 'SKU', 'Status', 'Selling_Price', 'Expected_Commission', 'Charged_Commission', 'Declared_Weight_g', 'Billed_Weight_g', 'Expected_Shipping', 'Charged_Shipping', 'Expected_Payout', 'Actual_UTR_Settled', 'Leak_Amount', 'Discrepancy_Reason', 'Claim_Status'];
     const escape = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
     const lines = displayed.map((r) => [
       r.orderId, r.sku, r.status, r.sellingPrice.toFixed(2),
@@ -897,11 +723,9 @@ export default function SettlementReconciliation() {
     ].map((c) => escape(String(c))).join(','));
     const blob = new Blob([[header.join(','), ...lines].join('\n')], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
+    const a = document.createElement('a'); a.href = url;
     a.download = `audit_${marketplace.toLowerCase()}_${Date.now()}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    a.click(); URL.revokeObjectURL(url);
     setToast(`Audit CSV exported — ${displayed.length} orders`);
   }, [displayed, claimedUids, marketplace]);
 
@@ -925,29 +749,20 @@ export default function SettlementReconciliation() {
   }, [claimTarget, claimedUids, computed, toggleClaimed, isClaimTargetFiled]);
 
   const [manual, setManual] = useState({
-    orderId: '', sku: '', status: 'Delivered',
-    sellingPrice: '', expectedCommission: '', chargedCommission: '',
-    declaredWeightG: '', billedWeightG: '',
-    expectedShipping: '', chargedShipping: '',
+    orderId: '', sku: '', status: 'Delivered', sellingPrice: '', expectedCommission: '', chargedCommission: '',
+    declaredWeightG: '', billedWeightG: '', expectedShipping: '', chargedShipping: '',
     bankUtrSettled: '', warehouseReturnReceived: 'Yes',
   });
 
   const manualPreview = useMemo<ComputedRow | null>(() => {
     if (!manual.orderId.trim() && !manual.sellingPrice.trim()) return null;
     return computeRow({
-      uid: 'manual-preview',
-      orderId: manual.orderId || 'MANUAL-ORDER',
-      sku: manual.sku || '—',
-      status: manual.status,
-      sellingPrice: num(manual.sellingPrice),
-      expectedCommission: num(manual.expectedCommission),
-      chargedCommission: num(manual.chargedCommission),
-      declaredWeightG: num(manual.declaredWeightG),
-      billedWeightG: num(manual.billedWeightG),
-      expectedShipping: num(manual.expectedShipping),
-      chargedShipping: num(manual.chargedShipping),
-      bankUtrSettled: num(manual.bankUtrSettled),
-      warehouseReturnReceived: manual.warehouseReturnReceived,
+      uid: 'manual-preview', orderId: manual.orderId || 'MANUAL-ORDER', sku: manual.sku || '—',
+      status: manual.status, sellingPrice: num(manual.sellingPrice),
+      expectedCommission: num(manual.expectedCommission), chargedCommission: num(manual.chargedCommission),
+      declaredWeightG: num(manual.declaredWeightG), billedWeightG: num(manual.billedWeightG),
+      expectedShipping: num(manual.expectedShipping), chargedShipping: num(manual.chargedShipping),
+      bankUtrSettled: num(manual.bankUtrSettled), warehouseReturnReceived: manual.warehouseReturnReceived,
     });
   }, [manual]);
 
@@ -955,17 +770,10 @@ export default function SettlementReconciliation() {
     if (!manualPreview) { setToast('Enter at least an Order ID or Selling Price'); return; }
     setRows((prev) => [...prev, { ...manualPreview, uid: uid() }]);
     if (!batchName) {
-      setBatchName('manual_audit_batch.csv');
-      setBatchUtr('Manual Entry');
+      setBatchName('manual_audit_batch.csv'); setBatchUtr('Manual Entry');
       setBatchDate(new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }));
     }
-    setManual({
-      orderId: '', sku: '', status: 'Delivered',
-      sellingPrice: '', expectedCommission: '', chargedCommission: '',
-      declaredWeightG: '', billedWeightG: '',
-      expectedShipping: '', chargedShipping: '',
-      bankUtrSettled: '', warehouseReturnReceived: 'Yes',
-    });
+    setManual({ orderId: '', sku: '', status: 'Delivered', sellingPrice: '', expectedCommission: '', chargedCommission: '', declaredWeightG: '', billedWeightG: '', expectedShipping: '', chargedShipping: '', bankUtrSettled: '', warehouseReturnReceived: 'Yes' });
     setToast('Order added to audit batch');
   }, [manualPreview, batchName]);
 
@@ -994,11 +802,12 @@ export default function SettlementReconciliation() {
     '③ Generate Ready-to-File SAFE-T / SPF Claims',
   ];
 
+  /* ──────────────────────────────────────────────────────────────────── */
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
       <div className="mx-auto box-border w-full max-w-[1360px] overflow-x-hidden px-3 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
 
-        {/* ─────────────── 1. UNIFIED STUDIO BANNER (HERO + SAMPLE BAR) ─────────────── */}
+        {/* ─────────────── 1. UNIFIED STUDIO BANNER ─────────────── */}
         <header className="relative mb-4 overflow-hidden rounded-3xl border border-zinc-200/80 bg-gradient-to-br from-white via-zinc-50/90 to-emerald-50/30 p-4 shadow-xl sm:mb-5 sm:p-7 dark:border-zinc-800/80 dark:from-zinc-900/95 dark:via-zinc-900/90 dark:to-emerald-950/25">
           <div className="pointer-events-none absolute -top-24 -right-24 h-64 w-64 rounded-full bg-emerald-500/10 blur-3xl" />
           <div className="pointer-events-none absolute -bottom-28 -left-20 h-56 w-56 rounded-full bg-teal-500/5 blur-3xl" />
@@ -1018,22 +827,17 @@ export default function SettlementReconciliation() {
               commission discrepancies, unpaid RTOs &amp; missing reimbursements.
             </p>
 
-            {/* Marketplace segmented pill track */}
             <div className="mt-4 inline-flex max-w-full flex-wrap gap-1.5 rounded-2xl border border-zinc-200/70 bg-zinc-100 p-1.5 sm:mt-5 dark:border-zinc-800/80 dark:bg-zinc-950/80">
               {MARKETPLACES.map((m) => {
                 const active = m.id === marketplace;
                 return (
-                  <button
-                    key={m.id}
-                    type="button"
-                    onClick={() => setMarketplace(m.id)}
+                  <button key={m.id} type="button" onClick={() => setMarketplace(m.id)}
                     className={[
-                      'select-none whitespace-nowrap rounded-xl px-3 py-1.5 text-[10px] transition-all sm:px-4 sm:text-xs',
-                      active
-                        ? 'bg-gradient-to-r from-emerald-500 to-teal-500 font-semibold text-white shadow-md shadow-emerald-500/20'
-                        : 'font-medium text-zinc-600 hover:bg-white hover:text-emerald-700 dark:text-zinc-400 dark:hover:bg-zinc-800/80 dark:hover:text-emerald-300',
-                    ].join(' ')}
-                  >
+                      'inline-flex select-none items-center gap-1.5 whitespace-nowrap rounded-xl px-3 py-1.5 text-[10px] transition-all sm:px-4 sm:text-xs',
+                      active ? 'bg-gradient-to-r from-emerald-500 to-teal-500 font-semibold text-white shadow-md shadow-emerald-500/20'
+                             : 'font-medium text-zinc-600 hover:bg-white hover:text-emerald-700 dark:text-zinc-400 dark:hover:bg-zinc-800/80 dark:hover:text-emerald-300',
+                    ].join(' ')}>
+                    <MarketplaceLogo marketplace={m.id} size="xs" />
                     {m.label}
                   </button>
                 );
@@ -1045,28 +849,18 @@ export default function SettlementReconciliation() {
               → <span className="font-semibold text-zinc-700 dark:text-zinc-300">{activeMarket.claim}</span> · {activeMarket.note}
             </p>
 
-            {/* Divider */}
             <div className="my-4 h-px w-full bg-gradient-to-r from-transparent via-zinc-200 to-transparent sm:my-5 dark:via-zinc-800" />
 
-            {/* Sample bar */}
             <div className="mb-2.5 flex items-center gap-1.5">
               <Sparkles className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
-              <span className="select-none text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-500 sm:text-[11px] dark:text-zinc-400">
-                Try Sample Audit
-              </span>
+              <span className="select-none text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-500 sm:text-[11px] dark:text-zinc-400">Try Sample Audit</span>
             </div>
 
             <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
               {SAMPLE_DEFS.map((s) => (
-                <button
-                  key={s.key}
-                  type="button"
-                  onClick={() => loadSample(s)}
-                  className="group relative flex min-w-0 select-none items-center gap-3 rounded-2xl border border-zinc-200/80 bg-white/80 p-3.5 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-500/50 hover:bg-emerald-500/[0.04] dark:border-zinc-800/80 dark:bg-zinc-900/70"
-                >
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-lg shadow-[0_0_18px_rgba(16,185,129,0.18)]">
-                    {s.emoji}
-                  </span>
+                <button key={s.key} type="button" onClick={() => loadSample(s)}
+                  className="group relative flex min-w-0 select-none items-center gap-3 rounded-2xl border border-zinc-200/80 bg-white/80 p-3.5 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-500/50 hover:bg-emerald-500/[0.04] dark:border-zinc-800/80 dark:bg-zinc-900/70">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-lg shadow-[0_0_18px_rgba(16,185,129,0.18)]">{s.emoji}</span>
                   <span className="flex min-w-0 flex-1 flex-col leading-tight">
                     <span className="truncate text-[12px] font-bold text-zinc-900 dark:text-zinc-100">{s.label}</span>
                     <span className="mt-0.5 truncate text-[10px] text-zinc-500 dark:text-zinc-400">{s.descriptor}</span>
@@ -1077,33 +871,22 @@ export default function SettlementReconciliation() {
             </div>
 
             <div className="mt-3 flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={downloadTemplate}
-                className="flex select-none items-center gap-1.5 whitespace-nowrap rounded-xl border border-zinc-200/80 bg-white/80 px-3 py-1.5 text-[10px] font-semibold text-zinc-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-teal-400 hover:text-teal-700 sm:text-[11px] dark:border-zinc-800/80 dark:bg-zinc-900/70 dark:text-zinc-300 dark:hover:border-teal-500/50 dark:hover:text-teal-300"
-              >
+              <button type="button" onClick={downloadTemplate}
+                className="flex select-none items-center gap-1.5 whitespace-nowrap rounded-xl border border-zinc-200/80 bg-white/80 px-3 py-1.5 text-[10px] font-semibold text-zinc-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-teal-400 hover:text-teal-700 sm:text-[11px] dark:border-zinc-800/80 dark:bg-zinc-900/70 dark:text-zinc-300 dark:hover:border-teal-500/50 dark:hover:text-teal-300">
                 <Download className="h-3.5 w-3.5 shrink-0" /> Download CSV Template
               </button>
 
-              <button
-                type="button"
-                onClick={() => setShowPaste((v) => !v)}
+              <button type="button" onClick={() => setShowPaste((v) => !v)}
                 className={[
                   'flex select-none items-center gap-1.5 whitespace-nowrap rounded-xl border px-3 py-1.5 text-[10px] font-semibold shadow-sm transition-all hover:-translate-y-0.5 sm:text-[11px]',
-                  showPaste
-                    ? 'border-emerald-400 bg-emerald-50 text-emerald-700 dark:border-emerald-500/50 dark:bg-emerald-500/10 dark:text-emerald-300'
-                    : 'border-zinc-200/80 bg-white/80 text-zinc-700 hover:border-emerald-400 hover:text-emerald-700 dark:border-zinc-800/80 dark:bg-zinc-900/70 dark:text-zinc-300 dark:hover:border-emerald-500/50 dark:hover:text-emerald-300',
-                ].join(' ')}
-              >
+                  showPaste ? 'border-emerald-400 bg-emerald-50 text-emerald-700 dark:border-emerald-500/50 dark:bg-emerald-500/10 dark:text-emerald-300'
+                             : 'border-zinc-200/80 bg-white/80 text-zinc-700 hover:border-emerald-400 hover:text-emerald-700 dark:border-zinc-800/80 dark:bg-zinc-900/70 dark:text-zinc-300 dark:hover:border-emerald-500/50 dark:hover:text-emerald-300',
+                ].join(' ')}>
                 <ClipboardPaste className="h-3.5 w-3.5 shrink-0" /> Paste Raw Settlement Rows
               </button>
 
-              <button
-                type="button"
-                onClick={resetAll}
-                disabled={!hasBatch}
-                className="flex select-none items-center gap-1.5 whitespace-nowrap rounded-xl border border-zinc-200/80 bg-white/80 px-3 py-1.5 text-[10px] font-semibold text-zinc-700 shadow-sm transition-all hover:border-rose-400 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-40 sm:text-[11px] dark:border-zinc-800/80 dark:bg-zinc-900/70 dark:text-zinc-300 dark:hover:border-rose-500/50 dark:hover:text-rose-400"
-              >
+              <button type="button" onClick={resetAll} disabled={!hasBatch}
+                className="flex select-none items-center gap-1.5 whitespace-nowrap rounded-xl border border-zinc-200/80 bg-white/80 px-3 py-1.5 text-[10px] font-semibold text-zinc-700 shadow-sm transition-all hover:border-rose-400 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-40 sm:text-[11px] dark:border-zinc-800/80 dark:bg-zinc-900/70 dark:text-zinc-300 dark:hover:border-rose-500/50 dark:hover:text-rose-400">
                 <RotateCcw className="h-3.5 w-3.5 shrink-0" /> Reset / Clear
               </button>
             </div>
@@ -1111,34 +894,19 @@ export default function SettlementReconciliation() {
             {showPaste && (
               <div className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-3 dark:border-emerald-500/25 dark:bg-emerald-500/[0.06]">
                 <div className="mb-1.5 flex flex-wrap items-center justify-between gap-1.5">
-                  <span className="select-none text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
-                    Paste rows from Excel / Google Sheets
-                  </span>
-                  <span className="select-none text-[9px] text-zinc-500 dark:text-zinc-400">
-                    Include the header row · comma or tab separated
-                  </span>
+                  <span className="select-none text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">Paste rows from Excel / Google Sheets</span>
+                  <span className="select-none text-[9px] text-zinc-500 dark:text-zinc-400">Include the header row · comma or tab separated</span>
                 </div>
-                <textarea
-                  value={pasteText}
-                  onChange={(e) => setPasteText(e.target.value)}
-                  rows={5}
-                  spellCheck={false}
+                <textarea value={pasteText} onChange={(e) => setPasteText(e.target.value)} rows={5} spellCheck={false}
                   placeholder={'Order_ID,SKU,Status,Selling_Price,Expected_Commission,Charged_Commission,Declared_Weight_g,Billed_Weight_g,Expected_Shipping,Charged_Shipping,Bank_UTR_Settled,Warehouse_Return_Received\nAMZ-1001,TSH-BLK-M,Delivered,799,80,80,300,300,55,55,632,Yes'}
-                  className="w-full resize-y rounded-xl border border-zinc-200 bg-white p-2.5 font-mono text-[10px] leading-relaxed text-zinc-800 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-                />
+                  className="w-full resize-y rounded-xl border border-zinc-200 bg-white p-2.5 font-mono text-[10px] leading-relaxed text-zinc-800 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100" />
                 <div className="mt-2 flex flex-wrap gap-1.5">
-                  <button
-                    type="button"
-                    onClick={handlePasteParse}
-                    className="select-none rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-3.5 py-1.5 text-[10px] font-bold text-white shadow-md shadow-emerald-500/20 transition-all hover:opacity-90"
-                  >
+                  <button type="button" onClick={handlePasteParse}
+                    className="select-none rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-3.5 py-1.5 text-[10px] font-bold text-white shadow-md shadow-emerald-500/20 transition-all hover:opacity-90">
                     Parse {pasteText.trim() ? `${Math.max(parseCsv(pasteText).length - 1, 0)} Rows` : 'Rows'}
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => { setPasteText(''); setShowPaste(false); }}
-                    className="select-none rounded-xl border border-zinc-200 bg-white px-3.5 py-1.5 text-[10px] font-semibold text-zinc-600 hover:text-rose-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400"
-                  >
+                  <button type="button" onClick={() => { setPasteText(''); setShowPaste(false); }}
+                    className="select-none rounded-xl border border-zinc-200 bg-white px-3.5 py-1.5 text-[10px] font-semibold text-zinc-600 hover:text-rose-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
                     Cancel
                   </button>
                 </div>
@@ -1147,67 +915,37 @@ export default function SettlementReconciliation() {
           </div>
         </header>
 
-        {/* ─────────────── 3. DUAL INPUT ENGINE ─────────────── */}
+        {/* ─────────────── 2. DUAL INPUT ENGINE ─────────────── */}
         <section className="mb-4 sm:mb-5">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".csv,text/csv"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) handleFile(f);
-              e.target.value = '';
-            }}
-          />
+          <input ref={fileInputRef} type="file" accept=".csv,text/csv" className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ''; }} />
 
           {!hasBatch ? (
-            <div
-              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-              onDragLeave={() => setDragOver(false)}
-              onDrop={onDrop}
-              onClick={() => fileInputRef.current?.click()}
+            <div onDragOver={(e) => { e.preventDefault(); setDragOver(true); }} onDragLeave={() => setDragOver(false)}
+              onDrop={onDrop} onClick={() => fileInputRef.current?.click()}
               className={[
                 'flex cursor-pointer flex-col items-center justify-center rounded-3xl border-2 border-dashed px-3 py-7 text-center transition-all sm:px-4 sm:py-12',
-                dragOver
-                  ? 'scale-[1.005] border-emerald-500 bg-emerald-50 dark:border-emerald-400 dark:bg-emerald-500/10'
-                  : 'border-emerald-300 bg-emerald-50/40 hover:border-emerald-400 hover:bg-emerald-50/70 dark:border-emerald-500/30 dark:bg-emerald-500/[0.04] dark:hover:border-emerald-500/60 dark:hover:bg-emerald-500/10',
-              ].join(' ')}
-            >
+                dragOver ? 'scale-[1.005] border-emerald-500 bg-emerald-50 dark:border-emerald-400 dark:bg-emerald-500/10'
+                         : 'border-emerald-300 bg-emerald-50/40 hover:border-emerald-400 hover:bg-emerald-50/70 dark:border-emerald-500/30 dark:bg-emerald-500/[0.04] dark:hover:border-emerald-500/60 dark:hover:bg-emerald-500/10',
+              ].join(' ')}>
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/25 sm:h-14 sm:w-14">
                 <UploadCloud className="h-6 w-6" />
               </div>
-              <p className="mt-3 select-none text-[13px] font-bold text-zinc-800 sm:mt-4 sm:text-base dark:text-zinc-100">
-                Drag &amp; drop your Settlement CSV here
-              </p>
-              <p className="mt-0.5 select-none text-[10px] text-zinc-500 sm:mt-1 sm:text-[11px] dark:text-zinc-400">
-                or <span className="font-semibold text-emerald-600 dark:text-emerald-400">click to browse</span> — CSV only
-              </p>
+              <p className="mt-3 select-none text-[13px] font-bold text-zinc-800 sm:mt-4 sm:text-base dark:text-zinc-100">Drag &amp; drop your Settlement CSV here</p>
+              <p className="mt-0.5 select-none text-[10px] text-zinc-500 sm:mt-1 sm:text-[11px] dark:text-zinc-400">or <span className="font-semibold text-emerald-600 dark:text-emerald-400">click to browse</span> — CSV only</p>
 
-              {/* 3-pill workflow strip */}
-              <div
-                className="mt-4 flex w-full max-w-2xl flex-col items-stretch gap-1.5 sm:mt-5 sm:flex-row sm:items-center sm:justify-center sm:gap-1.5"
-                onClick={(e) => e.stopPropagation()}
-              >
+              <div className="mt-4 flex w-full max-w-2xl flex-col items-stretch gap-1.5 sm:mt-5 sm:flex-row sm:items-center sm:justify-center sm:gap-1.5" onClick={(e) => e.stopPropagation()}>
                 {WORKFLOW_STEPS.map((step, i) => (
                   <div key={step} className="flex min-w-0 items-center gap-1.5">
-                    <span className="flex-1 select-none rounded-full border border-emerald-300 bg-white/90 px-3 py-1 text-[9px] font-semibold leading-tight text-emerald-800 shadow-sm sm:flex-none sm:text-[10px] dark:border-emerald-500/30 dark:bg-zinc-950/60 dark:text-emerald-300">
-                      {step}
-                    </span>
-                    {i < WORKFLOW_STEPS.length - 1 && (
-                      <ArrowRight className="hidden h-3 w-3 shrink-0 text-emerald-400 sm:block" />
-                    )}
+                    <span className="flex-1 select-none rounded-full border border-emerald-300 bg-white/90 px-3 py-1 text-[9px] font-semibold leading-tight text-emerald-800 shadow-sm sm:flex-none sm:text-[10px] dark:border-emerald-500/30 dark:bg-zinc-950/60 dark:text-emerald-300">{step}</span>
+                    {i < WORKFLOW_STEPS.length - 1 && <ArrowRight className="hidden h-3 w-3 shrink-0 text-emerald-400 sm:block" />}
                   </div>
                 ))}
               </div>
 
               <div className="mt-3 max-w-2xl select-none rounded-xl border border-emerald-200 bg-white/70 px-3 py-2 text-[9px] leading-relaxed text-zinc-600 sm:mt-4 sm:text-[10px] dark:border-emerald-500/20 dark:bg-zinc-950/40 dark:text-zinc-400">
                 <span className="font-semibold text-zinc-700 dark:text-zinc-300">Supported columns: </span>
-                <code className="break-words font-mono text-emerald-700 dark:text-emerald-300">
-                  Order_ID, SKU, Status, Selling_Price, Expected_Commission, Charged_Commission,
-                  Declared_Weight_g, Billed_Weight_g, Expected_Shipping, Charged_Shipping,
-                  Bank_UTR_Settled, Warehouse_Return_Received
-                </code>
+                <code className="break-words font-mono text-emerald-700 dark:text-emerald-300">Order_ID, SKU, Status, Selling_Price, Expected_Commission, Charged_Commission, Declared_Weight_g, Billed_Weight_g, Expected_Shipping, Charged_Shipping, Bank_UTR_Settled, Warehouse_Return_Received</code>
               </div>
             </div>
           ) : (
@@ -1216,48 +954,25 @@ export default function SettlementReconciliation() {
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-md shadow-emerald-500/20 sm:h-10 sm:w-10">
                   <FileSpreadsheet className="h-4 w-4" />
                 </div>
-
                 <div className="min-w-0 flex-1">
-                  <p className="truncate select-none text-[11px] font-bold text-zinc-900 sm:text-sm dark:text-zinc-100">
-                    {batchName}
-                  </p>
+                  <p className="truncate select-none text-[11px] font-bold text-zinc-900 sm:text-sm dark:text-zinc-100">{batchName}</p>
                   <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                    <span className="select-none whitespace-nowrap rounded-md bg-white/80 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-700 sm:text-[10px] dark:bg-zinc-950/50 dark:text-emerald-300">
-                      {rows.length} orders parsed
-                    </span>
-                    {batchUtr && (
-                      <span className="select-none whitespace-nowrap rounded-md bg-white/80 px-1.5 py-0.5 text-[9px] font-semibold text-teal-700 sm:text-[10px] dark:bg-zinc-950/50 dark:text-teal-300">
-                        {batchUtr}
-                      </span>
-                    )}
-                    {batchDate && (
-                      <span className="select-none whitespace-nowrap rounded-md bg-white/80 px-1.5 py-0.5 text-[9px] font-semibold text-zinc-600 sm:text-[10px] dark:bg-zinc-950/50 dark:text-zinc-400">
-                        {batchDate}
-                      </span>
-                    )}
+                    <span className="select-none whitespace-nowrap rounded-md bg-white/80 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-700 sm:text-[10px] dark:bg-zinc-950/50 dark:text-emerald-300">{rows.length} orders parsed</span>
+                    {batchUtr && <span className="select-none whitespace-nowrap rounded-md bg-white/80 px-1.5 py-0.5 text-[9px] font-semibold text-teal-700 sm:text-[10px] dark:bg-zinc-950/50 dark:text-teal-300">{batchUtr}</span>}
+                    {batchDate && <span className="select-none whitespace-nowrap rounded-md bg-white/80 px-1.5 py-0.5 text-[9px] font-semibold text-zinc-600 sm:text-[10px] dark:bg-zinc-950/50 dark:text-zinc-400">{batchDate}</span>}
                   </div>
                 </div>
-
                 <div className="flex w-full flex-wrap gap-1.5 sm:w-auto">
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="flex flex-1 select-none items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-white px-2.5 py-1.5 text-[10px] font-semibold text-zinc-700 shadow-sm transition-all hover:-translate-y-0.5 hover:text-emerald-600 sm:flex-none sm:text-[11px] dark:bg-zinc-900 dark:text-zinc-300 dark:hover:text-emerald-400"
-                  >
+                  <button type="button" onClick={() => fileInputRef.current?.click()}
+                    className="flex flex-1 select-none items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-white px-2.5 py-1.5 text-[10px] font-semibold text-zinc-700 shadow-sm transition-all hover:-translate-y-0.5 hover:text-emerald-600 sm:flex-none sm:text-[11px] dark:bg-zinc-900 dark:text-zinc-300 dark:hover:text-emerald-400">
                     <UploadCloud className="h-3.5 w-3.5 shrink-0" /> Upload Another CSV
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowManual(true)}
-                    className="flex flex-1 select-none items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-white px-2.5 py-1.5 text-[10px] font-semibold text-zinc-700 shadow-sm transition-all hover:-translate-y-0.5 hover:text-emerald-600 sm:flex-none sm:text-[11px] dark:bg-zinc-900 dark:text-zinc-300 dark:hover:text-emerald-400"
-                  >
+                  <button type="button" onClick={() => setShowManual(true)}
+                    className="flex flex-1 select-none items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-white px-2.5 py-1.5 text-[10px] font-semibold text-zinc-700 shadow-sm transition-all hover:-translate-y-0.5 hover:text-emerald-600 sm:flex-none sm:text-[11px] dark:bg-zinc-900 dark:text-zinc-300 dark:hover:text-emerald-400">
                     <Plus className="h-3.5 w-3.5 shrink-0" /> Add Order Row
                   </button>
-                  <button
-                    type="button"
-                    onClick={resetAll}
-                    className="flex flex-1 select-none items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-white px-2.5 py-1.5 text-[10px] font-semibold text-rose-600 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-rose-50 sm:flex-none sm:text-[11px] dark:bg-zinc-900 dark:text-rose-400 dark:hover:bg-rose-500/10"
-                  >
+                  <button type="button" onClick={resetAll}
+                    className="flex flex-1 select-none items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-white px-2.5 py-1.5 text-[10px] font-semibold text-rose-600 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-rose-50 sm:flex-none sm:text-[11px] dark:bg-zinc-900 dark:text-rose-400 dark:hover:bg-rose-500/10">
                     <Trash2 className="h-3.5 w-3.5 shrink-0" /> Clear Batch
                   </button>
                 </div>
@@ -1267,21 +982,15 @@ export default function SettlementReconciliation() {
 
           {parseError && (
             <div className="mt-2 flex items-start gap-2 rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-[10px] text-rose-700 sm:text-[11px] dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300">
-              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-              <span className="select-none">{parseError}</span>
+              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" /><span className="select-none">{parseError}</span>
             </div>
           )}
 
           <div className="mt-2.5 overflow-hidden rounded-2xl border border-zinc-200/80 bg-white shadow-sm dark:border-zinc-800/80 dark:bg-zinc-900/80">
-            <button
-              type="button"
-              onClick={() => setShowManual((v) => !v)}
-              className="flex w-full select-none items-center justify-between gap-2 px-3 py-3 text-left transition-colors hover:bg-zinc-50 sm:px-4 dark:hover:bg-zinc-800/50"
-            >
+            <button type="button" onClick={() => setShowManual((v) => !v)}
+              className="flex w-full select-none items-center justify-between gap-2 px-3 py-3 text-left transition-colors hover:bg-zinc-50 sm:px-4 dark:hover:bg-zinc-800/50">
               <span className="flex min-w-0 items-center gap-2 text-[10px] font-semibold text-zinc-700 sm:text-[11px] dark:text-zinc-300">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500">
-                  <Calculator className="h-3.5 w-3.5" />
-                </span>
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500"><Calculator className="h-3.5 w-3.5" /></span>
                 <span className="truncate">Manual Single-Order Discrepancy Checker</span>
               </span>
               <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-zinc-400 transition-transform ${showManual ? 'rotate-180' : ''}`} />
@@ -1291,47 +1000,29 @@ export default function SettlementReconciliation() {
               <div className="border-t border-zinc-200/80 p-3 sm:p-4 dark:border-zinc-800/80">
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
                   {([
-                    ['orderId', 'Order ID', 'text'],
-                    ['sku', 'SKU', 'text'],
-                    ['status', 'Status', 'select'],
-                    ['sellingPrice', 'Selling Price (₹)', 'number'],
-                    ['expectedCommission', 'Expected Commission (₹)', 'number'],
-                    ['chargedCommission', 'Charged Commission (₹)', 'number'],
-                    ['declaredWeightG', 'Declared Weight (g)', 'number'],
-                    ['billedWeightG', 'Billed Weight (g)', 'number'],
-                    ['expectedShipping', 'Expected Shipping (₹)', 'number'],
-                    ['chargedShipping', 'Charged Shipping (₹)', 'number'],
-                    ['bankUtrSettled', 'Bank UTR Settled (₹)', 'number'],
+                    ['orderId', 'Order ID', 'text'], ['sku', 'SKU', 'text'], ['status', 'Status', 'select'],
+                    ['sellingPrice', 'Selling Price (₹)', 'number'], ['expectedCommission', 'Expected Commission (₹)', 'number'],
+                    ['chargedCommission', 'Charged Commission (₹)', 'number'], ['declaredWeightG', 'Declared Weight (g)', 'number'],
+                    ['billedWeightG', 'Billed Weight (g)', 'number'], ['expectedShipping', 'Expected Shipping (₹)', 'number'],
+                    ['chargedShipping', 'Charged Shipping (₹)', 'number'], ['bankUtrSettled', 'Bank UTR Settled (₹)', 'number'],
                     ['warehouseReturnReceived', 'Return Received?', 'yn'],
                   ] as const).map(([key, label, type]) => (
                     <label key={key} className="block min-w-0">
-                      <span className="mb-0.5 block select-none truncate text-[9px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-500">
-                        {label}
-                      </span>
+                      <span className="mb-0.5 block select-none truncate text-[9px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-500">{label}</span>
                       {type === 'select' ? (
-                        <select
-                          value={manual[key]}
-                          onChange={(e) => setManual((m) => ({ ...m, [key]: e.target.value }))}
-                          className="w-full rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-[11px] text-zinc-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-                        >
+                        <select value={manual[key]} onChange={(e) => setManual((m) => ({ ...m, [key]: e.target.value }))}
+                          className="w-full rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-[11px] text-zinc-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100">
                           <option>Delivered</option><option>RTO</option><option>Customer Return</option><option>Cancelled</option>
                         </select>
                       ) : type === 'yn' ? (
-                        <select
-                          value={manual[key]}
-                          onChange={(e) => setManual((m) => ({ ...m, [key]: e.target.value }))}
-                          className="w-full rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-[11px] text-zinc-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-                        >
+                        <select value={manual[key]} onChange={(e) => setManual((m) => ({ ...m, [key]: e.target.value }))}
+                          className="w-full rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-[11px] text-zinc-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100">
                           <option>Yes</option><option>No</option>
                         </select>
                       ) : (
-                        <input
-                          type={type}
-                          value={manual[key]}
-                          onChange={(e) => setManual((m) => ({ ...m, [key]: e.target.value }))}
+                        <input type={type} value={manual[key]} onChange={(e) => setManual((m) => ({ ...m, [key]: e.target.value }))}
                           placeholder={type === 'number' ? '0' : ''}
-                          className="w-full rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-[11px] text-zinc-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-                        />
+                          className="w-full rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-[11px] text-zinc-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100" />
                       )}
                     </label>
                   ))}
@@ -1340,26 +1031,17 @@ export default function SettlementReconciliation() {
                 {manualPreview && (
                   <div className="mt-3 flex flex-wrap items-center gap-1.5 rounded-xl border border-zinc-200/80 bg-zinc-50 px-3 py-2 sm:gap-2 dark:border-zinc-800/80 dark:bg-zinc-950/50">
                     <span className="select-none text-[9px] font-semibold uppercase tracking-wide text-zinc-500">Live Result</span>
-                    <span className="select-none whitespace-nowrap rounded-md bg-white px-1.5 py-0.5 text-[9px] font-semibold tabular-nums text-zinc-700 sm:text-[10px] dark:bg-zinc-900 dark:text-zinc-300">
-                      Expected {fmtFull(manualPreview.expectedSettlement)}
-                    </span>
-                    <span className="select-none whitespace-nowrap rounded-md bg-white px-1.5 py-0.5 text-[9px] font-semibold tabular-nums text-zinc-700 sm:text-[10px] dark:bg-zinc-900 dark:text-zinc-300">
-                      Settled {fmtFull(manualPreview.bankUtrSettled)}
-                    </span>
+                    <span className="select-none whitespace-nowrap rounded-md bg-white px-1.5 py-0.5 text-[9px] font-semibold tabular-nums text-zinc-700 sm:text-[10px] dark:bg-zinc-900 dark:text-zinc-300">Expected {fmtFull(manualPreview.expectedSettlement)}</span>
+                    <span className="select-none whitespace-nowrap rounded-md bg-white px-1.5 py-0.5 text-[9px] font-semibold tabular-nums text-zinc-700 sm:text-[10px] dark:bg-zinc-900 dark:text-zinc-300">Settled {fmtFull(manualPreview.bankUtrSettled)}</span>
                     <span className={[
                       'select-none whitespace-nowrap rounded-md px-1.5 py-0.5 text-[9px] font-bold tabular-nums sm:text-[10px]',
-                      manualPreview.actionable
-                        ? 'bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300'
-                        : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300',
+                      manualPreview.actionable ? 'bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300',
                     ].join(' ')}>
                       {manualPreview.actionable ? `Leak ${fmtFull(manualPreview.leak)}` : 'Matched'}
                     </span>
                     {manualPreview.flags.map((f) => <Badge key={f} flag={f} />)}
-                    <button
-                      type="button"
-                      onClick={addManualRow}
-                      className="ml-auto select-none whitespace-nowrap rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 px-3 py-1 text-[10px] font-semibold text-white shadow-md shadow-emerald-500/20 hover:opacity-90"
-                    >
+                    <button type="button" onClick={addManualRow}
+                      className="ml-auto select-none whitespace-nowrap rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 px-3 py-1 text-[10px] font-semibold text-white shadow-md shadow-emerald-500/20 hover:opacity-90">
                       + Add to Batch
                     </button>
                   </div>
@@ -1369,39 +1051,28 @@ export default function SettlementReconciliation() {
           </div>
         </section>
 
-        {/* ─────────────── 4. KPIs + BREAKDOWN ─────────────── */}
+        {/* ─────────────── 3. KPIs + BREAKDOWN ─────────────── */}
         {hasBatch && (
           <section className="mb-4 space-y-3 sm:mb-5 sm:space-y-4">
             <div className="grid min-w-0 grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
-              <KpiCard tone="blue" label="Gross Order Value" value={fmtShort(portfolio.grossOrderValue)} raw={portfolio.grossOrderValue}
-                sub={`${computed.length} orders`} icon={<Receipt className="h-4 w-4" />} />
-              <KpiCard tone="teal" label="Expected Bank Payout" value={fmtShort(portfolio.expectedPayout)} raw={portfolio.expectedPayout}
-                sub="Net of fees, GST & TCS" icon={<Scale className="h-4 w-4" />} />
-              <KpiCard tone="emerald" label="Actual UTR Credited" value={fmtShort(portfolio.actualPayout)} raw={portfolio.actualPayout}
-                sub="Bank settled" icon={<Banknote className="h-4 w-4" />} />
-              <KpiCard tone="rose" label="Total Recoverable Leaks" value={fmtShort(portfolio.totalLeak)} raw={portfolio.totalLeak}
-                sub={`${portfolio.leakPct.toFixed(2)}% of revenue · ${portfolio.actionableCount} orders`}
-                highlight icon={<AlertTriangle className="h-4 w-4" />} />
-              <KpiCard tone="amber" label="Tax Credit Locked" value={fmtShort(portfolio.taxCredit)} raw={portfolio.taxCredit}
-                sub="1% TCS u/s 194-O + 18% Input GST" icon={<ShieldCheck className="h-4 w-4" />}
-                className="col-span-2 sm:col-span-1" />
+              <KpiCard tone="blue" label="Gross Order Value" value={fmtShort(portfolio.grossOrderValue)} raw={portfolio.grossOrderValue} sub={`${computed.length} orders`} icon={<Receipt className="h-4 w-4" />} />
+              <KpiCard tone="teal" label="Expected Bank Payout" value={fmtShort(portfolio.expectedPayout)} raw={portfolio.expectedPayout} sub="Net of fees, GST & TCS" icon={<Scale className="h-4 w-4" />} />
+              <KpiCard tone="emerald" label="Actual UTR Credited" value={fmtShort(portfolio.actualPayout)} raw={portfolio.actualPayout} sub="Bank settled" icon={<Banknote className="h-4 w-4" />} />
+              <KpiCard tone="rose" label="Total Recoverable Leak" value={fmtShort(portfolio.totalLeak)} raw={portfolio.totalLeak} sub={`${portfolio.leakPct.toFixed(2)}% of revenue · ${portfolio.actionableCount} orders`} highlight icon={<AlertTriangle className="h-4 w-4" />} />
+              <KpiCard tone="amber" label="Tax Credit Locked" value={fmtShort(portfolio.taxCredit)} raw={portfolio.taxCredit} sub="1% TCS u/s 194-O + 18% Input GST" icon={<ShieldCheck className="h-4 w-4" />} className="col-span-2 sm:col-span-1" />
             </div>
 
             <div className="rounded-3xl border border-zinc-200/80 bg-white p-3.5 shadow-sm sm:p-5 dark:border-zinc-800/80 dark:bg-zinc-900/80">
               <div className="mb-3 flex items-center justify-between gap-2">
-                <h2 className="select-none truncate text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-500 sm:text-[11px] dark:text-zinc-400">
-                  Where Your Money Leaked
-                </h2>
-                <span className="select-none whitespace-nowrap rounded-full border border-rose-500/30 bg-rose-500/10 px-2.5 py-0.5 text-[11px] font-extrabold tabular-nums text-rose-600 dark:text-rose-400" title={fmtFull(breakdownTotal)}>
-                  {fmtFull(breakdownTotal)}
-                </span>
+                <h2 className="select-none truncate text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-500 sm:text-[11px] dark:text-zinc-400">Where Your Money Leaked</h2>
+                <span className="select-none whitespace-nowrap rounded-full border border-rose-500/30 bg-rose-500/10 px-2.5 py-0.5 text-[11px] font-extrabold tabular-nums text-rose-600 dark:text-rose-400" title={fmtFull(breakdownTotal)}>{fmtFull(breakdownTotal)}</span>
               </div>
 
               <div className="flex h-3.5 w-full gap-1 overflow-hidden rounded-full bg-zinc-200 p-0.5 shadow-inner dark:bg-zinc-800">
                 {breakdownTotal > 0
                   ? breakdown.filter((b) => b.value > 0).map((b) => (
-                    <div key={b.key} className={`${b.bar} rounded-full transition-all`} style={{ width: `${(b.value / breakdownTotal) * 100}%` }} title={`${b.label}: ${fmtFull(b.value)}`} />
-                  ))
+                      <div key={b.key} className={`${b.bar} rounded-full transition-all`} style={{ width: `${(b.value / breakdownTotal) * 100}%` }} title={`${b.label}: ${fmtFull(b.value)}`} />
+                    ))
                   : <div className="w-full rounded-full bg-emerald-500/60" />}
               </div>
 
@@ -1412,15 +1083,284 @@ export default function SettlementReconciliation() {
                       <span className="select-none truncate text-[9px] font-bold uppercase tracking-wide text-zinc-600 sm:text-[10px] dark:text-zinc-400">{b.label}</span>
                     </div>
                     <div className="mt-1.5 flex items-center justify-between gap-2">
-                      <div className={`select-none truncate text-lg font-bold tabular-nums sm:text-xl ${b.text}`} title={fmtFull(b.value)}>
-                        {fmtShort(b.value)}
-                      </div>
+                      <div className={`select-none truncate text-lg font-bold tabular-nums sm:text-xl ${b.text}`} title={fmtFull(b.value)}>{fmtShort(b.value)}</div>
                       <span className={`select-none shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] font-bold tabular-nums ${b.pill}`}>
                         {breakdownTotal > 0 ? `${((b.value / breakdownTotal) * 100).toFixed(0)}%` : '0%'}
                       </span>
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* ═════════════════════════════════════════════════════════════════
+            4. 3-CARD VISUAL ANALYTICS ROW
+            ═════════════════════════════════════════════════════════════════ */}
+        {hasBatch && (
+          <section className="my-6 grid grid-cols-1 items-stretch gap-5 md:grid-cols-2 lg:grid-cols-3">
+
+            {/* ── CARD 1: Payout Bridge Waterfall ── */}
+            <div className="relative flex h-full flex-col justify-between rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-sm transition-all duration-200 hover:border-emerald-500/40 hover:shadow-md sm:p-6 dark:border-zinc-800/80 dark:bg-zinc-900">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500">
+                    <Banknote className="h-4 w-4" />
+                  </span>
+                  <div className="min-w-0">
+                    <h3 className="select-none truncate text-[12px] font-bold text-zinc-900 dark:text-zinc-100">Payout Bridge Waterfall</h3>
+                    <p className="select-none truncate text-[10px] text-zinc-500 dark:text-zinc-400">Gross value to actual bank UTR</p>
+                  </div>
+                </div>
+
+                <div className="mt-4 flex flex-1 flex-col justify-center">
+                  {(() => {
+                    const gross = Math.max(portfolio.grossOrderValue, 1);
+                    const fees = Math.max(0, portfolio.grossOrderValue - portfolio.expectedPayout);
+                    const expected = portfolio.expectedPayout;
+                    const leak = portfolio.totalLeak;
+                    const settled = portfolio.actualPayout;
+                    const bars = [
+                      { key: 'gross',   label: 'Gross',      value: portfolio.grossOrderValue, bottom: 0,                            height: 100,                          color: 'bg-blue-500',    text: 'text-blue-600 dark:text-blue-400',    display: fmtShort(portfolio.grossOrderValue), tooltipColor: 'text-blue-400' },
+                      { key: 'fees',    label: 'Fees & GST', value: fees,                      bottom: (expected / gross) * 100,     height: (fees / gross) * 100,         color: 'bg-amber-500',   text: 'text-amber-600 dark:text-amber-400',  display: fmtShort(fees), tooltipColor: 'text-amber-400' },
+                      { key: 'expected',label: 'Expected',   value: expected,                  bottom: 0,                            height: (expected / gross) * 100,     color: 'bg-emerald-500', text: 'text-emerald-600 dark:text-emerald-400',display: fmtShort(expected), tooltipColor: 'text-emerald-400' },
+                      { key: 'leaked',  label: 'Leaked',     value: leak,                      bottom: (settled / gross) * 100,      height: Math.max((leak / gross) * 100, 1), color: 'bg-rose-500', text: 'text-rose-600 dark:text-rose-400',   display: fmtShort(leak), tooltipColor: 'text-rose-400' },
+                      { key: 'settled', label: 'Settled',    value: settled,                   bottom: 0,                            height: (settled / gross) * 100,      color: 'bg-teal-500',    text: 'text-teal-600 dark:text-teal-400',    display: fmtShort(settled), tooltipColor: 'text-emerald-400' },
+                    ];
+                    return (
+                      <div className="flex items-end justify-between gap-1.5">
+                        {bars.map((b, idx) => {
+                          const pct = gross > 0 ? (b.value / gross) * 100 : 0;
+                          const isFirst = idx === 0;
+                          const isLast = idx === bars.length - 1;
+                          const tooltipPosition = isFirst ? 'left-0 translate-x-0' : isLast ? 'right-0 left-auto translate-x-0' : 'left-1/2 -translate-x-1/2';
+                          return (
+                            <div key={b.key} className="relative flex min-w-0 flex-1 flex-col items-center" onMouseLeave={() => setWaterfallHover(null)}>
+                              <div className="relative h-36 w-full">
+                                <div
+                                  className={`absolute left-1/2 w-full max-w-[44px] -translate-x-1/2 cursor-pointer rounded-t-md ${b.color} transition-all hover:brightness-110 hover:shadow-lg`}
+                                  style={{ bottom: `${b.bottom}%`, height: `${b.height}%`, minHeight: b.height > 0 ? '3px' : '0px' }}
+                                  onMouseEnter={() => setWaterfallHover(b.key)}
+                                />
+                                {waterfallHover === b.key && (
+                                  <div className={`absolute -top-20 ${tooltipPosition} z-30 pointer-events-none select-none whitespace-nowrap rounded-xl border border-zinc-800 bg-zinc-900/95 px-3 py-2 text-white shadow-xl backdrop-blur-sm dark:bg-zinc-950/95 transition-opacity duration-150`}>
+                                    <span className="text-[11px] font-bold select-none">{b.label}</span>
+                                    <span className={`mt-0.5 block text-[11px] font-semibold select-none ${b.tooltipColor}`}>{b.key === 'fees' || b.key === 'leaked' ? '-' : ''}{fmtFull(b.value)}</span>
+                                    <span className="mt-0.5 block text-[10px] text-zinc-400 select-none">{pct.toFixed(1)}% of gross order value</span>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="mt-2 w-full text-center">
+                                <div className="select-none truncate text-[9px] font-semibold text-zinc-600 dark:text-zinc-400">{b.label}</div>
+                                <div className={`select-none truncate text-[10px] font-bold tabular-nums ${b.text}`}>{b.display}</div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+
+              <div className="mt-4 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="select-none text-[10px] text-zinc-500 dark:text-zinc-400">Settlement Efficiency</span>
+                  <span className="select-none rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                    {portfolio.expectedPayout > 0 ? Math.round((portfolio.actualPayout / portfolio.expectedPayout) * 100) : 0}%
+                  </span>
+                </div>
+                <p className="mt-1 select-none text-[10px] text-zinc-500 dark:text-zinc-500">of expected payout received</p>
+              </div>
+            </div>
+
+            {/* ── CARD 2: Leakage Distribution (UPGRADED) ── */}
+            <div className="relative flex h-full flex-col justify-between rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-sm transition-all duration-200 hover:border-emerald-500/40 hover:shadow-md sm:p-6 dark:border-zinc-800/80 dark:bg-zinc-900">
+              <div className="flex flex-col h-full">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-rose-500/10 text-rose-500">
+                    <PieChart className="h-4 w-4" />
+                  </span>
+                  <div className="min-w-0">
+                    <h3 className="select-none truncate text-[12px] font-bold text-zinc-900 dark:text-zinc-100">Leakage Breakdown</h3>
+                    <p className="select-none truncate text-[10px] text-zinc-500 dark:text-zinc-400">Share of recoverable discrepancies</p>
+                  </div>
+                </div>
+
+                {/* Chart Container: flex-1 centers content */}
+                <div className="flex flex-col items-center justify-center gap-5 flex-1 w-full my-auto py-2 overflow-hidden">
+
+                  {/* Large Centered SVG Donut Chart */}
+                  <div className="relative flex items-center justify-center w-44 h-44 sm:w-48 sm:h-48 shrink-0 mx-auto" onMouseLeave={() => setDonutHover(null)}>
+                    <svg viewBox="0 0 120 120" className="w-full h-full overflow-visible">
+                      {(() => {
+                        const RADIUS = 46;
+                        const CIRC = 2 * Math.PI * RADIUS;
+                        const total = breakdownTotal || 1;
+                        const slices: Array<{ key: keyof typeof portfolio.buckets; color: string; label: string; tooltipColor: string }> = [
+                          { key: 'missingReturn', color: '#a855f7', label: 'Missing Returns', tooltipColor: 'text-purple-400' },
+                          { key: 'pending',       color: '#06b6d4', label: 'Pending Payouts', tooltipColor: 'text-cyan-400' },
+                          { key: 'commission',    color: '#f43f5e', label: 'Commission', tooltipColor: 'text-rose-400' },
+                          { key: 'weight',        color: '#f59e0b', label: 'Weight', tooltipColor: 'text-amber-400' },
+                        ];
+                        let offset = 0;
+                        return (
+                          <>
+                            <circle cx="60" cy="60" r={RADIUS} fill="none" strokeWidth="14" className="stroke-zinc-100 dark:stroke-zinc-800/80" />
+                            {slices.map((s) => {
+                              const val = portfolio.buckets[s.key];
+                              const pct = val / total;
+                              const dash = pct * CIRC;
+                              const thisOffset = -offset * CIRC;
+                              offset += pct;
+                              if (val <= 0) return null;
+                              const count = computed.filter((r) => r.flags.includes(s.key)).length;
+                              return (
+                                <circle
+                                  key={s.key}
+                                  cx="60" cy="60" r={RADIUS}
+                                  fill="none" stroke={s.color} strokeWidth="14"
+                                  strokeDasharray={`${dash} ${CIRC}`}
+                                  strokeDashoffset={thisOffset}
+                                  transform="rotate(-90 60 60)"
+                                  className="cursor-pointer transition-all hover:opacity-80"
+                                  onMouseEnter={() => setDonutHover(s.key)}
+                                  onClick={() => setFilter(s.key === 'pending' ? 'actionable' : (s.key as FilterKey))}
+                                />
+                              );
+                            })}
+                          </>
+                        );
+                      })()}
+                    </svg>
+
+                    {/* Center Overlay Text */}
+                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                      <span className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 tracking-wider">TOTAL LEAK</span>
+                      <span className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white mt-0.5">{fmtShort(portfolio.totalLeak)}</span>
+                    </div>
+
+                    {/* Tooltip positioned at top-center of Donut */}
+                    {donutHover && (() => {
+                      const s = [
+                        { key: 'missingReturn' as const, color: '#a855f7', label: 'Missing Returns', tooltipColor: 'text-purple-400' },
+                        { key: 'pending' as const,       color: '#06b6d4', label: 'Pending Payouts', tooltipColor: 'text-cyan-400' },
+                        { key: 'commission' as const,    color: '#f43f5e', label: 'Commission', tooltipColor: 'text-rose-400' },
+                        { key: 'weight' as const,        color: '#f59e0b', label: 'Weight', tooltipColor: 'text-amber-400' },
+                      ].find((x) => x.key === donutHover);
+                      if (!s) return null;
+                      const val = portfolio.buckets[s.key];
+                      const pct = breakdownTotal > 0 ? (val / breakdownTotal) * 100 : 0;
+                      const count = computed.filter((r) => r.flags.includes(s.key)).length;
+                      return (
+                        <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-30 pointer-events-none select-none whitespace-nowrap rounded-xl border border-zinc-800 bg-zinc-900/95 px-3 py-2 text-white shadow-xl backdrop-blur-sm dark:bg-zinc-950/95 transition-opacity duration-150">
+                          <span className="text-[11px] font-bold select-none">{s.label}</span>
+                          <span className={`mt-0.5 block text-[11px] font-semibold select-none ${s.tooltipColor}`}>-{fmtFull(val)}</span>
+                          <span className="mt-0.5 block text-[10px] text-zinc-400 select-none">{pct.toFixed(1)}% of total · {count} orders</span>
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Sleek 2x2 Grid Legend Below the Donut - 2-line compact layout */}
+                  <div className="grid grid-cols-2 gap-2 w-full pt-1" onMouseLeave={() => setDonutHover(null)}>
+                    {([
+                      { key: 'missingReturn' as const, label: 'Missing Returns', color: 'bg-purple-500', tooltipColor: 'text-purple-400' },
+                      { key: 'pending' as const,       label: 'Pending Payouts', color: 'bg-cyan-500', tooltipColor: 'text-cyan-400' },
+                      { key: 'commission' as const,    label: 'Commission',      color: 'bg-rose-500', tooltipColor: 'text-rose-400' },
+                      { key: 'weight' as const,        label: 'Weight',          color: 'bg-amber-500', tooltipColor: 'text-amber-400' },
+                    ]).map((s) => {
+                      const val = portfolio.buckets[s.key];
+                      const pct = breakdownTotal > 0 ? (val / breakdownTotal) * 100 : 0;
+                      const count = computed.filter((r) => r.flags.includes(s.key)).length;
+                      return (
+                        <button
+                          key={s.key}
+                          type="button"
+                          onClick={() => setFilter(s.key === 'pending' ? 'actionable' : (s.key as FilterKey))}
+                          onMouseEnter={() => setDonutHover(s.key)}
+                          className="relative flex flex-col items-start gap-1 px-2.5 py-2 rounded-xl border border-zinc-200/70 dark:border-zinc-800/80 bg-zinc-50/60 dark:bg-zinc-800/40 hover:border-emerald-500/40 hover:bg-zinc-100/80 dark:hover:bg-zinc-800 transition-all text-left w-full min-w-0"
+                        >
+                          <div className="flex items-center gap-1.5 w-full">
+                            <span className={`w-2 h-2 rounded-full shrink-0 ${s.color}`} />
+                            <span className="text-[11px] font-medium text-zinc-600 dark:text-zinc-300 leading-tight">{s.label}</span>
+                          </div>
+                          <div className="flex items-center justify-between w-full">
+                            <span className="text-xs font-bold text-zinc-900 dark:text-white tabular-nums">{fmtShort(val)}</span>
+                            <span className="text-[10px] font-semibold text-zinc-400 tabular-nums">{pct.toFixed(0)}%</span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+                <p className="select-none text-[10px] text-zinc-500 dark:text-zinc-500">Click any slice or row to filter orders below.</p>
+              </div>
+            </div>
+
+            {/* ── CARD 3: Top Order Discrepancies ── */}
+            <div className="relative flex h-full flex-col justify-between rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-sm transition-all duration-200 hover:border-emerald-500/40 hover:shadow-md sm:p-6 dark:border-zinc-800/80 dark:bg-zinc-900">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-500/10 text-violet-500">
+                    <Scale className="h-4 w-4" />
+                  </span>
+                  <div className="min-w-0">
+                    <h3 className="select-none truncate text-[12px] font-bold text-zinc-900 dark:text-zinc-100">Top Order Discrepancies</h3>
+                    <p className="select-none truncate text-[10px] text-zinc-500 dark:text-zinc-400">Expected vs. actual settled per order</p>
+                  </div>
+                </div>
+
+                <div className="mt-4 flex flex-1 flex-col justify-center space-y-2" onMouseLeave={() => setOrderHover(null)}>
+                  {topLeakedOrders.length === 0 ? (
+                    <div className="py-8 text-center">
+                      <CheckCircle2 className="mx-auto h-5 w-5 text-emerald-500" />
+                      <p className="mt-1.5 select-none text-[10px] text-zinc-500 dark:text-zinc-500">No leaked orders in this batch.</p>
+                    </div>
+                  ) : topLeakedOrders.map((r) => {
+                    const maxVal = Math.max(r.expectedSettlement, r.bankUtrSettled, 1);
+                    const expPct = (r.expectedSettlement / maxVal) * 100;
+                    const setPct = (r.bankUtrSettled / maxVal) * 100;
+                    return (
+                      <div
+                        key={r.uid}
+                        className="relative cursor-pointer rounded-lg p-1.5 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                        onMouseEnter={() => setOrderHover(r.uid)}
+                        onClick={() => toggleExpanded(r.uid)}
+                      >
+                        {orderHover === r.uid && (
+                          <div className="absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 z-30 pointer-events-none select-none whitespace-nowrap rounded-xl border border-zinc-800 bg-zinc-900/95 px-3 py-2 text-white shadow-xl backdrop-blur-sm dark:bg-zinc-950/95 transition-opacity duration-150">
+                            <span className="text-[11px] font-bold select-none">{r.orderId} • {r.sku}</span>
+                            <span className="mt-0.5 block text-[10px] text-emerald-400 select-none">Expected: {fmtFull(r.expectedSettlement)}</span>
+                            <span className="mt-0.5 block text-[10px] text-zinc-300 select-none">Settled: {fmtFull(r.bankUtrSettled)}</span>
+                            <span className="mt-0.5 block text-[10px] font-semibold text-rose-400 select-none">Leak: -{fmtFull(r.leak)} ({r.flags.map((f) => FLAG_META[f].short).join(' / ') || 'Pending'})</span>
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="truncate select-none text-[10px] font-bold text-zinc-900 dark:text-zinc-100">{r.orderId}</span>
+                          <span className="shrink-0 select-none text-[10px] font-bold tabular-nums text-rose-600 dark:text-rose-400">-{fmtFull(r.leak)}</span>
+                        </div>
+                        <div className="mt-1 space-y-0.5">
+                          <div className="relative h-1.5 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
+                            <div className="absolute inset-y-0 left-0 rounded-full bg-emerald-500 transition-all" style={{ width: `${expPct}%` }} />
+                          </div>
+                          <div className="relative h-1.5 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
+                            <div className="absolute inset-y-0 left-0 rounded-full bg-teal-500 transition-all" style={{ width: `${setPct}%` }} />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="mt-4 flex items-center justify-between gap-2 border-t border-zinc-200 pt-3 text-[10px] dark:border-zinc-800">
+                <span className="select-none font-semibold text-rose-600 dark:text-rose-400">{leakCounts.actionable} actionable</span>
+                <span className="select-none font-semibold text-emerald-600 dark:text-emerald-400">{leakCounts.matched} matched</span>
               </div>
             </div>
           </section>
@@ -1433,15 +1373,9 @@ export default function SettlementReconciliation() {
             {portfolio.totalLeak > 0 && (
               <div className="border-b border-zinc-200 bg-gradient-to-r from-emerald-500/10 via-teal-500/5 to-transparent px-3 py-3 sm:px-5 sm:py-3.5 dark:border-zinc-800/80">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="select-none whitespace-nowrap text-[9px] font-bold uppercase tracking-[0.14em] text-zinc-500 dark:text-zinc-400">
-                    Recovery Tracker
-                  </span>
-                  <span className="select-none whitespace-nowrap rounded-full border border-emerald-500/30 bg-emerald-100 px-2 py-0.5 text-[10px] font-bold tabular-nums text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
-                    {fmtFull(claimedAmount)} claimed
-                  </span>
-                  <span className="select-none whitespace-nowrap text-[10px] text-zinc-500 dark:text-zinc-500">
-                    of {fmtFull(portfolio.totalLeak)} recoverable · {claimedCount} orders
-                  </span>
+                  <span className="select-none whitespace-nowrap text-[9px] font-bold uppercase tracking-[0.14em] text-zinc-500 dark:text-zinc-400">Recovery Tracker</span>
+                  <span className="select-none whitespace-nowrap rounded-full border border-emerald-500/30 bg-emerald-100 px-2 py-0.5 text-[10px] font-bold tabular-nums text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">{fmtFull(claimedAmount)} claimed</span>
+                  <span className="select-none whitespace-nowrap text-[10px] text-zinc-500 dark:text-zinc-500">of {fmtFull(portfolio.totalLeak)} recoverable · {claimedCount} orders</span>
                   <div className="ml-auto flex min-w-[120px] flex-1 items-center gap-2 sm:max-w-[260px]">
                     <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-200 shadow-inner dark:bg-zinc-800">
                       <div
@@ -1449,9 +1383,7 @@ export default function SettlementReconciliation() {
                         style={{ width: `${Math.min(claimedPct, 100)}%` }}
                       />
                     </div>
-                    <span className="select-none whitespace-nowrap text-[10px] font-extrabold tabular-nums text-emerald-600 dark:text-emerald-400">
-                      {claimedPct.toFixed(0)}%
-                    </span>
+                    <span className="select-none whitespace-nowrap text-[10px] font-extrabold tabular-nums text-emerald-600 dark:text-emerald-400">{claimedPct.toFixed(0)}%</span>
                   </div>
                 </div>
               </div>
@@ -1459,52 +1391,33 @@ export default function SettlementReconciliation() {
 
             <div className="flex flex-wrap items-center gap-1.5 border-b border-zinc-200 p-3 sm:p-4 dark:border-zinc-800/80">
               {filterTabs.map((t) => (
-                <button
-                  key={t.key}
-                  type="button"
-                  onClick={() => setFilter(t.key)}
+                <button key={t.key} type="button" onClick={() => setFilter(t.key)}
                   className={[
                     'select-none whitespace-nowrap rounded-lg px-2.5 py-1 text-[9px] transition-all sm:px-3 sm:py-1.5 sm:text-[11px]',
-                    filter === t.key
-                      ? 'bg-emerald-500 font-semibold text-white shadow-sm shadow-emerald-500/25'
-                      : 'bg-zinc-100 font-medium text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800/70 dark:text-zinc-300 dark:hover:bg-zinc-800',
-                  ].join(' ')}
-                >
-                  {t.label}
-                  <span className={`ml-1 tabular-nums ${filter === t.key ? 'text-white/75' : 'text-zinc-400'}`}>{t.count}</span>
+                    filter === t.key ? 'bg-emerald-500 font-semibold text-white shadow-sm shadow-emerald-500/25'
+                                     : 'bg-zinc-100 font-medium text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800/70 dark:text-zinc-300 dark:hover:bg-zinc-800',
+                  ].join(' ')}>
+                  {t.label}<span className={`ml-1 tabular-nums ${filter === t.key ? 'text-white/75' : 'text-zinc-400'}`}>{t.count}</span>
                 </button>
               ))}
 
-              <button
-                type="button"
-                onClick={() => setClaimTarget({ mode: 'bulk' })}
-                disabled={portfolio.actionableCount === 0}
-                className="ml-auto flex select-none items-center gap-1.5 whitespace-nowrap rounded-xl bg-gradient-to-r from-rose-500 to-orange-500 px-4 py-2 text-[10px] font-semibold text-white shadow-md shadow-rose-500/20 transition-all hover:scale-[1.01] hover:from-rose-600 hover:to-orange-600 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100 sm:text-[11px]"
-              >
-                <ClipboardList className="h-3.5 w-3.5 shrink-0" />
-                Generate Bulk Dispute Packet
+              <button type="button" onClick={() => setClaimTarget({ mode: 'bulk' })} disabled={portfolio.actionableCount === 0}
+                className="ml-auto flex select-none items-center gap-1.5 whitespace-nowrap rounded-xl bg-gradient-to-r from-rose-500 to-orange-500 px-4 py-2 text-[10px] font-semibold text-white shadow-md shadow-rose-500/20 transition-all hover:scale-[1.01] hover:from-rose-600 hover:to-orange-600 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100 sm:text-[11px]">
+                <ClipboardList className="h-3.5 w-3.5 shrink-0" />Generate Bulk Dispute Packet
               </button>
             </div>
 
             <div className="flex flex-col gap-2 border-b border-zinc-200 p-3 sm:flex-row sm:items-center sm:p-4 dark:border-zinc-800/80">
               <div className="relative min-w-0 flex-1">
                 <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400" />
-                <input
-                  type="search"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                <input type="search" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search by Order ID or SKU..."
-                  className="w-full rounded-xl border border-zinc-200 bg-zinc-50 py-2 pl-8 pr-2.5 text-[11px] text-zinc-900 outline-none transition-all placeholder:text-zinc-400 focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-600"
-                />
+                  className="w-full rounded-xl border border-zinc-200 bg-zinc-50 py-2 pl-8 pr-2.5 text-[11px] text-zinc-900 outline-none transition-all placeholder:text-zinc-400 focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-600" />
               </div>
-
               <div className="relative flex items-center gap-1.5">
                 <ArrowUpDown className="pointer-events-none absolute left-2.5 h-3 w-3 text-zinc-400" />
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as SortKey)}
-                  className="w-full appearance-none rounded-xl border border-zinc-200 bg-zinc-50 py-2 pl-7 pr-7 text-[11px] font-semibold text-zinc-700 outline-none transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 sm:w-auto dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300"
-                >
+                <select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortKey)}
+                  className="w-full appearance-none rounded-xl border border-zinc-200 bg-zinc-50 py-2 pl-7 pr-7 text-[11px] font-semibold text-zinc-700 outline-none transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 sm:w-auto dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300">
                   <option value="leak">Sort by: Highest Leak (₹)</option>
                   <option value="value">Sort by: Order Value (High → Low)</option>
                   <option value="weight">Sort by: Weight Discrepancy (g)</option>
@@ -1512,36 +1425,25 @@ export default function SettlementReconciliation() {
                 </select>
                 <ChevronDown className="pointer-events-none absolute right-2.5 h-3 w-3 text-zinc-400" />
               </div>
-
-              <button
-                type="button"
-                onClick={exportAuditCsv}
-                className="flex select-none items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-zinc-200 bg-white px-3 py-2 text-[10px] font-bold text-zinc-700 shadow-sm transition-all hover:border-emerald-400 hover:text-emerald-700 sm:text-[11px] dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300 dark:hover:border-emerald-500/50 dark:hover:text-emerald-300"
-              >
-                <Download className="h-3.5 w-3.5 shrink-0" /> Export Audit CSV
+              <button type="button" onClick={exportAuditCsv}
+                className="flex select-none items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-zinc-200 bg-white px-3 py-2 text-[10px] font-bold text-zinc-700 shadow-sm transition-all hover:border-emerald-400 hover:text-emerald-700 sm:text-[11px] dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300 dark:hover:border-emerald-500/50 dark:hover:text-emerald-300">
+                <Download className="h-3.5 w-3.5 shrink-0" />Export Audit CSV
               </button>
             </div>
 
-            {/* Mobile cards (< md) */}
+            {/* Mobile cards */}
             <div className="space-y-2.5 p-3 md:hidden">
               {displayed.map((r) => {
                 const isOpen = expandedUid === r.uid;
                 const filed = claimedUids.has(r.uid);
                 return (
-                  <div
-                    key={r.uid}
+                  <div key={r.uid}
                     className={[
                       'overflow-hidden rounded-2xl border border-l-2 bg-white shadow-sm dark:bg-zinc-900/60',
-                      r.leak > 0 && !r.matched
-                        ? 'border-zinc-200 border-l-rose-500/70 dark:border-zinc-800 dark:border-l-rose-500/70'
-                        : 'border-zinc-200 border-l-transparent dark:border-zinc-800 dark:border-l-transparent',
-                    ].join(' ')}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => toggleExpanded(r.uid)}
-                      className="w-full px-3 py-2.5 text-left"
-                    >
+                      r.leak > 0 && !r.matched ? 'border-zinc-200 border-l-rose-500/70 dark:border-zinc-800 dark:border-l-rose-500/70'
+                                               : 'border-zinc-200 border-l-transparent dark:border-zinc-800 dark:border-l-transparent',
+                    ].join(' ')}>
+                    <button type="button" onClick={() => toggleExpanded(r.uid)} className="w-full px-3 py-2.5 text-left">
                       <div className="flex items-start gap-1.5">
                         <div className="min-w-0 flex-1">
                           <div className="truncate select-none text-[11px] font-bold text-zinc-900 dark:text-zinc-100">{r.orderId}</div>
@@ -1550,48 +1452,31 @@ export default function SettlementReconciliation() {
                         <StatusChip status={r.status} />
                         <ChevronRight className={`mt-0.5 h-3.5 w-3.5 shrink-0 text-zinc-400 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
                       </div>
-
-                      {!r.matched && (
-                        <div className="mt-1.5 flex flex-wrap gap-1">
-                          {r.flags.map((f) => <Badge key={f} flag={f} />)}
-                        </div>
+                      {!r.matched ? (
+                        <div className="mt-1.5 flex flex-wrap gap-1">{r.flags.map((f) => <Badge key={f} flag={f} />)}</div>
+                      ) : (
+                        <span className="mt-1.5 inline-flex select-none items-center gap-1 rounded-md border border-emerald-300 bg-emerald-100 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-300">✅ Matched</span>
                       )}
-                      {r.matched && (
-                        <span className="mt-1.5 inline-flex select-none items-center gap-1 rounded-md border border-emerald-300 bg-emerald-100 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-300">
-                          ✅ Matched
-                        </span>
-                      )}
-
                       <div className="mt-2 grid grid-cols-2 gap-1.5">
                         <div className="min-w-0 rounded-lg bg-zinc-50 px-2 py-1.5 dark:bg-zinc-950/60">
                           <div className="select-none text-[8px] font-semibold uppercase tracking-wide text-zinc-500">Weight (g)</div>
-                          <div className="mt-0.5 select-none truncate text-[10px] font-bold">
-                            <WeightPill declared={r.declaredWeightG} billed={r.billedWeightG} />
-                          </div>
+                          <div className="mt-0.5 select-none truncate text-[10px] font-bold"><WeightPill declared={r.declaredWeightG} billed={r.billedWeightG} /></div>
                         </div>
                         <div className="min-w-0 rounded-lg bg-zinc-50 px-2 py-1.5 dark:bg-zinc-950/60">
                           <div className="select-none text-[8px] font-semibold uppercase tracking-wide text-zinc-500">Exp → Settled</div>
                           <div className="mt-0.5 select-none truncate text-[10px] font-bold tabular-nums text-zinc-700 dark:text-zinc-300">
-                            {fmtFull(r.expectedSettlement)}
-                            <span className="mx-0.5 text-zinc-400">→</span>
-                            {fmtFull(r.bankUtrSettled)}
+                            {fmtFull(r.expectedSettlement)}<span className="mx-0.5 text-zinc-400">→</span>{fmtFull(r.bankUtrSettled)}
                           </div>
                         </div>
                       </div>
-
                       <div className="mt-2 flex items-center justify-between gap-2">
                         <span className="select-none text-[9px] font-semibold uppercase tracking-wide text-zinc-500">Leak</span>
-                        <span className={[
-                          'select-none text-[13px] font-extrabold tabular-nums',
-                          r.matched ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400',
-                        ].join(' ')}>
+                        <span className={['select-none text-[13px] font-extrabold tabular-nums', r.matched ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'].join(' ')}>
                           {r.matched ? '✓ Clean' : fmtFull(r.leak)}
                         </span>
                       </div>
                     </button>
-
                     {isOpen && <RowBreakdown row={r} />}
-
                     {r.actionable && (
                       <div className="border-t border-zinc-200 p-2 dark:border-zinc-800">
                         {filed ? (
@@ -1599,11 +1484,8 @@ export default function SettlementReconciliation() {
                             <BadgeCheck className="h-3.5 w-3.5" /> Claim Filed
                           </div>
                         ) : (
-                          <button
-                            type="button"
-                            onClick={() => setClaimTarget({ mode: 'single', row: r })}
-                            className="w-full select-none rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 py-2 text-[10px] font-bold text-zinc-950 shadow-sm shadow-emerald-500/20 transition-all hover:from-emerald-400 hover:to-teal-400"
-                          >
+                          <button type="button" onClick={() => setClaimTarget({ mode: 'single', row: r })}
+                            className="w-full select-none rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 py-2 text-[10px] font-bold text-zinc-950 shadow-sm shadow-emerald-500/20 transition-all hover:from-emerald-400 hover:to-teal-400">
                             ⚡ Draft Claim
                           </button>
                         )}
@@ -1612,7 +1494,6 @@ export default function SettlementReconciliation() {
                   </div>
                 );
               })}
-
               {displayed.length === 0 && (
                 <div className="py-8 text-center">
                   <CheckCircle2 className="mx-auto h-6 w-6 text-emerald-500" />
@@ -1621,7 +1502,7 @@ export default function SettlementReconciliation() {
               )}
             </div>
 
-            {/* Desktop / tablet table (≥ md) */}
+            {/* Desktop table */}
             <div className="hidden w-full min-w-0 md:block">
               <table className="w-full min-w-0 border-collapse text-left">
                 <thead>
@@ -1635,9 +1516,7 @@ export default function SettlementReconciliation() {
                       { label: 'Discrepancy', cls: '' },
                       { label: 'Action', cls: 'text-right' },
                     ].map((h) => (
-                      <th key={h.label} className={`select-none whitespace-nowrap px-2 py-2.5 text-[9px] font-bold uppercase tracking-[0.12em] text-zinc-500 sm:px-3 dark:text-zinc-500 ${h.cls}`}>
-                        {h.label}
-                      </th>
+                      <th key={h.label} className={`select-none whitespace-nowrap px-2 py-2.5 text-[9px] font-bold uppercase tracking-[0.12em] text-zinc-500 sm:px-3 dark:text-zinc-500 ${h.cls}`}>{h.label}</th>
                     ))}
                   </tr>
                 </thead>
@@ -1648,10 +1527,8 @@ export default function SettlementReconciliation() {
                     const hasLeak = r.leak > 0 && !r.matched;
                     return (
                       <Fragment key={r.uid}>
-                        <tr
-                          onClick={() => toggleExpanded(r.uid)}
-                          className="cursor-pointer border-b border-zinc-100 transition-colors last:border-0 hover:bg-zinc-50/80 dark:border-zinc-800/60 dark:hover:bg-zinc-800/40"
-                        >
+                        <tr onClick={() => toggleExpanded(r.uid)}
+                          className="cursor-pointer border-b border-zinc-100 transition-colors last:border-0 hover:bg-zinc-50/80 dark:border-zinc-800/60 dark:hover:bg-zinc-800/40">
                           <td className={`max-w-[160px] border-l-2 px-2 py-2.5 sm:px-3 ${hasLeak ? 'border-l-rose-500/70' : 'border-l-transparent'}`}>
                             <div className="flex items-center gap-1">
                               <ChevronRight className={`h-3 w-3 shrink-0 text-zinc-400 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
@@ -1661,39 +1538,24 @@ export default function SettlementReconciliation() {
                               </div>
                             </div>
                           </td>
-
-                          <td className="hidden whitespace-nowrap px-2 py-2.5 lg:table-cell sm:px-3">
-                            <StatusChip status={r.status} />
-                          </td>
-
-                          <td className="hidden whitespace-nowrap px-2 py-2.5 text-[10px] lg:table-cell sm:px-3">
-                            <WeightPill declared={r.declaredWeightG} billed={r.billedWeightG} />
-                          </td>
-
+                          <td className="hidden whitespace-nowrap px-2 py-2.5 lg:table-cell sm:px-3"><StatusChip status={r.status} /></td>
+                          <td className="hidden whitespace-nowrap px-2 py-2.5 text-[10px] lg:table-cell sm:px-3"><WeightPill declared={r.declaredWeightG} billed={r.billedWeightG} /></td>
                           <td className="whitespace-nowrap px-2 py-2.5 text-[10px] tabular-nums sm:px-3">
                             <div className="select-none font-bold tabular-nums text-zinc-900 dark:text-zinc-100" title={fmtFull(r.expectedSettlement)}>{fmtFull(r.expectedSettlement)}</div>
                             <div className="select-none font-bold tabular-nums text-zinc-500 dark:text-zinc-500" title={fmtFull(r.bankUtrSettled)}>{fmtFull(r.bankUtrSettled)}</div>
                           </td>
-
                           <td className="whitespace-nowrap px-2 py-2.5 text-[11px] font-bold tabular-nums sm:px-3">
-                            <span
-                              className={r.matched ? 'font-bold tabular-nums text-emerald-600 dark:text-emerald-400' : r.leak > 0 ? 'font-bold tabular-nums text-rose-600 dark:text-rose-400' : 'font-bold tabular-nums text-amber-600 dark:text-amber-400'}
-                              title={fmtFull(r.leak)}
-                            >
+                            <span className={r.matched ? 'text-emerald-600 dark:text-emerald-400' : r.leak > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-amber-600 dark:text-amber-400'} title={fmtFull(r.leak)}>
                               {r.matched ? '✓ Clean' : fmtFull(r.leak)}
                             </span>
                           </td>
-
                           <td className="px-2 py-2.5 sm:px-3">
                             <div className="flex flex-wrap gap-1">
                               {r.matched ? (
-                                <span className="select-none whitespace-nowrap rounded-md border border-emerald-300 bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-300">
-                                  ✅ Matched
-                                </span>
+                                <span className="select-none whitespace-nowrap rounded-md border border-emerald-300 bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-300">✅ Matched</span>
                               ) : r.flags.map((f) => <Badge key={f} flag={f} />)}
                             </div>
                           </td>
-
                           <td className="whitespace-nowrap px-2 py-2.5 text-right sm:px-3">
                             {r.actionable ? (
                               filed ? (
@@ -1701,11 +1563,8 @@ export default function SettlementReconciliation() {
                                   <BadgeCheck className="h-3 w-3" /> Filed
                                 </span>
                               ) : (
-                                <button
-                                  type="button"
-                                  onClick={(e) => { e.stopPropagation(); setClaimTarget({ mode: 'single', row: r }); }}
-                                  className="select-none whitespace-nowrap rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-3.5 py-1.5 text-[10px] font-bold text-zinc-950 shadow-sm shadow-emerald-500/20 transition-all hover:scale-[1.02] hover:from-emerald-400 hover:to-teal-400"
-                                >
+                                <button type="button" onClick={(e) => { e.stopPropagation(); setClaimTarget({ mode: 'single', row: r }); }}
+                                  className="select-none whitespace-nowrap rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-3.5 py-1.5 text-[10px] font-bold text-zinc-950 shadow-sm shadow-emerald-500/20 transition-all hover:scale-[1.02] hover:from-emerald-400 hover:to-teal-400">
                                   ⚡ Draft Claim
                                 </button>
                               )
@@ -1714,18 +1573,14 @@ export default function SettlementReconciliation() {
                             )}
                           </td>
                         </tr>
-
                         {isOpen && (
                           <tr className="border-b border-zinc-100 dark:border-zinc-800/60">
-                            <td colSpan={7} className="p-0">
-                              <RowBreakdown row={r} />
-                            </td>
+                            <td colSpan={7} className="p-0"><RowBreakdown row={r} /></td>
                           </tr>
                         )}
                       </Fragment>
                     );
                   })}
-
                   {displayed.length === 0 && (
                     <tr>
                       <td colSpan={7} className="px-3 py-10 text-center">
@@ -1749,28 +1604,18 @@ export default function SettlementReconciliation() {
 
       {/* ─────────────── CLAIM MODAL ─────────────── */}
       {claimTarget && (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-zinc-950/60 p-2 backdrop-blur-sm sm:items-center sm:p-4"
-          onClick={() => setClaimTarget(null)}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl border border-zinc-200/80 bg-white shadow-2xl dark:border-zinc-800/80 dark:bg-zinc-900"
-          >
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-zinc-950/60 p-2 backdrop-blur-sm sm:items-center sm:p-4" onClick={() => setClaimTarget(null)}>
+          <div onClick={(e) => e.stopPropagation()}
+            className="flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl border border-zinc-200/80 bg-white shadow-2xl dark:border-zinc-800/80 dark:bg-zinc-900">
             <div className="flex items-start gap-2.5 border-b border-zinc-200 bg-gradient-to-r from-emerald-500/10 via-teal-500/5 to-transparent p-3 sm:p-4 dark:border-zinc-800/80">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-md shadow-emerald-500/20">
-                <Zap className="h-4 w-4" />
-              </div>
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-md shadow-emerald-500/20"><Zap className="h-4 w-4" /></div>
               <div className="min-w-0 flex-1">
                 <h3 className="select-none truncate text-[12px] font-bold text-zinc-900 sm:text-sm dark:text-zinc-100">
-                  {claimTarget.mode === 'bulk'
-                    ? `${activeMarket.claim} — Bulk Dispute Packet`
-                    : `${activeMarket.claim} — ${claimTarget.row.orderId}`}
+                  {claimTarget.mode === 'bulk' ? `${activeMarket.claim} — Bulk Dispute Packet` : `${activeMarket.claim} — ${claimTarget.row.orderId}`}
                 </h3>
                 <p className="select-none truncate text-[9px] text-zinc-500 sm:text-[10px] dark:text-zinc-400">
-                  {claimTarget.mode === 'bulk'
-                    ? `${portfolio.actionableCount} leaked orders · ${fmtFull(portfolio.totalLeak)} recoverable`
-                    : `${claimTarget.row.sku} · Refund request ${fmtFull(Math.max(0, claimTarget.row.leak))}`}
+                  {claimTarget.mode === 'bulk' ? `${portfolio.actionableCount} leaked orders · ${fmtFull(portfolio.totalLeak)} recoverable`
+                                                : `${claimTarget.row.sku} · Refund request ${fmtFull(Math.max(0, claimTarget.row.leak))}`}
                 </p>
               </div>
               {isClaimTargetFiled && (
@@ -1778,25 +1623,17 @@ export default function SettlementReconciliation() {
                   <BadgeCheck className="h-3 w-3" /> Filed
                 </span>
               )}
-              <button
-                type="button"
-                onClick={() => setClaimTarget(null)}
-                className="shrink-0 rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
-                aria-label="Close"
-              >
+              <button type="button" onClick={() => setClaimTarget(null)}
+                className="shrink-0 rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200" aria-label="Close">
                 <X className="h-4 w-4" />
               </button>
             </div>
-
             <div className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-4">
               <pre className="select-text whitespace-pre-wrap break-words rounded-xl border border-zinc-200 bg-zinc-50 p-3 font-mono text-[9px] leading-relaxed text-zinc-800 sm:p-4 sm:text-[11px] dark:border-zinc-800 dark:bg-zinc-950 dark:text-emerald-200/90">
 {claimText}
               </pre>
-
               <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-2.5 sm:p-3 dark:border-emerald-500/30 dark:bg-emerald-500/10">
-                <p className="select-none text-[9px] font-bold uppercase tracking-wider text-emerald-700 sm:text-[10px] dark:text-emerald-300">
-                  Required Evidence Checklist
-                </p>
+                <p className="select-none text-[9px] font-bold uppercase tracking-wider text-emerald-700 sm:text-[10px] dark:text-emerald-300">Required Evidence Checklist</p>
                 <ul className="mt-1.5 space-y-0.5">
                   {['Packing slip photo with weight scale', 'Brand box L×W×H dimensions image', 'Tax Invoice copy'].map((item) => (
                     <li key={item} className="flex items-center gap-1.5 select-none text-[9px] text-emerald-800 sm:text-[10px] dark:text-emerald-200">
@@ -1806,44 +1643,30 @@ export default function SettlementReconciliation() {
                 </ul>
               </div>
             </div>
-
             <div className="flex flex-wrap gap-2 border-t border-zinc-200 p-3 sm:p-4 dark:border-zinc-800/80">
-              <button
-                type="button"
-                onClick={copyClaim}
-                className="flex flex-1 select-none items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-3 py-2.5 text-[10px] font-bold text-white shadow-md shadow-emerald-500/20 transition-all hover:opacity-90 sm:text-[11px]"
-              >
+              <button type="button" onClick={copyClaim}
+                className="flex flex-1 select-none items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-3 py-2.5 text-[10px] font-bold text-white shadow-md shadow-emerald-500/20 transition-all hover:opacity-90 sm:text-[11px]">
                 {copied ? <Check className="h-3.5 w-3.5 shrink-0" /> : <Copy className="h-3.5 w-3.5 shrink-0" />}
                 {copied ? 'Copied!' : 'Copy Claim Text'}
               </button>
-
-              <button
-                type="button"
-                onClick={handleMarkFiled}
+              <button type="button" onClick={handleMarkFiled}
                 className={[
                   'flex flex-1 select-none items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border px-3 py-2.5 text-[10px] font-bold transition-colors sm:text-[11px]',
-                  isClaimTargetFiled
-                    ? 'border-emerald-400 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-300'
-                    : 'border-zinc-200 bg-white text-zinc-700 hover:border-emerald-400 hover:text-emerald-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-emerald-500/50 dark:hover:text-emerald-300',
-                ].join(' ')}
-              >
-                {isClaimTargetFiled
-                  ? <><BadgeCheck className="h-3.5 w-3.5 shrink-0" /> Claim Filed — Undo</>
-                  : <><Check className="h-3.5 w-3.5 shrink-0" /> Mark as Claim Filed</>}
+                  isClaimTargetFiled ? 'border-emerald-400 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-300'
+                                     : 'border-zinc-200 bg-white text-zinc-700 hover:border-emerald-400 hover:text-emerald-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-emerald-500/50 dark:hover:text-emerald-300',
+                ].join(' ')}>
+                {isClaimTargetFiled ? <><BadgeCheck className="h-3.5 w-3.5 shrink-0" /> Claim Filed — Undo</> : <><Check className="h-3.5 w-3.5 shrink-0" /> Mark as Claim Filed</>}
               </button>
-
-              <button
-                type="button"
-                onClick={exportLeaksCsv}
-                className="flex flex-1 select-none items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-[10px] font-bold text-zinc-700 transition-colors hover:border-emerald-400 hover:text-emerald-700 sm:text-[11px] dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-emerald-500/50 dark:hover:text-emerald-300"
-              >
-                <Download className="h-3.5 w-3.5 shrink-0" />
-                Export All Leaked Orders (CSV)
+              <button type="button" onClick={exportLeaksCsv}
+                className="flex flex-1 select-none items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-[10px] font-bold text-zinc-700 transition-colors hover:border-emerald-400 hover:text-emerald-700 sm:text-[11px] dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-emerald-500/50 dark:hover:text-emerald-300">
+                <Download className="h-3.5 w-3.5 shrink-0" />Export All Leaked Orders (CSV)
               </button>
             </div>
           </div>
         </div>
       )}
+
+
 
       {toast && (
         <div className="fixed bottom-4 left-1/2 z-[60] w-[calc(100%-1.5rem)] max-w-sm -translate-x-1/2">

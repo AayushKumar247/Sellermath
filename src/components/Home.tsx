@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import type { PageId } from '@/components/Sidebar';
+import MarketplaceLogo from '@/components/MarketplaceLogo';
 import {
   Calculator,
   Sparkles,
@@ -498,7 +499,7 @@ function QuickProfitCalculator({ onNavigate }: { onNavigate: (p: PageId) => void
                 : 'dark:bg-zinc-950 bg-white text-zinc-600 dark:text-zinc-400 dark:border-zinc-800 border-zinc-200 hover:border-zinc-400'
             }`}
           >
-            <span className={`w-1.5 h-1.5 rounded-full ${m.dot}`} />
+            <MarketplaceLogo marketplace={m.id} size="xs" />
             {m.name}
           </button>
         ))}
@@ -1008,7 +1009,7 @@ function MarketplaceComparison({ onNavigate }: { onNavigate: (p: PageId) => void
                 >
                   <td className="px-4 sm:px-5 py-3">
                     <div className="flex items-center gap-2 font-semibold text-zinc-900 dark:text-zinc-100">
-                      <span className={`w-2 h-2 rounded-full ${m.dot}`} />
+                      <MarketplaceLogo marketplace={m.id} size="xs" />
                       {m.name}
                     </div>
                   </td>

@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useRemoteCalc } from '@/lib/calculateApi';
 import {
-  Store,
   Package,
   IndianRupee,
   Truck,
@@ -13,6 +12,7 @@ import {
   Receipt,
 } from 'lucide-react';
 import { InputCard, MetricCard, HeroCard, InfoBanner } from './ui';
+import MarketplaceLogo from '@/components/MarketplaceLogo';
 
 interface FlipkartState {
   productCost: number;
@@ -49,8 +49,8 @@ export default function FlipkartCalculator() {
   return (
     <div className="space-y-8">
       <div className="flex items-center gap-3 mb-2">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
-          <Store className="w-5 h-5 text-white" />
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20 p-1">
+          <MarketplaceLogo marketplace="flipkart" size="md" />
         </div>
         <div>
           <h2 className="text-2xl font-bold text-slate-900">Flipkart Profit Calculator</h2>

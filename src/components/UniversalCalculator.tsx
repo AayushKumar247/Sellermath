@@ -234,7 +234,7 @@ export default function UniversalCalculator({ onNavigate }: UniversalCalculatorP
                       ? `bg-gradient-to-br ${mp.gradient} ${isBlinkit ? 'text-slate-900' : 'text-white'} border-transparent shadow-lg scale-105`
                       : 'bg-white dark:bg-zinc-900/90 border-slate-200 dark:border-zinc-700/80 hover:border-slate-300 dark:hover:border-zinc-600 hover:shadow-md'
                   }`}>
-                  <MarketplaceLogo id={mp.id} size="lg" />
+                  <MarketplaceLogo marketplace={mp.id} size="lg" />
                   <span className={`text-xs font-bold ${isActive ? (isBlinkit ? 'text-slate-900' : 'text-white') : 'text-slate-700 dark:text-zinc-50'}`}>{mp.shortName}</span>
                   <span className={`text-[10px] leading-tight text-center ${isActive ? (isBlinkit ? 'text-slate-900/80' : 'text-white/80') : 'text-slate-400 dark:text-zinc-300'}`}>{mp.tagline}</span>
                 </button>
@@ -396,7 +396,7 @@ export default function UniversalCalculator({ onNavigate }: UniversalCalculatorP
         </div>
 
         {/* Analytics dashboard */}
-        <div className="no-print grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="no-print grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 items-stretch">
           <CostBreakdownCard state={state} result={result} marketplace={activeMarketplace} />
           <HealthScoreCard state={state} result={result} marketplace={activeMarketplace} />
           <SensitivityCard state={state} result={result} marketplace={activeMarketplace} />
@@ -518,6 +518,8 @@ function SmartAlerts({ state, result }: { state: CalcState; result: CalcResult; 
 
 /* ==================== COST BREAKDOWN DONUT ==================== */
 function CostBreakdownCard({ state, result }: { state: CalcState; result: CalcResult; marketplace: MarketplacePreset }) {
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+
   const segments = useMemo(() => {
     const items = [
       { label:'COGS', value:Math.max(0, state.cogs), color:'#64748b' },
@@ -536,42 +538,49 @@ function CostBreakdownCard({ state, result }: { state: CalcState; result: CalcRe
     return items.map((s) => ({ ...s, pct:(s.value / denominator) * 100 }));
   }, [state, result]);
 
-  const size = 160, stroke = 22, radius = (size - stroke) / 2, circumference = 2 * Math.PI * radius;
+  const size = 128, stroke = 22, radius = (size - stroke) / 2, circumference = 2 * Math.PI * radius;
   let offset = 0;
   const totalCostPct = segments.filter((s) => s.label !== 'Net Profit').reduce((sum, s) => sum + s.pct, 0);
 
   return (
-    <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden transition-all hover:shadow-lg hover:border-slate-300 dark:hover:border-zinc-700 min-w-0">
-      <div className="p-5 border-b border-slate-200 dark:border-zinc-800">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-md flex-shrink-0"><PieChart className="w-4 h-4 text-white" strokeWidth={2.5} /></div>
-          <div className="min-w-0">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-zinc-50 select-none">Where Your Money Goes</h3>
-            <p className="text-xs text-slate-500 dark:text-zinc-400 select-none truncate">Cost breakdown of {formatINR(state.sellingPrice)}</p>
-          </div>
+    <div className="h-full flex flex-col justify-between bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 rounded-2xl p-5 sm:p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 hover:border-emerald-500/60 transition-all duration-300 ease-out">
+      <div className="flex items-center gap-2.5 pb-4 mb-4 border-b border-zinc-100 dark:border-zinc-800/70">
+        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-md flex-shrink-0"><PieChart className="w-4 h-4 text-white" strokeWidth={2.5} /></div>
+        <div className="min-w-0">
+          <h3 className="text-sm font-bold text-slate-900 dark:text-zinc-50 select-none">Where Your Money Goes</h3>
+          <p className="text-xs text-slate-500 dark:text-zinc-400 select-none truncate">Cost breakdown of {formatINR(state.sellingPrice)}</p>
         </div>
       </div>
-      <div className="p-5 flex flex-col sm:flex-row items-center gap-4">
-        <div className="relative flex-shrink-0">
+      <div className="flex-1 flex flex-col sm:flex-row items-center justify-between gap-5 my-auto">
+        <div className="relative flex-shrink-0" onMouseLeave={() => setHoveredIndex(null)}>
           <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
             {segments.length === 0 && <circle cx={size/2} cy={size/2} r={radius} fill="none" stroke="#e2e8f0" strokeWidth={stroke} />}
             {segments.map((seg, i) => {
               const dash = (seg.pct / 100) * circumference;
-              const el = <circle key={i} cx={size/2} cy={size/2} r={radius} fill="none" stroke={seg.color} strokeWidth={stroke} strokeDasharray={`${dash} ${circumference - dash}`} strokeDashoffset={-offset} className="transition-all duration-500" />;
+              const isActive = hoveredIndex === i;
+              const el = <circle key={i} cx={size/2} cy={size/2} r={radius} fill="none" stroke={seg.color} strokeWidth={stroke} strokeDasharray={`${dash} ${circumference - dash}`} strokeDashoffset={-offset} className={`cursor-pointer transition-opacity duration-150 ${isActive ? 'opacity-100' : 'opacity-75 hover:opacity-100'}`} onMouseEnter={() => setHoveredIndex(i)} />;
               offset += dash;
               return el;
             })}
           </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
             <span className="text-[10px] uppercase font-semibold text-slate-400 dark:text-zinc-500 tracking-wider">Cost Ratio</span>
             <span className={`text-xl font-bold ${totalCostPct > 100 ? 'text-red-600' : totalCostPct > 80 ? 'text-amber-600' : 'text-emerald-600'}`}>{totalCostPct.toFixed(0)}%</span>
           </div>
+          {/* Dark Popover Tooltip */}
+          {hoveredIndex !== null && segments[hoveredIndex] && (
+            <div className="absolute -top-16 left-1/2 -translate-x-1/2 pointer-events-none select-none z-50 whitespace-nowrap bg-zinc-900 dark:bg-zinc-800 text-white text-xs font-medium rounded-lg px-3 py-2 shadow-2xl border border-zinc-700 dark:border-zinc-600 transition-opacity duration-150">
+              <div className="font-semibold mb-0.5 select-none">{segments[hoveredIndex].label}</div>
+              <div className="text-[11px] opacity-90 select-none">{formatINR(segments[hoveredIndex].value)}</div>
+              <div className="text-[10px] opacity-75 mt-0.5 select-none">{segments[hoveredIndex].pct.toFixed(1)}% of revenue</div>
+            </div>
+          )}
         </div>
-        <div className="flex-1 w-full space-y-1 min-w-0">
-          {segments.slice(0, 6).map((seg) => (
-            <div key={seg.label} className="flex items-center gap-2 text-xs min-w-0">
+        <div className="flex-1 w-full space-y-1 min-w-0" onMouseLeave={() => setHoveredIndex(null)}>
+          {segments.slice(0, 6).map((seg, i) => (
+            <div key={seg.label} className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-2.5 w-full tabular-nums text-xs min-w-0 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 px-2 py-1 rounded-lg transition-colors cursor-pointer" onMouseEnter={() => setHoveredIndex(i)}>
               <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: seg.color }} />
-              <span className="text-slate-600 dark:text-zinc-400 truncate flex-1 min-w-0 select-none">{seg.label}</span>
+              <span className="text-slate-600 dark:text-zinc-400 truncate select-none">{seg.label}</span>
               <span className="font-semibold text-slate-800 dark:text-zinc-200 whitespace-nowrap">{formatINR(seg.value)}</span>
               <span className="text-slate-400 dark:text-zinc-500 text-[10px] w-10 text-right flex-shrink-0">{seg.pct.toFixed(1)}%</span>
             </div>
@@ -585,6 +594,8 @@ function CostBreakdownCard({ state, result }: { state: CalcState; result: CalcRe
 
 /* ==================== HEALTH SCORE ==================== */
 function HealthScoreCard({ state, result }: { state: CalcState; result: CalcResult; marketplace: MarketplacePreset }) {
+  const [hoveredItem, setHoveredItem] = useState<'gauge' | 'margin' | 'rto' | 'fees' | null>(null);
+
   const score = useMemo(() => {
     let s = 100;
     if (result.netProfit < 0) s -= 50;
@@ -615,34 +626,74 @@ function HealthScoreCard({ state, result }: { state: CalcState; result: CalcResu
   const circumference = 2 * Math.PI * radius;
   const dashOffset = circumference - (score / 100) * circumference;
 
+  const feePct = state.sellingPrice > 0
+    ? (((result.commissionAmount + result.shippingFee + result.gstOnMarketplaceFees) / state.sellingPrice) * 100).toFixed(0)
+    : '0';
+
   return (
-    <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden transition-all hover:shadow-lg hover:border-slate-300 dark:hover:border-zinc-700 min-w-0">
-      <div className="p-5 border-b border-slate-200 dark:border-zinc-800">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${config.bg} flex items-center justify-center shadow-md flex-shrink-0`}><Gauge className="w-4 h-4 text-white" strokeWidth={2.5} /></div>
-          <div className="min-w-0">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-zinc-50 select-none">Profit Health Score</h3>
-            <p className="text-xs text-slate-500 dark:text-zinc-400 select-none">Combined SKU viability</p>
-          </div>
+    <div className="h-full flex flex-col justify-between bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 rounded-2xl p-5 sm:p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 hover:border-emerald-500/60 transition-all duration-300 ease-out group">
+      <div className="flex items-center gap-2.5 pb-4 mb-4 border-b border-zinc-100 dark:border-zinc-800/70">
+        <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${config.bg} flex items-center justify-center shadow-md flex-shrink-0`}><Gauge className="w-4 h-4 text-white" strokeWidth={2.5} /></div>
+        <div className="min-w-0">
+          <h3 className="text-sm font-bold text-slate-900 dark:text-zinc-50 select-none">Profit Health Score</h3>
+          <p className="text-xs text-slate-500 dark:text-zinc-400 select-none">Combined SKU viability</p>
         </div>
       </div>
-      <div className="p-5 flex flex-col items-center">
-        <div className="relative">
+      <div className="flex-1 flex flex-col items-center justify-center my-auto">
+        <div className="relative cursor-pointer" onMouseEnter={() => setHoveredItem('gauge')} onMouseLeave={() => setHoveredItem(null)}>
           <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
             <circle cx={size/2} cy={size/2} r={radius} fill="none" stroke="#e2e8f0" strokeWidth={stroke} className="dark:stroke-zinc-800" />
             <circle cx={size/2} cy={size/2} r={radius} fill="none" stroke={config.color} strokeWidth={stroke} strokeDasharray={circumference} strokeDashoffset={dashOffset} strokeLinecap="round" className="transition-all duration-1000 ease-out" />
           </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
             <span className={`text-4xl font-bold ${config.text} tabular-nums select-none`}>{score}</span>
             <span className="text-[10px] uppercase font-semibold text-slate-400 dark:text-zinc-500 tracking-wider select-none">/ 100</span>
           </div>
+          {/* Dark Popover Tooltip for Gauge */}
+          {hoveredItem === 'gauge' && (
+            <div className="absolute -top-16 left-1/2 -translate-x-1/2 pointer-events-none select-none z-50 whitespace-nowrap bg-zinc-900 dark:bg-zinc-800 text-white text-xs font-medium rounded-lg px-3 py-2 shadow-2xl border border-zinc-700 dark:border-zinc-600 transition-opacity duration-150">
+              <div className="font-semibold mb-0.5 select-none">Profit Health Score</div>
+              <div className="text-[11px] opacity-90 select-none">{score} / 100 ({config.label})</div>
+              <div className="text-[10px] opacity-75 mt-0.5 select-none">{result.netProfitMargin.toFixed(1)}% net margin • {state.returnRate}% RTO</div>
+            </div>
+          )}
         </div>
         <div className={`mt-3 px-3 py-1 rounded-full text-xs font-bold text-white bg-gradient-to-r ${config.bg} shadow-md select-none`}>{config.label}</div>
         <p className="text-xs text-center text-slate-500 dark:text-zinc-400 mt-2 leading-relaxed select-none">{config.desc}</p>
-        <div className="w-full mt-4 grid grid-cols-3 gap-2 text-center">
-          <div className="min-w-0"><p className="text-[10px] text-slate-400 dark:text-zinc-500 uppercase font-semibold select-none">Margin</p><p className={`text-sm font-bold ${result.netProfitMargin >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>{result.netProfitMargin.toFixed(1)}%</p></div>
-          <div className="min-w-0"><p className="text-[10px] text-slate-400 dark:text-zinc-500 uppercase font-semibold select-none">RTO</p><p className="text-sm font-bold text-slate-700 dark:text-zinc-300">{state.returnRate}%</p></div>
-          <div className="min-w-0"><p className="text-[10px] text-slate-400 dark:text-zinc-500 uppercase font-semibold select-none">Fees</p><p className="text-sm font-bold text-slate-700 dark:text-zinc-300">{state.sellingPrice > 0 ? (((result.commissionAmount + result.shippingFee + result.gstOnMarketplaceFees) / state.sellingPrice) * 100).toFixed(0) : 0}%</p></div>
+      </div>
+      <div className="grid grid-cols-3 gap-2 w-full pt-4 mt-4 border-t border-zinc-100 dark:border-zinc-800/70 text-center tabular-nums" onMouseLeave={() => setHoveredItem(null)}>
+        <div className="min-w-0 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 rounded-lg transition-colors cursor-pointer" onMouseEnter={() => setHoveredItem('margin')}>
+          <p className="text-[10px] text-slate-400 dark:text-zinc-500 uppercase font-semibold select-none">Margin</p>
+          <p className={`text-sm font-bold ${result.netProfitMargin >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>{result.netProfitMargin.toFixed(1)}%</p>
+          {hoveredItem === 'margin' && (
+            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 pointer-events-none select-none z-50 whitespace-nowrap bg-zinc-900 dark:bg-zinc-800 text-white text-xs font-medium rounded-lg px-3 py-2 shadow-2xl border border-zinc-700 dark:border-zinc-600 transition-opacity duration-150">
+              <div className="font-semibold mb-0.5 select-none">Net Profit Margin</div>
+              <div className="text-[11px] opacity-90 select-none">{result.netProfitMargin.toFixed(1)}%</div>
+              <div className="text-[10px] opacity-75 mt-0.5 select-none">{formatINR(result.netProfit)} profit per unit</div>
+            </div>
+          )}
+        </div>
+        <div className="min-w-0 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 rounded-lg transition-colors cursor-pointer" onMouseEnter={() => setHoveredItem('rto')}>
+          <p className="text-[10px] text-slate-400 dark:text-zinc-500 uppercase font-semibold select-none">RTO</p>
+          <p className="text-sm font-bold text-slate-700 dark:text-zinc-300">{state.returnRate}%</p>
+          {hoveredItem === 'rto' && (
+            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 pointer-events-none select-none z-50 whitespace-nowrap bg-zinc-900 dark:bg-zinc-800 text-white text-xs font-medium rounded-lg px-3 py-2 shadow-2xl border border-zinc-700 dark:border-zinc-600 transition-opacity duration-150">
+              <div className="font-semibold mb-0.5 select-none">RTO Risk Rate</div>
+              <div className="text-[11px] opacity-90 select-none">{state.returnRate}%</div>
+              <div className="text-[10px] opacity-75 mt-0.5 select-none">Return drag factor</div>
+            </div>
+          )}
+        </div>
+        <div className="min-w-0 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 rounded-lg transition-colors cursor-pointer" onMouseEnter={() => setHoveredItem('fees')}>
+          <p className="text-[10px] text-slate-400 dark:text-zinc-500 uppercase font-semibold select-none">Fees</p>
+          <p className="text-sm font-bold text-slate-700 dark:text-zinc-300">{feePct}%</p>
+          {hoveredItem === 'fees' && (
+            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 pointer-events-none select-none z-50 whitespace-nowrap bg-zinc-900 dark:bg-zinc-800 text-white text-xs font-medium rounded-lg px-3 py-2 shadow-2xl border border-zinc-700 dark:border-zinc-600 transition-opacity duration-150">
+              <div className="font-semibold mb-0.5 select-none">Total Marketplace Fees</div>
+              <div className="text-[11px] opacity-90 select-none">{feePct}%</div>
+              <div className="text-[10px] opacity-75 mt-0.5 select-none">Commission + closing + GST</div>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -651,6 +702,8 @@ function HealthScoreCard({ state, result }: { state: CalcState; result: CalcResu
 
 /* ==================== SENSITIVITY ==================== */
 function SensitivityCard({ state, result }: { state: CalcState; result: CalcResult; marketplace: MarketplacePreset }) {
+  const [hoveredPoint, setHoveredPoint] = useState<{ price: number; profit: number; x: number; y: number } | null>(null);
+
   const points = useMemo(() => {
     const currentPrice = state.sellingPrice, breakeven = result.breakEvenPrice, currentProfit = result.netProfit;
     if (!currentPrice || currentPrice <= 0) return [];
@@ -687,35 +740,83 @@ function SensitivityCard({ state, result }: { state: CalcState; result: CalcResu
 
   const zeroY = useMemo(() => maxProfit === minProfit ? pad.top + innerH / 2 : pad.top + innerH - ((0 - minProfit) / (maxProfit - minProfit)) * innerH, [minProfit, maxProfit, innerH, pad.top]);
 
+  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (points.length === 0) return;
+    const svg = e.currentTarget;
+    const rect = svg.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const chartX = (x / rect.width) * chartW;
+    if (chartX < pad.left || chartX > pad.left + innerW) {
+      setHoveredPoint(null);
+      return;
+    }
+    const relX = (chartX - pad.left) / innerW;
+    const minPrice = minPriceV;
+    const maxPrice = maxPriceV;
+    const hoveredPrice = minPrice + relX * (maxPrice - minPrice);
+    const hoveredPointData = points.reduce((best, p) => Math.abs(p.price - hoveredPrice) < Math.abs(best.price - hoveredPrice) ? p : best);
+    const profits = points.map((p) => p.profit).concat([0]);
+    const mnP = Math.min(...profits), mxP = Math.max(...profits);
+    const prices = points.map((p) => p.price);
+    const mnX = Math.min(...prices), mxX = Math.max(...prices);
+    const xFor = (v: number) => pad.left + ((v - mnX) / Math.max(1, mxX - mnX)) * innerW;
+    const yFor = (v: number) => pad.top + innerH - ((v - mnP) / Math.max(1, mxP - mnP)) * innerH;
+    setHoveredPoint({
+      price: hoveredPointData.price,
+      profit: hoveredPointData.profit,
+      x: xFor(hoveredPointData.price),
+      y: yFor(hoveredPointData.profit),
+    });
+  };
+
+  const handleMouseLeave = () => setHoveredPoint(null);
+
+  const hoveredMargin = hoveredPoint && state.sellingPrice > 0 ? (hoveredPoint.profit / state.sellingPrice) * 100 : 0;
+
   return (
-    <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden transition-all hover:shadow-lg hover:border-slate-300 dark:hover:border-zinc-700 min-w-0">
-      <div className="p-5 border-b border-slate-200 dark:border-zinc-800">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center shadow-md flex-shrink-0"><Activity className="w-4 h-4 text-white" strokeWidth={2.5} /></div>
-          <div className="min-w-0">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-zinc-50 select-none">Price Sensitivity</h3>
-            <p className="text-xs text-slate-500 dark:text-zinc-400 select-none">Profit at different selling prices</p>
-          </div>
+    <div className="h-full flex flex-col justify-between bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 rounded-2xl p-5 sm:p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 hover:border-emerald-500/60 transition-all duration-300 ease-out group">
+      <div className="flex items-center gap-2.5 pb-4 mb-4 border-b border-zinc-100 dark:border-zinc-800/70">
+        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center shadow-md flex-shrink-0"><Activity className="w-4 h-4 text-white" strokeWidth={2.5} /></div>
+        <div className="min-w-0">
+          <h3 className="text-sm font-bold text-slate-900 dark:text-zinc-50 select-none">Price Sensitivity</h3>
+          <p className="text-xs text-slate-500 dark:text-zinc-400 select-none">Profit at different selling prices</p>
         </div>
       </div>
-      <div className="p-4">
-        <svg viewBox={`0 0 ${chartW} ${chartH}`} className="w-full" preserveAspectRatio="xMidYMid meet">
-          <defs><linearGradient id="sensGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity="0.3" /><stop offset="100%" stopColor="#10b981" stopOpacity="0" /></linearGradient></defs>
-          {[0, 0.25, 0.5, 0.75, 1].map((frac) => <line key={frac} x1={pad.left} x2={pad.left + innerW} y1={pad.top + innerH * frac} y2={pad.top + innerH * frac} stroke="#e2e8f0" strokeWidth="1" className="dark:stroke-zinc-800" strokeDasharray="2 3" />)}
-          <line x1={pad.left} x2={pad.left + innerW} y1={zeroY} y2={zeroY} stroke="#94a3b8" strokeWidth="1.5" strokeDasharray="4 3" className="dark:stroke-zinc-600" />
-          {path && <path d={`${path} L ${pad.left + innerW} ${zeroY} L ${pad.left} ${zeroY} Z`} fill="url(#sensGrad)" />}
-          {path && <path d={path} fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="transition-all duration-300" />}
-          {breakevenX !== null && <g><line x1={breakevenX} x2={breakevenX} y1={pad.top} y2={pad.top + innerH} stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="3 3" /><text x={breakevenX + 3} y={pad.top + 10} fontSize="8" fill="#f59e0b" fontWeight="bold">BE</text></g>}
-          {currentPoint && <g><circle cx={currentPoint.x} cy={currentPoint.y} r="6" fill="#10b981" opacity="0.25" /><circle cx={currentPoint.x} cy={currentPoint.y} r="3.5" fill="#10b981" stroke="white" strokeWidth="2" /></g>}
-          <text x={pad.left} y={chartH - 6} fontSize="9" fill="#94a3b8" textAnchor="start">₹{formatCompactINR(minPriceV).replace('₹','')}</text>
-          <text x={pad.left + innerW} y={chartH - 6} fontSize="9" fill="#94a3b8" textAnchor="end">₹{formatCompactINR(maxPriceV).replace('₹','')}</text>
-          <text x={4} y={pad.top + 8} fontSize="9" fill="#94a3b8" textAnchor="start">{formatCompactINR(maxProfit)}</text>
-          <text x={4} y={pad.top + innerH} fontSize="9" fill="#94a3b8" textAnchor="start">{formatCompactINR(minProfit)}</text>
-        </svg>
-        <div className="mt-2 flex items-center justify-between text-[10px] gap-2">
-          <span className="text-slate-500 dark:text-zinc-400 flex items-center gap-1 min-w-0 truncate select-none"><span className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" /> Current: <b className="text-slate-700 dark:text-zinc-200">{formatCompactINR(state.sellingPrice)}</b></span>
-          <span className="text-slate-500 dark:text-zinc-400 flex items-center gap-1 min-w-0 truncate select-none"><span className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0" /> BE: <b className="text-slate-700 dark:text-zinc-200">{formatCompactINR(result.breakEvenPrice)}</b></span>
+      <div className="flex-1 flex flex-col justify-center">
+        <div className="relative">
+          <svg viewBox={`0 0 ${chartW} ${chartH}`} className="w-full" preserveAspectRatio="xMidYMid meet" onMouseMove={handleMouseMove} onMouseLeave={handleMouseLeave}>
+            <defs><linearGradient id="sensGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity="0.3" /><stop offset="100%" stopColor="#10b981" stopOpacity="0" /></linearGradient></defs>
+            {[0, 0.25, 0.5, 0.75, 1].map((frac) => <line key={frac} x1={pad.left} x2={pad.left + innerW} y1={pad.top + innerH * frac} y2={pad.top + innerH * frac} stroke="#e2e8f0" strokeWidth="1" className="dark:stroke-zinc-800" strokeDasharray="2 3" />)}
+            <line x1={pad.left} x2={pad.left + innerW} y1={zeroY} y2={zeroY} stroke="#94a3b8" strokeWidth="1.5" strokeDasharray="4 3" className="dark:stroke-zinc-600" />
+            {path && <path d={`${path} L ${pad.left + innerW} ${zeroY} L ${pad.left} ${zeroY} Z`} fill="url(#sensGrad)" />}
+            {path && <path d={path} fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="transition-all duration-300" />}
+            {breakevenX !== null && <g><line x1={breakevenX} x2={breakevenX} y1={pad.top} y2={pad.top + innerH} stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="3 3" /><text x={breakevenX + 3} y={pad.top + 10} fontSize="8" fill="#f59e0b" fontWeight="bold">BE</text></g>}
+            {currentPoint && <g><circle cx={currentPoint.x} cy={currentPoint.y} r="6" fill="#10b981" opacity="0.25" /><circle cx={currentPoint.x} cy={currentPoint.y} r="3.5" fill="#10b981" stroke="white" strokeWidth="2" /></g>}
+            {/* Hover hairline and dot */}
+            {hoveredPoint && (
+              <>
+                <line x1={hoveredPoint.x} x2={hoveredPoint.x} y1={pad.top} y2={pad.top + innerH} stroke="#10b981" strokeWidth="1" strokeDasharray="2 2" opacity="0.5" />
+                <circle cx={hoveredPoint.x} cy={hoveredPoint.y} r="4" fill="#10b981" stroke="white" strokeWidth="2" className="animate-pulse" />
+              </>
+            )}
+            <text x={pad.left} y={chartH - 6} fontSize="9" fill="#94a3b8" textAnchor="start">₹{formatCompactINR(minPriceV).replace('₹','')}</text>
+            <text x={pad.left + innerW} y={chartH - 6} fontSize="9" fill="#94a3b8" textAnchor="end">₹{formatCompactINR(maxPriceV).replace('₹','')}</text>
+            <text x={4} y={pad.top + 8} fontSize="9" fill="#94a3b8" textAnchor="start">{formatCompactINR(maxProfit)}</text>
+            <text x={4} y={pad.top + innerH} fontSize="9" fill="#94a3b8" textAnchor="start">{formatCompactINR(minProfit)}</text>
+          </svg>
+          {/* Dark Popover Tooltip */}
+          {hoveredPoint && (
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-full mb-2 pointer-events-none select-none z-50 whitespace-nowrap bg-zinc-900 dark:bg-zinc-800 text-white text-xs font-medium rounded-lg px-3 py-2 shadow-2xl border border-zinc-700 dark:border-zinc-600 transition-opacity duration-150">
+              <div className="font-semibold mb-0.5 select-none">Selling Price: {formatINR(hoveredPoint.price)}</div>
+              <div className={`text-[11px] opacity-90 select-none ${hoveredPoint.profit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>Net Profit: {formatINR(hoveredPoint.profit)}</div>
+              <div className="text-[10px] opacity-75 mt-0.5 select-none">{hoveredMargin.toFixed(1)}% margin • {hoveredPoint.price >= result.breakEvenPrice ? `${formatINR(hoveredPoint.price - result.breakEvenPrice)} above BE` : `${formatINR(result.breakEvenPrice - hoveredPoint.price)} below BE`}</div>
+            </div>
+          )}
         </div>
+      </div>
+      <div className="flex items-center justify-between pt-4 mt-4 border-t border-zinc-100 dark:border-zinc-800/70 text-xs font-semibold tabular-nums">
+        <span className="text-slate-500 dark:text-zinc-400 flex items-center gap-1 min-w-0 truncate select-none"><span className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" /> Current: <b className="text-slate-700 dark:text-zinc-200">{formatCompactINR(state.sellingPrice)}</b></span>
+        <span className="text-slate-500 dark:text-zinc-400 flex items-center gap-1 min-w-0 truncate select-none"><span className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0" /> BE: <b className="text-slate-700 dark:text-zinc-200">{formatCompactINR(result.breakEvenPrice)}</b></span>
       </div>
     </div>
   );
@@ -1107,7 +1208,7 @@ function CrossPlatformComparison({ sellingPrice, cogs, shippingWeight, zone, pro
                 {isBest && <div className="absolute top-2 right-2 bg-emerald-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">Best Margin</div>}
                 {isCurrent && !isBest && <div className={`absolute top-2 right-2 ${badgeColor.bg} ${badgeColor.text} text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1`}>Active</div>}
                 <div className="flex items-center gap-2 mb-2 min-w-0 pr-16">
-                  <MarketplaceLogo id={item.marketplace.id} size="md" />
+                  <MarketplaceLogo marketplace={item.marketplace.id} size="md" />
                   <span className={`text-sm font-bold truncate ${isBest ? 'text-emerald-800 dark:text-emerald-100' : 'text-slate-700 dark:text-zinc-50'}`}>{item.marketplace.name}</span>
                 </div>
                 <div className="space-y-1 min-w-0">

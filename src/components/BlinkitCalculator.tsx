@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useRemoteCalc } from '@/lib/calculateApi';
 import {
-  Truck,
   Package,
   IndianRupee,
   Percent,
@@ -12,6 +11,7 @@ import {
   Wallet,
 } from 'lucide-react';
 import { InputCard, MetricCard, HeroCard, InfoBanner } from './ui';
+import MarketplaceLogo from '@/components/MarketplaceLogo';
 
 interface BlinkitState {
   productCost: number;
@@ -54,8 +54,8 @@ export default function BlinkitCalculator() {
   return (
     <div className="space-y-8">
       <div className="flex items-center gap-3 mb-2">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center shadow-lg shadow-amber-500/20">
-          <Truck className="w-5 h-5 text-white" />
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center shadow-lg shadow-amber-500/20 p-1">
+          <MarketplaceLogo marketplace="blinkit" size="md" />
         </div>
         <div>
           <h2 className="text-2xl font-bold text-slate-900">Blinkit Margin Calculator</h2>

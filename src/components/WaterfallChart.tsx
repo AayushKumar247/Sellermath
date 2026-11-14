@@ -225,14 +225,14 @@ export default function WaterfallChart({
 
                       {/* Hover tooltip */}
                       <div
-                        className={`absolute ${tooltipAlign} opacity-0 group-hover:opacity-100 pointer-events-none z-50 whitespace-nowrap bg-zinc-900 dark:bg-zinc-800 text-white text-xs font-medium rounded-lg px-3 py-2 shadow-2xl border border-zinc-700 dark:border-zinc-600 ${
+                        className={`absolute ${tooltipAlign} opacity-0 group-hover:opacity-100 pointer-events-none select-none z-50 whitespace-nowrap bg-zinc-900 dark:bg-zinc-800 text-white text-xs font-medium rounded-lg px-3 py-2 shadow-2xl border border-zinc-700 dark:border-zinc-600 transition-opacity duration-150 ${
                           tooltipBelowBar ? 'top-2' : 'bottom-full mb-2'
                         }`}
                       >
-                        <div className="font-semibold mb-0.5">{step.label}</div>
-                        <div className="text-[11px] opacity-90">{isPositive ? '' : '-'}{formatINR(Math.abs(stepValue)).replace('-', '')}</div>
+                        <div className="font-semibold mb-0.5 select-none">{step.label}</div>
+                        <div className="text-[11px] opacity-90 select-none">{isPositive ? '' : '-'}{formatINR(Math.abs(stepValue)).replace('-', '')}</div>
                         {revenue > 0 && (
-                          <div className="text-[10px] opacity-75 mt-0.5">
+                          <div className="text-[10px] opacity-75 mt-0.5 select-none">
                             {((Math.abs(stepValue) / revenue) * 100).toFixed(1)}% of revenue
                           </div>
                         )}

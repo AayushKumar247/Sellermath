@@ -6,6 +6,7 @@ import {
   Home as HomeIcon, Hash, ChevronRight, Star, Plus, Target, TrendingUp,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import MarketplaceLogo from '@/components/MarketplaceLogo';
 
 /* -------------------------------------------------------------------------- */
 /*  Types                                                                     */
@@ -492,7 +493,6 @@ export default function AIListingWriter() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 w-full min-w-0">
                 {(Object.keys(PLATFORMS) as PlatformKey[]).map((p) => {
                   const cfg = PLATFORMS[p];
-                  const Icon = cfg.icon;
                   const active = input.platform === p;
                   return (
                     <button
@@ -504,7 +504,7 @@ export default function AIListingWriter() {
                           : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-700 hover:-translate-y-0.5 hover:shadow-md'
                       }`}
                     >
-                      <Icon className={`w-4 h-4 transition-transform duration-200 ${active ? 'scale-110' : 'group-hover:scale-110'}`} />
+                      <MarketplaceLogo marketplace={p} size="sm" className={active ? 'scale-110' : 'group-hover:scale-110 transition-transform duration-200'} />
                       {p}
                       <span className="text-[10px] font-normal opacity-70">{cfg.limit} chars</span>
                       {active && (

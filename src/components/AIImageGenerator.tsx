@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import MarketplaceLogo from "@/components/MarketplaceLogo";
 
 /* ================================ Types ================================== */
 
@@ -1301,7 +1302,7 @@ export default function AIImageGenerator() {
                         : "border-zinc-200 bg-white hover:border-emerald-300 hover:bg-emerald-50/30 dark:border-zinc-800 dark:bg-zinc-900/40 dark:hover:border-emerald-700/50 dark:hover:bg-emerald-950/10"
                     }`}
                   >
-                    <span className="text-base leading-none">{p.icon}</span>
+                    {id === "banner" ? <span className="text-base leading-none">{p.icon}</span> : <MarketplaceLogo marketplace={id} size="sm" />}
                     <span className="mt-0.5 text-[11px] font-bold text-zinc-800 dark:text-zinc-200">{p.label}</span>
                     <span className="font-mono text-[9px] text-zinc-500 dark:text-zinc-400">{p.dims}</span>
                     <span className="text-[9px] leading-tight text-zinc-400 dark:text-zinc-500">{p.hint}</span>

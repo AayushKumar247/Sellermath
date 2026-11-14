@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useRemoteCalc } from '@/lib/calculateApi';
 import {
-  ShoppingBag,
   Package,
   IndianRupee,
   Percent,
@@ -13,6 +12,7 @@ import {
   Info,
 } from 'lucide-react';
 import { InputCard, MetricCard, InfoBanner } from './ui';
+import MarketplaceLogo from '@/components/MarketplaceLogo';
 
 interface AmazonFBAState {
   sellingPrice: number;
@@ -64,8 +64,8 @@ export default function AmazonFBACalculator() {
   return (
     <div className="space-y-8">
       <div className="flex items-center gap-3 mb-2">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center shadow-lg shadow-orange-500/20">
-          <ShoppingBag className="w-5 h-5 text-white" />
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center shadow-lg shadow-orange-500/20 p-1">
+          <MarketplaceLogo marketplace="amazon" size="md" />
         </div>
         <div>
           <h2 className="text-2xl font-bold text-slate-900">Amazon FBA Calculator</h2>
@@ -152,7 +152,7 @@ export default function AmazonFBACalculator() {
           label="Total Amazon Fees"
           value={results.totalAmazonFees}
           subtitle="Referral + closing + FBA + storage"
-          icon={ShoppingBag}
+          icon={Package}
           variant="neutral"
         />
         <MetricCard

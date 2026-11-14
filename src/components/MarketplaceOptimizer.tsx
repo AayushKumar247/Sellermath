@@ -13,6 +13,7 @@ import {
   Crown, Smile, Briefcase, Lightbulb, X, ArrowRight, Loader2, Star,
   Eye, ClipboardList, Wand2,
 } from 'lucide-react';
+import MarketplaceLogo from '@/components/MarketplaceLogo';
 
 /* ================= TYPES ================= */
 type Marketplace = 'Amazon India' | 'Flipkart' | 'Meesho' | 'Myntra';
@@ -278,7 +279,6 @@ export default function MarketplaceOptimizer() {
   const [showHistory, setShowHistory] = useState(false);
 
   const spec = MARKETPLACE_SPECS[marketplace];
-  const SpecIcon = spec.icon;
 
   const pushToast = useCallback((type: ToastMsg['type'], msg: string) => {
     const id = Date.now() + Math.random();
@@ -527,7 +527,6 @@ export default function MarketplaceOptimizer() {
           {/* Marketplace pills — emerald active */}
           <div className="relative mt-4 sm:mt-5 flex flex-wrap gap-2">
             {Object.entries(MARKETPLACE_SPECS).map(([name, s]) => {
-              const Icon = s.icon;
               const active = name === marketplace;
               return (
                 <button key={name} onClick={() => setMarketplace(name as Marketplace)}
@@ -536,7 +535,7 @@ export default function MarketplaceOptimizer() {
                       ? 'bg-emerald-500/10 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500 shadow-sm'
                       : 'border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-emerald-300 dark:hover:border-emerald-800 hover:bg-emerald-50/50 dark:hover:bg-emerald-900/10 hover:-translate-y-0.5'
                   }`}>
-                  <Icon className={`w-3.5 h-3.5 ${active ? 'text-emerald-600 dark:text-emerald-400' : ''}`} />
+                  <MarketplaceLogo marketplace={name} size="xs" />
                   {name}
                 </button>
               );
@@ -631,7 +630,7 @@ export default function MarketplaceOptimizer() {
               <button onClick={() => setShowGuidance((v) => !v)}
                 className="w-full flex items-center justify-between gap-2 px-3.5 py-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors select-none">
                 <span className="flex items-center gap-2 text-[11px] sm:text-xs font-semibold text-zinc-700 dark:text-zinc-300 min-w-0">
-                  <SpecIcon className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <MarketplaceLogo marketplace={marketplace} size="xs" />
                   <span className="truncate">{marketplace} — {spec.tagline}</span>
                 </span>
                 {showGuidance ? <ChevronUp className="w-4 h-4 text-zinc-400 shrink-0" /> : <ChevronDown className="w-4 h-4 text-zinc-400 shrink-0" />}

@@ -6,6 +6,7 @@ import {
   Gauge, Type, Move, Sparkles, Contrast as ContrastIcon, Package,
   ArrowLeftRight, Sun, Droplet, Camera, Target,
 } from 'lucide-react';
+import MarketplaceLogo from '@/components/MarketplaceLogo';
 
 /* ================================================================== */
 /* Types                                                              */
@@ -873,9 +874,13 @@ export default function ImageResizer({ onNavigate }: ImageResizerProps) {
                             onClick={() => { setActiveTab('presets'); setActivePreset(p.id); }}
                             className={`flex flex-col items-center gap-1.5 px-2 py-2.5 rounded-xl border transition-all ${active ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-400/50 shadow-sm' : 'bg-zinc-50/40 dark:bg-zinc-800/30 border-zinc-200/60 dark:border-zinc-800/50 hover:bg-emerald-50/40 dark:hover:bg-emerald-900/10'}`}
                           >
-                            <div className="w-8 h-8 rounded-lg flex items-center justify-center border border-zinc-200/40 dark:border-zinc-700/40 text-[11px] font-bold text-zinc-900 dark:text-zinc-100">
-                              {p.ratio}
-                            </div>
+                            {p.id === 'story' ? (
+                              <div className="w-8 h-8 rounded-lg flex items-center justify-center border border-zinc-200/40 dark:border-zinc-700/40 text-[11px] font-bold text-zinc-900 dark:text-zinc-100">
+                                {p.ratio}
+                              </div>
+                            ) : (
+                              <MarketplaceLogo marketplace={p.id} size="sm" />
+                            )}
                             <span className="text-[10px] font-bold text-zinc-900 dark:text-zinc-100 text-center leading-tight line-clamp-2">{p.label}</span>
                             <span className="text-[9px] text-zinc-500 dark:text-zinc-400">{p.width}×{p.height}</span>
                           </button>

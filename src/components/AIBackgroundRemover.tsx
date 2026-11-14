@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import MarketplaceLogo from '@/components/MarketplaceLogo';
 
 type ExportMode = 'transparent' | 'white';
 type Ratio = 'free' | '1:1' | '3:4';
@@ -1124,8 +1125,9 @@ export default function AIBackgroundRemover({ onLeadCapture }: AIBackgroundRemov
                             : 'border-zinc-200 dark:border-zinc-800 hover:border-emerald-300 dark:hover:border-emerald-700 bg-white dark:bg-zinc-900'
                         }`}
                       >
-                        <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                          {p.emoji} {p.label}
+                        <div className="flex items-center gap-1.5 text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                          {p.id === 'free' ? <span>{p.emoji}</span> : <MarketplaceLogo marketplace={p.id} size="xs" />}
+                          {p.label}
                         </div>
                         <div className="text-[11px] text-zinc-500 dark:text-zinc-400">{p.hint}</div>
                       </button>

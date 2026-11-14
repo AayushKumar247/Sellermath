@@ -7,6 +7,7 @@ import {
   ShoppingBag, Gauge, ArrowUpDown, Layers, Info, Eraser,
 } from 'lucide-react';
 import { postCalculate } from '@/lib/calculateApi';
+import MarketplaceLogo from '@/components/MarketplaceLogo';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -648,12 +649,13 @@ export default function SEOKeywords() {
                         key={p.id}
                         type="button"
                         onClick={() => setPlatform(p.id)}
-                        className={`truncate rounded-lg px-1.5 py-2 text-xs font-semibold transition-all duration-200 sm:text-sm ${
+                        className={`flex items-center justify-center gap-1.5 truncate rounded-lg px-1.5 py-2 text-xs font-semibold transition-all duration-200 sm:text-sm ${
                           active
                             ? 'bg-white text-emerald-600 shadow-sm dark:bg-zinc-700 dark:text-emerald-400'
                             : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200'
                         }`}
                       >
+                        <MarketplaceLogo marketplace={p.id} size="xs" />
                         {p.short}
                       </button>
                     );
@@ -970,7 +972,7 @@ export default function SEOKeywords() {
             <div className="rounded-2xl border border-zinc-200/80 bg-white/80 p-5 shadow-xl backdrop-blur-xl dark:border-zinc-800/80 dark:bg-zinc-900/80">
               <div className="mb-3 flex items-center gap-2 select-none">
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-emerald-500/20 bg-emerald-500/10">
-                  <ShoppingBag className="h-4 w-4 text-emerald-500 dark:text-emerald-400" />
+                  <MarketplaceLogo marketplace={platform} size="sm" />
                 </div>
                 <div className="min-w-0">
                   <h3 className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">

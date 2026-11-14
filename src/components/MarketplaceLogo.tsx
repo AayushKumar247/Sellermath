@@ -1,13 +1,32 @@
 import { useState } from 'react';
 
 interface MarketplaceLogoProps {
-  id: string;
-  size?: 'sm' | 'md' | 'lg';
+  id?: string;
+  marketplace?: string;
+  platform?: string;
+  name?: string;
+  size?: 'xs' | 'sm' | 'md' | 'lg';
   className?: string;
 }
 
-export default function MarketplaceLogo({ id, size = 'md', className = '' }: MarketplaceLogoProps) {
+export default function MarketplaceLogo({ id, marketplace, platform, name, size = 'md', className = '' }: MarketplaceLogoProps) {
   const [imgError, setImgError] = useState(false);
+
+  const rawKey = (marketplace || platform || id || name || '').toLowerCase().trim();
+
+  const normalizeKey = (key: string): string => {
+    if (key.includes('flipkart')) return 'flipkart';
+    if (key.includes('meesho')) return 'meesho';
+    if (key.includes('myntra')) return 'myntra';
+    if (key.includes('blinkit')) return 'blinkit';
+    if (key.includes('zepto')) return 'zepto';
+    if (key.includes('instamart') || key.includes('swiggy')) return 'instamart';
+    if (key.includes('snapdeal')) return 'snapdeal';
+    if (key.includes('amazon')) return 'amazon';
+    return 'amazon';
+  };
+
+  const logoId = normalizeKey(rawKey);
 
   const logoUrls: Record<string, string> = {
     amazon: 'https://www.google.com/s2/favicons?domain=amazon.in&sz=128',
@@ -20,7 +39,7 @@ export default function MarketplaceLogo({ id, size = 'md', className = '' }: Mar
     snapdeal: 'https://www.google.com/s2/favicons?domain=snapdeal.com&sz=128',
   };
 
-  const logoUrl = logoUrls[id] || logoUrls.amazon;
+  const logoUrl = logoUrls[logoId] || logoUrls.amazon;
 
   const brandColors: Record<string, string> = {
     amazon: '#FB923C',
@@ -45,26 +64,28 @@ export default function MarketplaceLogo({ id, size = 'md', className = '' }: Mar
   };
 
   const sizeClasses = {
+    xs: 'w-5 h-5',
     sm: 'w-6 h-6',
     md: 'w-7 h-7 sm:w-9 sm:h-9 md:w-10 md:h-10',
     lg: 'w-7 h-7 sm:w-10 sm:h-10 md:w-12 md:h-12',
   };
 
   const fontSizes = {
+    xs: 'text-[10px]',
     sm: 'text-xs',
     md: 'text-sm',
     lg: 'text-base',
   };
 
-  const bgColor = brandColors[id] || brandColors.amazon;
-  const initial = brandInitials[id] || brandInitials.amazon;
+  const bgColor = brandColors[logoId] || brandColors.amazon;
+  const initial = brandInitials[logoId] || brandInitials.amazon;
 
   return (
     <div className={`shrink-0 ${sizeClasses[size]} ${className}`}>
       {!imgError ? (
         <img
           src={logoUrl}
-          alt={id}
+          alt={logoId}
           className="w-full h-full object-contain rounded-2xl shadow-sm"
           onError={() => setImgError(true)}
         />

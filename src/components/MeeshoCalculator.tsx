@@ -10,8 +10,8 @@ import {
   RotateCcw,
   Percent,
   Info,
-  Calculator,
 } from 'lucide-react';
+import MarketplaceLogo from '@/components/MarketplaceLogo';
 
 function formatCurrency(val: number): string {
   const sign = val < 0 ? '-' : '';
@@ -110,8 +110,8 @@ export default function MeeshoCalculator() {
     <div className="space-y-8">
       <div>
         <div className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-            <Calculator className="w-5 h-5 text-white" />
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/20 p-1">
+            <MarketplaceLogo marketplace="meesho" size="md" />
           </div>
           <div>
             <h2 className="text-2xl font-bold text-slate-900">Meesho Return Loss Calculator</h2>

@@ -4,7 +4,7 @@ import {
   ChevronRight, TrendingUp, RefreshCcw, Layers, ShieldCheck, Zap,
   CheckCircle2, X, Sliders, RotateCw, FlipHorizontal, FlipVertical,
   Gauge, Type, Move, Sparkles, Contrast as ContrastIcon, Package,
-  ArrowLeftRight, Sun, Droplet, Camera, Target,
+  ArrowLeftRight, Sun, Droplet, Camera, Target, Frame,
 } from 'lucide-react';
 import MarketplaceLogo from '@/components/MarketplaceLogo';
 
@@ -22,6 +22,9 @@ interface DrawOpts {
   shadowEnabled: boolean; shadowIntensity: number;
   watermarkText: string; watermarkPos: 'br' | 'bl' | 'tr' | 'tl' | 'c';
   watermarkOpacity: number; watermarkSize: number;
+  sharpness: number;
+  borderWidth: number;
+  borderColor: string;
 }
 interface BatchResult { presetId: string; label: string; url: string; blob: Blob; sizeKB: number; width: number; height: number; }
 interface ImageResizerProps { onNavigate?: (page: string) => void; }
@@ -50,7 +53,40 @@ const FORMATS: FormatOption[] = [
 ];
 
 /* ================================================================== */
-/* Pure render function — shared by preview, download, batch export  */
+/* Sharpening — 5-tap unsharp mask convolution                        */
+/* ================================================================== */
+function applySharpen(ctx: CanvasRenderingContext2D, w: number, h: number, strength: number) {
+  if (strength <= 0 || w < 3 || h < 3) return;
+  try {
+    const imgData = ctx.getImageData(0, 0, w, h);
+    const src = imgData.data;
+    const dst = new Uint8ClampedArray(src);
+    const s = Math.min(1, Math.max(0, strength / 100));
+    const w4 = w * 4;
+
+    for (let y = 1; y < h - 1; y++) {
+      for (let x = 1; x < w - 1; x++) {
+        const i = (y * w + x) * 4;
+        if (src[i + 3] === 0) continue;
+        for (let c = 0; c < 3; c++) {
+          const center = src[i + c];
+          const sum =
+            src[i - w4 + c] + src[i + w4 + c] +
+            src[i - 4 + c] + src[i + 4 + c];
+          const val = center * (1 + 4 * s) - s * sum;
+          dst[i + c] = val < 0 ? 0 : val > 255 ? 255 : val;
+        }
+      }
+    }
+    imgData.data.set(dst);
+    ctx.putImageData(imgData, 0, 0);
+  } catch (e) {
+    console.warn('Sharpen skipped:', e);
+  }
+}
+
+/* ================================================================== */
+/* Pure render — shared by preview, download, batch                   */
 /* ================================================================== */
 function drawToCanvas(canvas: HTMLCanvasElement, img: HTMLImageElement, opts: DrawOpts) {
   const { targetW: tW, targetH: tH } = opts;
@@ -61,29 +97,30 @@ function drawToCanvas(canvas: HTMLCanvasElement, img: HTMLImageElement, opts: Dr
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
 
-  // Background
+  // 1. Background
   if (opts.bgColor === 'transparent') ctx.clearRect(0, 0, tW, tH);
   else { ctx.fillStyle = opts.bgColor; ctx.fillRect(0, 0, tW, tH); }
 
-  // Effective padding (pad mode only)
+  // 2. Padding
   const effPad = opts.fitMode === 'pad' ? opts.paddingPct : 0;
   const padPx = Math.round(Math.min(tW, tH) * (effPad / 100));
   const areaW = Math.max(1, tW - padPx * 2);
   const areaH = Math.max(1, tH - padPx * 2);
 
-  // Rotated source dimensions
+  // 3. Rotated dimensions
   const sideways = opts.rotation === 90 || opts.rotation === 270;
   const srcW = sideways ? img.height : img.width;
   const srcH = sideways ? img.width : img.height;
 
-  // Scale
+  // 4. Scale
   const scale = opts.fitMode === 'pad'
     ? Math.min(areaW / srcW, areaH / srcH)
     : Math.max(areaW / srcW, areaH / srcH);
-  const drawW = Math.max(1, img.width * scale);   // unrotated width
-  const drawH = Math.max(1, img.height * scale);  // unrotated height
+  const drawW = Math.max(1, img.width * scale);
+  const drawH = Math.max(1, img.height * scale);
 
-  // Filters
+  // 5. Draw image (filter + shadow isolated by save/restore)
+  ctx.save();
   if (opts.brightness !== 100 || opts.contrast !== 100 || opts.saturation !== 100) {
     ctx.filter = `brightness(${opts.brightness}%) contrast(${opts.contrast}%) saturate(${opts.saturation}%)`;
   }
@@ -92,15 +129,28 @@ function drawToCanvas(canvas: HTMLCanvasElement, img: HTMLImageElement, opts: Dr
     ctx.shadowBlur = Math.max(8, Math.min(tW, tH) * 0.035);
     ctx.shadowOffsetY = Math.max(4, Math.min(tW, tH) * 0.018);
   }
-  ctx.save();
   ctx.translate(tW / 2, tH / 2);
   ctx.rotate((opts.rotation * Math.PI) / 180);
   ctx.scale(opts.flipH ? -1 : 1, opts.flipV ? -1 : 1);
   ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
   ctx.restore();
-  ctx.filter = 'none';
 
-  // Watermark
+  // 6. Sharpening
+  if (opts.sharpness > 0) applySharpen(ctx, tW, tH, opts.sharpness);
+
+  // 7. Border frame (stroke sits fully inside canvas)
+  if (opts.borderWidth > 0) {
+    ctx.strokeStyle = opts.borderColor;
+    ctx.lineWidth = opts.borderWidth;
+    ctx.strokeRect(
+      opts.borderWidth / 2,
+      opts.borderWidth / 2,
+      tW - opts.borderWidth,
+      tH - opts.borderWidth,
+    );
+  }
+
+  // 8. Watermark
   const wm = opts.watermarkText.trim();
   if (wm) {
     const fs = Math.max(12, Math.round(tW * (opts.watermarkSize / 100)));
@@ -125,16 +175,12 @@ function drawToCanvas(canvas: HTMLCanvasElement, img: HTMLImageElement, opts: Dr
   }
 }
 
-/* Approx KB from base64 data URL — instant fallback until blob resolves */
 const dataUrlToKB = (url: string): number => {
   const commaIdx = url.indexOf(',');
   const b64Len = url.length - commaIdx - 1;
   return Math.max(1, Math.round((b64Len * 3) / 4 / 1024));
 };
 
-/* NOTE: `Image` from lucide-react is imported as `ImageIcon`, and we use
-   `window.Image` here so the browser's real HTMLImageElement constructor is
-   always used (the old code was calling the lucide icon component). */
 const loadImgFromUrl = (src: string): Promise<HTMLImageElement> =>
   new Promise((resolve, reject) => {
     const i = new window.Image();
@@ -166,14 +212,14 @@ export default function ImageResizer({ onNavigate }: ImageResizerProps) {
     { id: 'free',    icon: <CheckCircle2 className="w-5 h-5" />, title: '100% Free Forever', desc: 'No watermarks, no daily limits, no sign-up walls, and zero annoying popup ads.' },
   ];
 
-  /* ---------- SOURCE STATE (pure state, triggers re-renders) ---------- */
+  /* ---------- SOURCE ---------- */
   const [sourceDataUrl, setSourceDataUrl] = useState<string | null>(null);
   const [sourceDims, setSourceDims] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
   const [sourceSizeKB, setSourceSizeKB] = useState<number>(0);
   const [sourceMime, setSourceMime] = useState<string>('image/jpeg');
   const [sourceFileName, setSourceFileName] = useState<string>('');
 
-  /* ---------- OUTPUT STATE ---------- */
+  /* ---------- OUTPUT ---------- */
   const [renderedDataUrl, setRenderedDataUrl] = useState<string | null>(null);
   const [outputBlob, setOutputBlob] = useState<Blob | null>(null);
   const [estimatedKB, setEstimatedKB] = useState<number>(0);
@@ -198,11 +244,16 @@ export default function ImageResizer({ onNavigate }: ImageResizerProps) {
   const [brightness, setBrightness] = useState(100);
   const [contrast, setContrast] = useState(100);
   const [saturation, setSaturation] = useState(100);
+  const [sharpness, setSharpness] = useState(0);
   const [rotation, setRotation] = useState(0);
   const [flipH, setFlipH] = useState(false);
   const [flipV, setFlipV] = useState(false);
   const [shadowEnabled, setShadowEnabled] = useState(false);
   const [shadowIntensity, setShadowIntensity] = useState(50);
+
+  /* ---------- BORDER ---------- */
+  const [borderWidth, setBorderWidth] = useState(0);
+  const [borderColor, setBorderColor] = useState('#000000');
 
   /* ---------- WATERMARK ---------- */
   const [watermarkText, setWatermarkText] = useState('');
@@ -246,7 +297,6 @@ export default function ImageResizer({ onNavigate }: ImageResizerProps) {
     return ['image/png', 'image/jpeg', 'image/webp'].includes(sourceMime) ? sourceMime : 'image/png';
   }, [format, formatOption, sourceMime]);
 
-  // JPEG cannot encode alpha
   const resolvedBgColor = useMemo(
     () => (format === 'jpg' && bgColor === 'transparent' ? '#FFFFFF' : bgColor),
     [format, bgColor],
@@ -265,15 +315,15 @@ export default function ImageResizer({ onNavigate }: ImageResizerProps) {
     brightness, contrast, saturation, rotation, flipH, flipV,
     shadowEnabled, shadowIntensity,
     watermarkText, watermarkPos, watermarkOpacity, watermarkSize,
+    sharpness, borderWidth, borderColor,
   }), [targetDims, fitMode, paddingPct, resolvedBgColor, brightness, contrast,
        saturation, rotation, flipH, flipV, shadowEnabled, shadowIntensity,
-       watermarkText, watermarkPos, watermarkOpacity, watermarkSize]);
+       watermarkText, watermarkPos, watermarkOpacity, watermarkSize,
+       sharpness, borderWidth, borderColor]);
 
   /* ================================================================ */
   /* EFFECTS                                                          */
   /* ================================================================ */
-
-  // Sync custom dims with preset selection
   useEffect(() => {
     if (activeTab === 'presets') {
       const p = PRESETS.find((x) => x.id === activePreset);
@@ -281,7 +331,6 @@ export default function ImageResizer({ onNavigate }: ImageResizerProps) {
     }
   }, [activeTab, activePreset]);
 
-  // BULLETPROOF RENDER: always synchronous offscreen canvas → dataURL → state
   useEffect(() => {
     if (!sourceDataUrl) return;
     let cancelled = false;
@@ -299,14 +348,11 @@ export default function ImageResizer({ onNavigate }: ImageResizerProps) {
         const qArg = (activeMime === 'image/jpeg' || activeMime === 'image/webp')
           ? quality / 100 : undefined;
 
-        // Initial dataURL (guaranteed to exist)
         let dataUrl = canvas.toDataURL(activeMime, qArg);
         let kb = dataUrlToKB(dataUrl);
 
-        // Target KB compression via binary search on quality
         if (
-          targetKB > 0 &&
-          kb > targetKB &&
+          targetKB > 0 && kb > targetKB &&
           (activeMime === 'image/jpeg' || activeMime === 'image/webp')
         ) {
           let lo = 5, hi = quality, bestUrl = dataUrl, bestKB = kb;
@@ -325,7 +371,6 @@ export default function ImageResizer({ onNavigate }: ImageResizerProps) {
         setRenderedDataUrl(dataUrl);
         setEstimatedKB(kb);
 
-        // Blob for download — resolves slightly after dataURL
         canvas.toBlob((blob) => {
           if (cancelled || !blob) return;
           setOutputBlob(blob);
@@ -336,7 +381,7 @@ export default function ImageResizer({ onNavigate }: ImageResizerProps) {
       } finally {
         if (!cancelled) setIsResizing(false);
       }
-    }, 60);
+    }, 100);
 
     return () => { cancelled = true; clearTimeout(timer); };
   }, [sourceDataUrl, drawOpts, activeMime, quality, targetKB]);
@@ -344,11 +389,8 @@ export default function ImageResizer({ onNavigate }: ImageResizerProps) {
   /* ================================================================ */
   /* HANDLERS                                                         */
   /* ================================================================ */
-
-  // Shared loader for File objects (file input + drag & drop)
   const processFile = (file: File) => {
     if (!file || !file.type.startsWith('image/')) return;
-
     const reader = new FileReader();
     reader.onload = () => {
       const dataUrl = reader.result as string;
@@ -375,7 +417,7 @@ export default function ImageResizer({ onNavigate }: ImageResizerProps) {
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    e.target.value = ''; // allow same-file re-selection
+    e.target.value = '';
     if (!file) return;
     processFile(file);
   };
@@ -388,19 +430,16 @@ export default function ImageResizer({ onNavigate }: ImageResizerProps) {
     const ctx = c.getContext('2d');
     if (!ctx) return;
 
-    // Bg gradient
     const grad = ctx.createLinearGradient(0, 0, 800, 1000);
     grad.addColorStop(0, '#f0fdf4');
     grad.addColorStop(1, '#dcfce7');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, 800, 1000);
 
-    // Decor
     ctx.fillStyle = 'rgba(16, 185, 129, 0.12)';
     ctx.beginPath(); ctx.arc(650, 150, 120, 0, Math.PI * 2); ctx.fill();
     ctx.beginPath(); ctx.arc(150, 850, 140, 0, Math.PI * 2); ctx.fill();
 
-    // Bottle body (safe path — no roundRect)
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
     ctx.moveTo(320, 280);
@@ -415,13 +454,11 @@ export default function ImageResizer({ onNavigate }: ImageResizerProps) {
     ctx.lineWidth = 3;
     ctx.stroke();
 
-    // Cap
     ctx.fillStyle = '#10b981';
     ctx.fillRect(336, 220, 128, 60);
     ctx.fillStyle = '#059669';
     ctx.fillRect(332, 280, 136, 10);
 
-    // Label
     ctx.fillStyle = '#f0fdf4';
     ctx.fillRect(340, 450, 120, 200);
     ctx.fillStyle = '#047857';
@@ -436,11 +473,9 @@ export default function ImageResizer({ onNavigate }: ImageResizerProps) {
     ctx.fillText('STAINLESS', 400, 590);
     ctx.fillText('STEEL', 400, 615);
 
-    // Highlight
     ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
     ctx.fillRect(356, 320, 10, 100);
 
-    // Badge
     ctx.fillStyle = 'rgba(16, 185, 129, 0.18)';
     ctx.fillRect(120, 80, 210, 60);
     ctx.fillStyle = '#047857';
@@ -476,6 +511,7 @@ export default function ImageResizer({ onNavigate }: ImageResizerProps) {
       height: effectiveAspect != null && lockAspect ? Math.max(1, Math.round(v / effectiveAspect)) : p.height,
     }));
   }, [effectiveAspect, lockAspect]);
+
   const handleHeightChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const v = Math.max(1, Math.min(4096, Number(e.target.value) || 1));
     setCustomDims((p) => ({
@@ -483,6 +519,7 @@ export default function ImageResizer({ onNavigate }: ImageResizerProps) {
       height: v,
     }));
   }, [effectiveAspect, lockAspect]);
+
   const toggleLockAspect = useCallback(() => {
     setLockAspect((prev) => {
       const next = !prev;
@@ -514,7 +551,6 @@ export default function ImageResizer({ onNavigate }: ImageResizerProps) {
       document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(url), 200);
     } else if (renderedDataUrl) {
-      // DataURL fallback — always works
       const a = document.createElement('a');
       a.download = filename;
       a.href = renderedDataUrl;
@@ -548,11 +584,14 @@ export default function ImageResizer({ onNavigate }: ImageResizerProps) {
     setBrightness(100);
     setContrast(100);
     setSaturation(100);
+    setSharpness(0);
     setRotation(0);
     setFlipH(false);
     setFlipV(false);
     setShadowEnabled(false);
     setShadowIntensity(50);
+    setBorderWidth(0);
+    setBorderColor('#000000');
     setWatermarkText('');
     setWatermarkPos('br');
     setWatermarkOpacity(60);
@@ -589,10 +628,12 @@ export default function ImageResizer({ onNavigate }: ImageResizerProps) {
       setBatchLoading(false);
     }
   };
+
   const closeBatchModal = () => {
     setBatchResults((prev) => { prev.forEach((r) => URL.revokeObjectURL(r.url)); return []; });
     setShowBatchModal(false);
   };
+
   const downloadBatchItem = (item: BatchResult) => {
     const ext = getExt();
     const a = document.createElement('a');
@@ -607,6 +648,7 @@ export default function ImageResizer({ onNavigate }: ImageResizerProps) {
     if (onNavigate) return onNavigate('listing-optimizer');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [onNavigate]);
+
   const handleCalcProfit = useCallback(() => {
     if (onNavigate) return onNavigate('calculator');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -614,13 +656,52 @@ export default function ImageResizer({ onNavigate }: ImageResizerProps) {
 
   /* ---------- COMPLIANCE ---------- */
   const complianceChecks = useMemo(() => ([
-    { id: 'res',  label: 'Resolution ≥ 1000px', sub: 'Amazon Zoom Eligible',
-      pass: Math.max(targetDims.width, targetDims.height) >= 1000 },
-    { id: 'bg',   label: 'Pure White #FFFFFF Background', sub: 'Amazon Main Image Compliant',
-      pass: resolvedBgColor.toUpperCase() === '#FFFFFF' },
-    { id: 'size', label: 'File Weight < 500 KB', sub: estimatedKB > 0 ? `Current: ${estimatedKB} KB` : 'Processing…',
-      pass: estimatedKB > 0 && estimatedKB < 500 },
+    {
+      id: 'res', label: 'Resolution ≥ 1000px', sub: 'Amazon Zoom Eligible',
+      pass: Math.max(targetDims.width, targetDims.height) >= 1000,
+    },
+    {
+      id: 'bg', label: 'Pure White #FFFFFF Background', sub: 'Amazon Main Image Compliant',
+      pass: resolvedBgColor.toUpperCase() === '#FFFFFF',
+    },
+    {
+      id: 'size', label: 'File Weight < 500 KB',
+      sub: estimatedKB > 0 ? `Current: ${estimatedKB} KB` : 'Processing…',
+      pass: estimatedKB > 0 && estimatedKB < 500,
+    },
   ]), [targetDims, resolvedBgColor, estimatedKB]);
+
+  const allPass = complianceChecks.every((c) => c.pass);
+
+  /* ---------- 1-CLICK AUTO-FIX ---------- */
+  const autoFixCompliance = useCallback(() => {
+    setBgMode('white');
+    setCustomHex('#FFFFFF');
+    setPaddingPct(7.5);
+
+    const longest = Math.max(targetDims.width, targetDims.height);
+    if (longest < 1000) {
+      const ratio = targetDims.width / targetDims.height;
+      let newW: number, newH: number;
+      if (ratio >= 1) {
+        newW = 1000;
+        newH = Math.max(1, Math.round(1000 / ratio));
+      } else {
+        newH = 1000;
+        newW = Math.max(1, Math.round(1000 * ratio));
+      }
+      setActiveTab('custom');
+      setCustomDims({ width: newW, height: newH });
+    }
+
+    if (estimatedKB > 500) {
+      if (format === 'png') {
+        setFormat('jpg');
+        setQuality(92);
+      }
+      setTargetKB(480);
+    }
+  }, [targetDims, format, estimatedKB]);
 
   /* ================================================================ */
   /* RENDER                                                           */
@@ -630,10 +711,11 @@ export default function ImageResizer({ onNavigate }: ImageResizerProps) {
   const previewSrc = showOriginal ? sourceDataUrl : (renderedDataUrl || sourceDataUrl);
   const hasSource = !!sourceDataUrl;
   const canDownload = !!renderedDataUrl;
+  const showPngTip = format === 'png' && estimatedKB > 500;
 
   return (
-    <div className="w-full max-w-[1360px] mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 space-y-10 overflow-x-hidden select-none box-border">
-      {/* ALWAYS-MOUNTED hidden input — never unmounts */}
+    <div className="w-full max-w-[1360px] mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-6 sm:space-y-8 overflow-x-hidden select-none box-border">
+      {/* ALWAYS-MOUNTED hidden input */}
       <input
         ref={fileInputRef}
         type="file"
@@ -642,27 +724,35 @@ export default function ImageResizer({ onNavigate }: ImageResizerProps) {
         onChange={handleFileInputChange}
       />
 
-      {/* ============ PAGE HEADER ============ */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 tracking-tight">
-            Product Image Resizer
-          </h1>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
-            Resize product photos for Amazon, Flipkart, Meesho &amp; Myntra — 100% client-side.
-          </p>
+      {/* ============ HERO HEADER ============ */}
+      <div className="rounded-2xl border border-emerald-200/70 dark:border-emerald-500/20 bg-gradient-to-br from-emerald-50 via-white to-teal-50 dark:from-emerald-950/40 dark:via-zinc-900 dark:to-teal-950/20 p-5 sm:p-6 lg:p-8 shadow-sm overflow-hidden relative">
+        <div className="absolute -top-16 -right-16 w-64 h-64 rounded-full bg-emerald-400/20 blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-16 -left-16 w-56 h-56 rounded-full bg-teal-400/15 blur-3xl pointer-events-none" />
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="min-w-0">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 border border-emerald-300/50 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold uppercase tracking-wider mb-3">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Product Studio • 100% Client-Side Privacy
+            </div>
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-zinc-900 dark:text-zinc-50 tracking-tight leading-tight mb-2">
+              Marketplace Product Image Resizer &amp; Compliance Studio
+            </h1>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400 max-w-2xl leading-relaxed">
+              Convert any raw phone or supplier photo into Amazon, Flipkart, Meesho &amp; Myntra compliant catalog listings with 1-click white background, 85% frame rule, and smart KB compression.
+            </p>
+          </div>
+          {hasSource && (
+            <button
+              onClick={handleReset}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border border-zinc-200/80 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700 flex-shrink-0 shadow-sm self-start sm:self-center"
+            >
+              <RotateCcw className="w-3.5 h-3.5" /> Start Over
+            </button>
+          )}
         </div>
-        {hasSource && (
-          <button
-            onClick={handleReset}
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border border-zinc-200/80 dark:border-zinc-800/80 hover:bg-zinc-200 dark:hover:bg-zinc-700 flex-shrink-0"
-          >
-            <RotateCcw className="w-3 h-3" /> Start Over
-          </button>
-        )}
       </div>
 
-      {/* ============ SECTION 1: DROPZONE / STUDIO ============ */}
+      {/* ============ DROPZONE / STUDIO ============ */}
       {!hasSource ? (
         <section className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-sm overflow-hidden">
           <div
@@ -717,11 +807,10 @@ export default function ImageResizer({ onNavigate }: ImageResizerProps) {
           </div>
         </section>
       ) : (
-        // ============ SECTION 1: STUDIO EDITOR ============
         <section className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-sm overflow-hidden">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 items-start">
-            {/* ===== LEFT: STICKY PREVIEW + TOOLBAR + COMPLIANCE ===== */}
-            <div className="lg:col-span-7 min-w-0 p-5 sm:p-8 lg:sticky lg:top-24 self-start border-b lg:border-b-0 lg:border-r border-zinc-200/50 dark:border-zinc-800/40">
+            {/* ===== LEFT: STICKY PREVIEW + COMPLIANCE ===== */}
+            <div className="lg:col-span-7 min-w-0 p-5 sm:p-8 lg:sticky lg:top-20 self-start border-b lg:border-b-0 lg:border-r border-zinc-200/50 dark:border-zinc-800/40">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">Live Studio Preview</h2>
                 <span className={`text-[11px] px-2 py-0.5 rounded-full font-bold ${showOriginal ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300' : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400'}`}>
@@ -729,7 +818,6 @@ export default function ImageResizer({ onNavigate }: ImageResizerProps) {
                 </span>
               </div>
 
-              {/* Source / Target stats */}
               <div className="grid grid-cols-2 gap-3 mb-4">
                 <div className="flex flex-col gap-0.5 min-w-0">
                   <span className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400">Source</span>
@@ -752,7 +840,6 @@ export default function ImageResizer({ onNavigate }: ImageResizerProps) {
                 </div>
               </div>
 
-              {/* Checkerboard preview — REAL <img>, always visible */}
               <div
                 className="relative w-full rounded-xl overflow-hidden bg-[linear-gradient(45deg,#e5e7eb_25%,transparent_25%),linear-gradient(-45deg,#e5e7eb_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#e5e7eb_75%),linear-gradient(-45deg,transparent_75%,#e5e7eb_75%)] bg-[length:16px_16px] dark:bg-[linear-gradient(45deg,#374151_25%,transparent_25%),linear-gradient(-45deg,#374151_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#4b5563_75%),linear-gradient(-45deg,transparent_75%,#4b5563_75%)] dark:bg-[length:16px_16px] ring-1 ring-zinc-200/50 dark:ring-zinc-800/50 flex items-center justify-center p-2 sm:p-3"
                 style={{ aspectRatio: targetRatio, maxHeight: 440 }}
@@ -825,7 +912,7 @@ export default function ImageResizer({ onNavigate }: ImageResizerProps) {
                 </button>
               </div>
 
-              {/* COMPLIANCE CHECKLIST */}
+              {/* COMPLIANCE CHECKLIST + AUTO-FIX */}
               <div className="mt-4 rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-3.5">
                 <div className="flex items-center gap-1.5 mb-2.5">
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
@@ -843,6 +930,22 @@ export default function ImageResizer({ onNavigate }: ImageResizerProps) {
                       </div>
                     </div>
                   ))}
+                </div>
+                <div className="mt-3">
+                  {allPass ? (
+                    <div className="flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-300/60 dark:border-emerald-500/30">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                      <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400">100% Marketplace Compliant ✓</span>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={autoFixCompliance}
+                      className="w-full flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white text-[11px] font-bold shadow-md shadow-emerald-500/30 transition-all"
+                    >
+                      <Zap className="w-3 h-3 flex-shrink-0" />
+                      <span className="leading-tight">1-Click Make 100% Amazon/Flipkart Compliant</span>
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -997,6 +1100,7 @@ export default function ImageResizer({ onNavigate }: ImageResizerProps) {
                             { icon: <Sun className="w-3.5 h-3.5" />, label: 'Brightness', value: brightness, set: setBrightness, min: 50, max: 150 },
                             { icon: <ContrastIcon className="w-3.5 h-3.5" />, label: 'Contrast', value: contrast, set: setContrast, min: 50, max: 150 },
                             { icon: <Droplet className="w-3.5 h-3.5" />, label: 'Saturation', value: saturation, set: setSaturation, min: 0, max: 200 },
+                            { icon: <Zap className="w-3.5 h-3.5" />, label: 'Sharpness', value: sharpness, set: setSharpness, min: 0, max: 100 },
                           ].map(({ icon, label, value, set, min, max }) => (
                             <div key={label}>
                               <div className="flex items-center justify-between mb-1">
@@ -1008,6 +1112,7 @@ export default function ImageResizer({ onNavigate }: ImageResizerProps) {
                           ))}
                         </div>
                       </div>
+
                       {/* Orientation */}
                       <div>
                         <div className="flex items-center gap-1.5 mb-2">
@@ -1026,6 +1131,7 @@ export default function ImageResizer({ onNavigate }: ImageResizerProps) {
                           </button>
                         </div>
                       </div>
+
                       {/* Layout: shadow */}
                       <div>
                         <div className="flex items-center justify-between">
@@ -1046,6 +1152,38 @@ export default function ImageResizer({ onNavigate }: ImageResizerProps) {
                           </div>
                         )}
                       </div>
+
+                      {/* CATALOG BORDER */}
+                      <div>
+                        <div className="flex items-center gap-1.5 mb-2">
+                          <Frame className="w-3.5 h-3.5 text-zinc-500" />
+                          <span className="text-[10px] font-bold text-zinc-700 dark:text-zinc-200 uppercase tracking-wide">Catalog Border</span>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-medium text-zinc-600 dark:text-zinc-300">Thickness</span>
+                            <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">{borderWidth}px</span>
+                          </div>
+                          <input
+                            type="range" min={0} max={20} value={borderWidth}
+                            onChange={(e) => setBorderWidth(Number(e.target.value))}
+                            className="w-full accent-emerald-500 h-1.5 bg-zinc-200 dark:bg-zinc-700 rounded-lg appearance-none cursor-pointer"
+                          />
+                          {borderWidth > 0 && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] text-zinc-500 dark:text-zinc-400">Color</span>
+                              <input
+                                type="color"
+                                value={borderColor}
+                                onChange={(e) => setBorderColor(e.target.value)}
+                                className="w-7 h-7 rounded border-none p-0 cursor-pointer"
+                              />
+                              <span className="text-[10px] text-zinc-500 dark:text-zinc-400 font-mono">{borderColor.toUpperCase()}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
                       {/* Watermark */}
                       <div>
                         <div className="flex items-center gap-1.5 mb-2">
@@ -1111,6 +1249,17 @@ export default function ImageResizer({ onNavigate }: ImageResizerProps) {
                     </div>
                     <input type="range" min={10} max={100} value={quality} onChange={(e) => setQuality(Number(e.target.value))} className="w-full accent-emerald-500 h-1.5 bg-zinc-200 dark:bg-zinc-700 rounded-lg appearance-none cursor-pointer" />
                   </div>
+
+                  {/* PNG size warning */}
+                  {showPngTip && (
+                    <div className="flex items-start gap-2 px-2.5 py-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-300/60 dark:border-amber-500/30">
+                      <Zap className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                      <p className="text-[10px] font-medium text-amber-800 dark:text-amber-300 leading-snug">
+                        Tip: Switch to JPG or WEBP for &lt;500 KB marketplace compliance. PNG is lossless and ignores the Quality slider.
+                      </p>
+                    </div>
+                  )}
+
                   <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg border border-zinc-200/80 dark:border-zinc-800/80 bg-zinc-50 dark:bg-zinc-800/30">
                     <div className="flex items-center gap-1.5">
                       <Gauge className="w-3.5 h-3.5 text-zinc-500" />

@@ -1,42 +1,47 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import MarketplaceLogo from '@/components/MarketplaceLogo';
 
-type ExportMode = 'transparent' | 'white';
+type ExportMode = 'transparent' | 'white' | 'black';
 type Ratio = 'free' | '1:1' | '3:4';
 type OutSize = 'original' | 1000 | 1440 | 1500 | 2000;
 type Status = 'idle' | 'processing' | 'done';
 type ViewMode = 'result' | 'compare';
 
-const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB — big raw camera files can freeze mobile browsers
+const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB
 
-/* ───────────── Daily credit limiter (localStorage, auto-resets at local midnight) ───────────── */
+/* ───────────── Dev mode + daily credit limiter ───────────── */
+
+const DEV_MODE = (() => {
+  try {
+    return Boolean((import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV);
+  } catch {
+    return false;
+  }
+})();
 
 const CREDITS_KEY = 'sellermath_bg_credits';
 const NEWSLETTER_KEY = 'sellermath_newsletter';
 const WAITLIST_KEY = 'sellermath_pro_waitlist';
-const BASE_DAILY_LIMIT = 5;
-const BONUS_DAILY_LIMIT = 10;
+const BASE_DAILY_LIMIT = 999;       // ↑ from 5
+const BONUS_DAILY_LIMIT = 1004;     // ↑ from 10
 
 interface Credits {
-  date: string; // YYYY-MM-DD (user's local calendar day)
+  date: string;
   used: number;
   bonusUnlocked: boolean;
 }
 
 export interface AIBackgroundRemoverProps {
-  /** Optional hook to send captured leads to your backend (Supabase, Mailchimp, etc.). */
   onLeadCapture?: (kind: 'bonus' | 'waitlist', value: string) => void;
 }
 
 const pad2 = (n: number) => String(n).padStart(2, '0');
 
-/** Local calendar day, so "midnight" really means the seller's midnight (IST for Indian users). */
 function todayKey() {
   const d = new Date();
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
 
-// In-memory mirror: keeps limits working in the session even if localStorage is blocked (private mode).
 let memoryCredits: Credits | null = null;
 
 function writeCredits(c: Credits) {
@@ -44,11 +49,16 @@ function writeCredits(c: Credits) {
   try {
     localStorage.setItem(CREDITS_KEY, JSON.stringify(c));
   } catch {
-    /* storage unavailable — memory mirror still enforces the limit this session */
+    /* storage unavailable */
   }
 }
 
 function readCredits(): Credits {
+  // Dev mode: always fresh + unlocked, never lock during development
+  if (DEV_MODE) {
+    return { date: todayKey(), used: 0, bonusUnlocked: true };
+  }
+
   const today = todayKey();
   let saved: Credits | null = null;
   try {
@@ -60,11 +70,10 @@ function readCredits(): Credits {
       }
     }
   } catch {
-    /* corrupt JSON or blocked storage — fall through */
+    /* ignore */
   }
   if (!saved) saved = memoryCredits;
 
-  // New calendar day (or first visit) → automatic reset
   if (!saved || saved.date !== today) {
     const fresh: Credits = { date: today, used: 0, bonusUnlocked: false };
     writeCredits(fresh);
@@ -73,9 +82,9 @@ function readCredits(): Credits {
   return saved;
 }
 
-/** +1 used credit. Called ONLY after background removal succeeds. */
 function consumeCredit(): Credits {
   const c = readCredits();
+  if (DEV_MODE) return c; // never consume in dev
   const next = { ...c, used: c.used + 1 };
   writeCredits(next);
   return next;
@@ -117,7 +126,8 @@ function resetTimeLabel() {
   }
   return 'midnight (your local time)';
 }
-const MAX_INPUT_SIDE = 4096; // downscale huge photos before AI for speed + memory
+
+const MAX_INPUT_SIDE = 4096;
 const IMAGE_EXT = /\.(png|jpe?g|webp|gif|bmp|avif|heic|heif)$/i;
 const NATIVE_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 const RATIO_VALUE: Record<Exclude<Ratio, 'free'>, number> = { '1:1': 1, '3:4': 0.75 };
@@ -128,7 +138,6 @@ interface Settings {
   padding: number;
 }
 
-/** One-tap marketplace presets. */
 const PRESETS: { id: string; label: string; emoji: string; hint: string; s: Settings }[] = [
   { id: 'amazon', label: 'Amazon', emoji: '📦', hint: '2000×2000 · white', s: { ratio: '1:1', size: 2000, padding: 6 } },
   { id: 'flipkart', label: 'Flipkart', emoji: '🛍️', hint: '1500×1500 · white', s: { ratio: '1:1', size: 1500, padding: 8 } },
@@ -159,10 +168,6 @@ function formatBytes(n: number) {
   return `${(n / 1024 / 1024).toFixed(1)} MB`;
 }
 
-/**
- * Normalises any input (HEIC from iPhone, GIF, AVIF, huge camera photos…)
- * into a PNG/JPEG/WEBP that is at most MAX_INPUT_SIDE px on its longest edge.
- */
 async function normalizeInput(file: File): Promise<File> {
   const needsConvert = !NATIVE_TYPES.includes(file.type);
   const url = URL.createObjectURL(file);
@@ -186,11 +191,11 @@ async function normalizeInput(file: File): Promise<File> {
   }
 }
 
-/** Tight bounding box of non-transparent pixels (computed on a small copy for speed). */
-function findSubjectBox(img: HTMLImageElement) {
+/** Tight bounding box of non-transparent pixels. */
+function findSubjectBox(img: HTMLImageElement, alphaThreshold = 12) {
   const w = img.naturalWidth;
   const h = img.naturalHeight;
-  const probe = Math.min(1, 800 / Math.max(w, h));
+  const probe = Math.min(1, 900 / Math.max(w, h));
   const pw = Math.max(1, Math.round(w * probe));
   const ph = Math.max(1, Math.round(h * probe));
   const c = document.createElement('canvas');
@@ -204,7 +209,7 @@ function findSubjectBox(img: HTMLImageElement) {
   let minX = pw, minY = ph, maxX = -1, maxY = -1;
   for (let y = 0; y < ph; y++) {
     for (let x = 0; x < pw; x++) {
-      if (data[(y * pw + x) * 4 + 3] > 12) {
+      if (data[(y * pw + x) * 4 + 3] > alphaThreshold) {
         if (x < minX) minX = x;
         if (x > maxX) maxX = x;
         if (y < minY) minY = y;
@@ -222,21 +227,269 @@ function findSubjectBox(img: HTMLImageElement) {
   };
 }
 
-interface RenderOpts extends Settings {
-  mode: ExportMode;
-  quality: number; // 0.7-1
+/* ═══════════════════════ Removal: cloud → isnet_fp16 ═══════════════════════ */
+
+async function removeBackgroundWithFallback(
+  file: File,
+  onProgress?: (pct: number) => void,
+): Promise<Blob> {
+  const env = import.meta.env as unknown as Record<string, string | undefined>;
+  const apiKey = (env.VITE_REMOVE_BG_API_KEY || '').trim();
+
+  if (apiKey) {
+    try {
+      const form = new FormData();
+      form.append('image_file', file);
+      form.append('size', 'auto');
+      const res = await fetch('https://api.remove.bg/v1.0/removebg', {
+        method: 'POST',
+        headers: { 'X-Api-Key': apiKey },
+        body: form,
+      });
+      if (res.ok) {
+        const cloudBlob = await res.blob();
+        if (cloudBlob.type.startsWith('image/')) {
+          onProgress?.(100);
+          return cloudBlob;
+        }
+        console.warn('[bg-remover] remove.bg returned non-image:', cloudBlob.type);
+      } else {
+        console.warn('[bg-remover] remove.bg non-OK:', res.status);
+      }
+    } catch (e) {
+      console.warn('[bg-remover] remove.bg network error, falling back locally:', e);
+    }
+  }
+
+  const { removeBackground } = await import('@imgly/background-removal');
+  return removeBackground(file, {
+    model: 'isnet_fp16',
+    output: { format: 'image/png', quality: 1 },
+    progress: (_key: string, current: number, total: number) => {
+      if (onProgress && total > 0) {
+        onProgress(Math.min(100, Math.round((current / total) * 100)));
+      }
+    },
+  });
 }
 
-/** Composites the transparent cut-out into the final export blob. */
-async function renderExport(cutout: Blob, o: RenderOpts): Promise<{ blob: Blob; w: number; h: number }> {
+/* ═══════════════════ Post-process: alpha matting + islands ═══════════════════ */
+
+interface PostProcessOpts {
+  strength: number;      // 0–100 (0 = gentle, 100 = aggressive)
+  removeFloating: boolean;
+}
+
+async function postProcessCutout(input: Blob, opts: PostProcessOpts): Promise<Blob> {
+  const url = URL.createObjectURL(input);
+  try {
+    const img = await loadImage(url);
+    const w = img.naturalWidth;
+    const h = img.naturalHeight;
+    if (!w || !h) return input;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return input;
+
+    ctx.drawImage(img, 0, 0);
+    const imageData = ctx.getImageData(0, 0, w, h);
+    const data = imageData.data;
+
+    // strength 0 → floor 85; strength 50 → floor 115; strength 100 → floor 145
+    const floor = 85 + opts.strength * 0.6;
+    const EDGE_TOP = 215;
+    const EDGE_SPAN = EDGE_TOP - floor;
+    const DECON_BOOST = 0.15;
+
+    for (let i = 0; i < data.length; i += 4) {
+      const a = data[i + 3];
+
+      // 1) Hard background floor
+      if (a < floor) {
+        data[i + 3] = 0;
+        continue;
+      }
+
+      // 2) Smoothstep S-curve on edge band
+      let newA: number;
+      if (a <= EDGE_TOP) {
+        const t = (a - floor) / EDGE_SPAN;
+        const s = t * t * (3 - 2 * t);
+        newA = Math.round(s * 255);
+      } else {
+        newA = 255;
+      }
+      data[i + 3] = newA;
+
+      // 3) Edge color decontamination
+      if (newA > 0 && newA < 240) {
+        for (let c = 0; c < 3; c++) {
+          const v = data[i + c];
+          const pushed = v < 128 ? v - (128 - v) * DECON_BOOST : v + (v - 128) * DECON_BOOST;
+          data[i + c] = v === 0 || v === 255 ? v : Math.max(0, Math.min(255, Math.round(pushed)));
+        }
+      }
+    }
+
+    // 4) Connected-region filter — remove disconnected artifacts
+    if (opts.removeFloating) {
+      removeFloatingIslands(imageData, 30);
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+    const blob = await canvasToBlob(canvas, 'image/png');
+    return blob || input;
+  } catch (err) {
+    console.warn('[bg-remover] post-process failed:', err);
+    return input;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+/**
+ * 4-connected flood-fill. Keeps the largest component + components ≥ 3%
+ * of the largest (or ≥ 200px). Zeros small disconnected islands.
+ * Mutates `imageData.data` in place.
+ */
+function removeFloatingIslands(imageData: ImageData, alphaThreshold = 30): void {
+  const { width, height, data } = imageData;
+  const total = width * height;
+  const labels = new Int32Array(total).fill(-1);
+  const stack = new Int32Array(total);
+  const sizes: number[] = [];
+  let nextLabel = 0;
+
+  for (let start = 0; start < total; start++) {
+    if (labels[start] !== -1) continue;
+    if (data[start * 4 + 3] < alphaThreshold) {
+      labels[start] = -2;
+      continue;
+    }
+    let top = 0;
+    stack[top++] = start;
+    labels[start] = nextLabel;
+    let size = 0;
+
+    while (top > 0) {
+      const cur = stack[--top];
+      size++;
+      const cx = cur % width;
+      const cy = (cur - cx) / width;
+
+      if (cy > 0) {
+        const n = cur - width;
+        if (labels[n] === -1 && data[n * 4 + 3] >= alphaThreshold) {
+          labels[n] = nextLabel;
+          stack[top++] = n;
+        }
+      }
+      if (cy < height - 1) {
+        const n = cur + width;
+        if (labels[n] === -1 && data[n * 4 + 3] >= alphaThreshold) {
+          labels[n] = nextLabel;
+          stack[top++] = n;
+        }
+      }
+      if (cx > 0) {
+        const n = cur - 1;
+        if (labels[n] === -1 && data[n * 4 + 3] >= alphaThreshold) {
+          labels[n] = nextLabel;
+          stack[top++] = n;
+        }
+      }
+      if (cx < width - 1) {
+        const n = cur + 1;
+        if (labels[n] === -1 && data[n * 4 + 3] >= alphaThreshold) {
+          labels[n] = nextLabel;
+          stack[top++] = n;
+        }
+      }
+    }
+    sizes.push(size);
+    nextLabel++;
+  }
+
+  if (sizes.length <= 1) return;
+
+  let maxSize = 0;
+  for (const s of sizes) if (s > maxSize) maxSize = s;
+  const minKeep = Math.max(200, maxSize * 0.03);
+
+  for (let i = 0; i < total; i++) {
+    const l = labels[i];
+    if (l >= 0 && sizes[l] < minKeep) {
+      data[i * 4 + 3] = 0;
+    }
+  }
+}
+
+/* ═══════════════════════ Export compositing ═══════════════════════ */
+
+interface RenderOpts extends Settings {
+  mode: ExportMode;
+  quality: number;
+  autoCenter: boolean;
+  contactShadow: boolean;
+}
+
+function drawEllipseShadow(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  rx: number,
+  ry: number,
+  alpha: number,
+) {
+  if (rx < 1 || ry < 1 || alpha <= 0) return;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.scale(rx, ry);
+  const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
+  grad.addColorStop(0, `rgba(0, 0, 0, ${alpha})`);
+  grad.addColorStop(0.55, `rgba(0, 0, 0, ${alpha * 0.4})`);
+  grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(0, 0, 1, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+async function renderExport(
+  cutout: Blob,
+  o: RenderOpts,
+): Promise<{ blob: Blob; w: number; h: number }> {
   const srcUrl = URL.createObjectURL(cutout);
   try {
     const img = await loadImage(srcUrl);
+
+    // Auto-center uses stricter threshold; padding mode uses gentle
+    const box = findSubjectBox(img, o.autoCenter ? 40 : 12);
+
     let sx = 0, sy = 0, sw = img.naturalWidth, sh = img.naturalHeight;
     let cw: number, ch: number, dx: number, dy: number, dw: number, dh: number;
 
-    if (o.ratio !== 'free') {
-      const box = findSubjectBox(img);
+    if (o.autoCenter && o.ratio !== 'free') {
+      // Tight crop to bbox, scale to fill 85% of the target frame
+      sx = box.x; sy = box.y; sw = box.w; sh = box.h;
+      const targetFill = 0.85;
+      const r = RATIO_VALUE[o.ratio];
+      const outH = o.size === 'original' ? Math.min(4096, Math.max(Math.ceil(sh / targetFill), Math.ceil((sw / targetFill) / r))) : o.size;
+      ch = outH;
+      cw = Math.round(outH * r);
+      const maxW = cw * targetFill;
+      const maxH = ch * targetFill;
+      const scale = Math.min(maxW / sw, maxH / sh);
+      dw = Math.round(sw * scale);
+      dh = Math.round(sh * scale);
+      dx = Math.round((cw - dw) / 2);
+      dy = Math.round((ch - dh) / 2);
+    } else if (o.ratio !== 'free') {
+      // Legacy padding-based mode (respects user padding %)
       sx = box.x; sy = box.y; sw = box.w; sh = box.h;
       const r = RATIO_VALUE[o.ratio];
       const inner = 1 - 2 * (o.padding / 100);
@@ -261,18 +514,36 @@ async function renderExport(cutout: Blob, o: RenderOpts): Promise<{ blob: Blob; 
     canvas.height = ch;
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('Canvas 2D context unavailable');
+    ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
 
+    // Exact background fill
     if (o.mode === 'white') {
       ctx.fillStyle = '#FFFFFF';
       ctx.fillRect(0, 0, cw, ch);
+    } else if (o.mode === 'black') {
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, cw, ch);
+    } else {
+      ctx.clearRect(0, 0, cw, ch);
     }
+
+    // Dual-layer contact shadow (only on solid backgrounds)
+    if (o.contactShadow && o.mode !== 'transparent' && dw > 0 && dh > 0) {
+      const cx = dx + dw / 2;
+      const baseY = dy + dh;
+      // Ambient — wide, soft
+      drawEllipseShadow(ctx, cx, baseY - dh * 0.015, dw * 0.44, dh * 0.07, 0.22);
+      // Contact — tight, darker
+      drawEllipseShadow(ctx, cx, baseY - dh * 0.005, dw * 0.30, dh * 0.035, 0.38);
+    }
+
     ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
 
     const blob =
-      o.mode === 'white'
-        ? await canvasToBlob(canvas, 'image/jpeg', o.quality)
-        : await canvasToBlob(canvas, 'image/png');
+      o.mode === 'transparent'
+        ? await canvasToBlob(canvas, 'image/png')
+        : await canvasToBlob(canvas, 'image/jpeg', o.quality);
     if (!blob) throw new Error('Failed to encode image');
     return { blob, w: cw, h: ch };
   } finally {
@@ -327,7 +598,6 @@ function Badge({ ok, children }: { ok: boolean; children: React.ReactNode }) {
   );
 }
 
-/** Before/after slider. Uses a transparent native range input on top → mouse, touch AND keyboard all work. */
 function CompareSlider({ before, after }: { before: string; after: string }) {
   const [pos, setPos] = useState(50);
   return (
@@ -359,7 +629,6 @@ function CompareSlider({ before, after }: { before: string; after: string }) {
   );
 }
 
-/** Live credit counter pill: emerald → amber (≤2 left) → rose (0 left). */
 function CreditPill({ remaining, limit, bonus }: { remaining: number; limit: number; bonus: boolean }) {
   const tone = remaining === 0 ? 'rose' : remaining <= 2 ? 'amber' : 'emerald';
   const styles = {
@@ -376,7 +645,8 @@ function CreditPill({ remaining, limit, bonus }: { remaining: number; limit: num
       bar: 'bg-gradient-to-r from-rose-500 to-rose-600',
     },
   }[tone];
-  const pct = limit > 0 ? (remaining / limit) * 100 : 0;
+  const pct = limit > 0 ? Math.min(100, (remaining / limit) * 100) : 0;
+  const label = limit >= 10000 ? '∞' : String(limit);
 
   return (
     <div
@@ -385,9 +655,7 @@ function CreditPill({ remaining, limit, bonus }: { remaining: number; limit: num
       className={`w-full lg:w-auto lg:min-w-[270px] lg:max-w-xs flex-shrink-0 rounded-2xl border px-3.5 py-2.5 backdrop-blur transition-colors ${styles.box}`}
     >
       <div className="flex flex-wrap items-center gap-x-1.5 text-sm font-semibold">
-        <span>
-          ⚡ {remaining} / {limit} Free Daily Cutouts Left
-        </span>
+        <span>⚡ {remaining} / {label} Free Daily Cutouts Left</span>
         <span className="text-xs font-normal opacity-80">• Resets at Midnight</span>
       </div>
       <div
@@ -400,7 +668,7 @@ function CreditPill({ remaining, limit, bonus }: { remaining: number; limit: num
       >
         <div className={`h-full rounded-full transition-all duration-500 ${styles.bar}`} style={{ width: `${pct}%` }} />
       </div>
-      {bonus && <p className="mt-1.5 text-[11px] opacity-80">🎁 +5 bonus cutouts active today</p>}
+      {bonus && <p className="mt-1.5 text-[11px] opacity-80">🎁 Bonus cutouts active today</p>}
     </div>
   );
 }
@@ -411,6 +679,10 @@ export default function AIBackgroundRemover({ onLeadCapture }: AIBackgroundRemov
   const [status, setStatus] = useState<Status>('idle');
   const [originalUrl, setOriginalUrl] = useState<string | null>(null);
   const [originalMeta, setOriginalMeta] = useState<{ name: string; size: number; w?: number; h?: number } | null>(null);
+
+  // rawCutout = AI output before post-processing
+  // cutout    = post-processed (and possibly eraser-edited) master
+  const [rawCutout, setRawCutout] = useState<Blob | null>(null);
   const [cutout, setCutout] = useState<Blob | null>(null);
   const [cutoutUrl, setCutoutUrl] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -422,27 +694,46 @@ export default function AIBackgroundRemover({ onLeadCapture }: AIBackgroundRemov
   const [isDragging, setIsDragging] = useState(false);
   const [view, setView] = useState<ViewMode>('result');
 
-  // Daily credits + lead capture
+  // Credits
   const [credits, setCredits] = useState<Credits>(() => readCredits());
   const [leadInput, setLeadInput] = useState<string>(() => readSavedLead());
   const [leadError, setLeadError] = useState<string | null>(null);
   const [waitlistJoined, setWaitlistJoined] = useState<boolean>(() => isWaitlisted());
 
-  // Export controls
+  // Export
   const [exportMode, setExportMode] = useState<ExportMode>('white');
   const [ratio, setRatio] = useState<Ratio>('1:1');
   const [padding, setPadding] = useState(6);
   const [size, setSize] = useState<OutSize>(2000);
   const [quality, setQuality] = useState(0.95);
 
+  // Post-processing
+  const [cleanupStrength, setCleanupStrength] = useState(50);
+  const [removeFloating, setRemoveFloating] = useState(true);
+
+  // Auto-center + shadow
+  const [autoCenter, setAutoCenter] = useState(true);
+  const [contactShadow, setContactShadow] = useState(true);
+
+  // Eraser
+  const [eraserMode, setEraserMode] = useState(false);
+  const [brushSize, setBrushSize] = useState(30);
+  const [isErasing, setIsErasing] = useState(false);
+  const [undoStack, setUndoStack] = useState<Blob[]>([]);
+  const [eraserDims, setEraserDims] = useState<{ w: number; h: number } | null>(null);
+  const [pointerPos, setPointerPos] = useState<{ x: number; y: number } | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const eraserCanvasRef = useRef<HTMLCanvasElement>(null);
   const originalUrlRef = useRef<string | null>(null);
   const cutoutUrlRef = useRef<string | null>(null);
   const previewUrlRef = useRef<string | null>(null);
   const runIdRef = useRef(0);
   const dragDepthRef = useRef(0);
   const toastTimer = useRef<number | null>(null);
+  const processedSettingsRef = useRef<{ strength: number; removeFloating: boolean }>({ strength: -1, removeFloating: false });
+  const wasEraserModeRef = useRef(false);
 
   const flash = useCallback((msg: string, ms = 2600) => {
     setToast(msg);
@@ -458,13 +749,14 @@ export default function AIBackgroundRemover({ onLeadCapture }: AIBackgroundRemov
   }, []);
 
   const clearAll = useCallback(() => {
-    runIdRef.current++; // cancels any in-flight job
+    runIdRef.current++;
     [originalUrlRef, cutoutUrlRef, previewUrlRef].forEach((r) => {
       if (r.current) URL.revokeObjectURL(r.current);
       r.current = null;
     });
     setOriginalUrl(null);
     setOriginalMeta(null);
+    setRawCutout(null);
     setCutout(null);
     setCutoutUrl(null);
     setPreviewUrl(null);
@@ -473,6 +765,10 @@ export default function AIBackgroundRemover({ onLeadCapture }: AIBackgroundRemov
     setProgress(null);
     setView('result');
     setStatus('idle');
+    setEraserMode(false);
+    setUndoStack([]);
+    setEraserDims(null);
+    processedSettingsRef.current = { strength: -1, removeFloating: false };
   }, []);
 
   /* ── main pipeline ── */
@@ -480,7 +776,6 @@ export default function AIBackgroundRemover({ onLeadCapture }: AIBackgroundRemov
     async (file: File) => {
       setError(null);
 
-      // Daily credit guard — read fresh from storage so a stale render can never bypass it.
       const fresh = readCredits();
       if (fresh.used >= (fresh.bonusUnlocked ? BONUS_DAILY_LIMIT : BASE_DAILY_LIMIT)) {
         setCredits(fresh);
@@ -493,7 +788,6 @@ export default function AIBackgroundRemover({ onLeadCapture }: AIBackgroundRemov
         return;
       }
 
-      // File size guard (applies to upload, camera, drag & drop AND paste)
       if (file.size > MAX_FILE_BYTES) {
         flash('File exceeds 10MB limit. Please upload a JPG/PNG/WEBP under 10MB.', 5000);
         return;
@@ -512,24 +806,23 @@ export default function AIBackgroundRemover({ onLeadCapture }: AIBackgroundRemov
         const prepared = await normalizeInput(file);
         if (myRun !== runIdRef.current) return;
 
-        // Dynamic import keeps the heavy model bundle out of the main chunk.
-        const { removeBackground } = await import('@imgly/background-removal');
-        const blob = await removeBackground(prepared, {
-          progress: (_key: string, current: number, total: number) => {
-            if (myRun === runIdRef.current && total > 0) {
-              setProgress(Math.min(100, Math.round((current / total) * 100)));
-            }
-          },
+        const rawBlob = await removeBackgroundWithFallback(prepared, (pct) => {
+          if (myRun === runIdRef.current) setProgress(pct);
         });
         if (myRun !== runIdRef.current) return;
 
-        // Success → NOW spend one credit (failed removals never cost the seller anything).
+        const cleanedBlob = await postProcessCutout(rawBlob, { strength: cleanupStrength, removeFloating });
+        if (myRun !== runIdRef.current) return;
+
+        processedSettingsRef.current = { strength: cleanupStrength, removeFloating };
         setCredits(consumeCredit());
 
-        const cUrl = URL.createObjectURL(blob);
+        const cUrl = URL.createObjectURL(cleanedBlob);
         cutoutUrlRef.current = cUrl;
+        setRawCutout(rawBlob);
+        setCutout(cleanedBlob);
         setCutoutUrl(cUrl);
-        setCutout(blob);
+        setUndoStack([]);
         setStatus('done');
         flash('Background removed ✨');
       } catch (err) {
@@ -546,16 +839,41 @@ export default function AIBackgroundRemover({ onLeadCapture }: AIBackgroundRemov
         if (myRun === runIdRef.current) setProgress(null);
       }
     },
-    [clearAll, flash],
+    [clearAll, flash, cleanupStrength, removeFloating],
   );
 
-  /* ── live preview: re-render whenever cut-out or any export setting changes ── */
+  /* ── re-process when cleanup settings change ── */
+  useEffect(() => {
+    if (!rawCutout) return;
+    const prev = processedSettingsRef.current;
+    if (prev.strength === cleanupStrength && prev.removeFloating === removeFloating) return;
+    let cancelled = false;
+    const t = window.setTimeout(async () => {
+      const cleaned = await postProcessCutout(rawCutout, { strength: cleanupStrength, removeFloating });
+      if (cancelled) return;
+      processedSettingsRef.current = { strength: cleanupStrength, removeFloating };
+      if (cutoutUrlRef.current) URL.revokeObjectURL(cutoutUrlRef.current);
+      const u = URL.createObjectURL(cleaned);
+      cutoutUrlRef.current = u;
+      setCutout(cleaned);
+      setCutoutUrl(u);
+      setUndoStack([]);
+    }, 220);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+    };
+  }, [rawCutout, cleanupStrength, removeFloating]);
+
+  /* ── live preview ── */
   useEffect(() => {
     if (!cutout) return;
     let cancelled = false;
     const t = window.setTimeout(async () => {
       try {
-        const { blob, w, h } = await renderExport(cutout, { mode: exportMode, ratio, padding, size, quality });
+        const { blob, w, h } = await renderExport(cutout, {
+          mode: exportMode, ratio, padding, size, quality, autoCenter, contactShadow,
+        });
         if (cancelled) return;
         const url = URL.createObjectURL(blob);
         if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
@@ -574,10 +892,9 @@ export default function AIBackgroundRemover({ onLeadCapture }: AIBackgroundRemov
       cancelled = true;
       window.clearTimeout(t);
     };
-  }, [cutout, exportMode, ratio, padding, size, quality]);
+  }, [cutout, exportMode, ratio, padding, size, quality, autoCenter, contactShadow]);
 
-  /* ── input methods: picker / camera, page-wide drag & drop, paste ── */
-
+  /* ── input methods ── */
   useEffect(() => {
     const onPaste = (e: ClipboardEvent) => {
       const items = e.clipboardData?.items;
@@ -641,12 +958,11 @@ export default function AIBackgroundRemover({ onLeadCapture }: AIBackgroundRemov
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (file) void handleFile(file);
-      e.target.value = ''; // allow re-selecting the same file
+      e.target.value = '';
     },
     [handleFile],
   );
 
-  // "Paste" button — for phones/tablets where there is no Ctrl+V
   const pasteFromClipboard = useCallback(async () => {
     setError(null);
     try {
@@ -666,10 +982,10 @@ export default function AIBackgroundRemover({ onLeadCapture }: AIBackgroundRemov
     }
   }, [handleFile]);
 
-  /* ── output actions ── */
+  /* ── download / copy ── */
   const handleDownload = useCallback(() => {
     if (!previewBlob) return;
-    const ext = exportMode === 'white' ? 'jpg' : 'png';
+    const ext = exportMode === 'transparent' ? 'png' : 'jpg';
     const base = (originalMeta?.name || 'image').replace(/\.[^.]+$/, '').replace(/[^\w-]+/g, '-').slice(0, 40);
     const url = URL.createObjectURL(previewBlob);
     const a = document.createElement('a');
@@ -705,7 +1021,136 @@ export default function AIBackgroundRemover({ onLeadCapture }: AIBackgroundRemov
     }
   }, [previewBlob, flash]);
 
-  /* ── credits: midnight auto-reset, re-sync on tab focus, cross-tab sync ── */
+  /* ── eraser: init canvas when entering eraser mode ── */
+  useEffect(() => {
+    if (eraserMode && !wasEraserModeRef.current) {
+      // Entering eraser mode → reset undo stack
+      setUndoStack([]);
+    }
+    if (!eraserMode) {
+      setUndoStack([]);
+    }
+    wasEraserModeRef.current = eraserMode;
+  }, [eraserMode]);
+
+  useEffect(() => {
+    if (!eraserMode || !cutout) return;
+    const canvas = eraserCanvasRef.current;
+    if (!canvas) return;
+    let cancelled = false;
+    (async () => {
+      const url = URL.createObjectURL(cutout);
+      try {
+        const img = await loadImage(url);
+        if (cancelled) return;
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        setEraserDims({ w: img.naturalWidth, h: img.naturalHeight });
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eraserMode]);
+
+  const getCanvasCoords = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const canvas = eraserCanvasRef.current!;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    return {
+      x: (e.clientX - rect.left) * scaleX,
+      y: (e.clientY - rect.top) * scaleY,
+      scaleX,
+    };
+  };
+
+  const eraseAt = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const canvas = eraserCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const { x, y, scaleX } = getCanvasCoords(e);
+    const brushCanvasPx = brushSize * scaleX;
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.beginPath();
+    ctx.arc(x, y, brushCanvasPx / 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+  };
+
+  const handleEraserDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    const canvas = eraserCanvasRef.current;
+    if (!canvas) return;
+    try { canvas.setPointerCapture(e.pointerId); } catch { /* ignore */ }
+
+    // Snapshot for undo
+    canvas.toBlob((b) => {
+      if (b) setUndoStack((prev) => [...prev.slice(-19), b]);
+    }, 'image/png');
+
+    setIsErasing(true);
+    eraseAt(e);
+  };
+
+  const handleEraserMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    setPointerPos({ x: e.clientX, y: e.clientY });
+    if (!isErasing) return;
+    eraseAt(e);
+  };
+
+  const handleEraserUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!isErasing) return;
+    setIsErasing(false);
+    const canvas = eraserCanvasRef.current;
+    if (!canvas) return;
+    try { canvas.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
+
+    canvas.toBlob((b) => {
+      if (!b) return;
+      if (cutoutUrlRef.current) URL.revokeObjectURL(cutoutUrlRef.current);
+      const u = URL.createObjectURL(b);
+      cutoutUrlRef.current = u;
+      setCutout(b);
+      setCutoutUrl(u);
+    }, 'image/png');
+  };
+
+  const handleUndo = useCallback(async () => {
+    const prev = undoStack[undoStack.length - 1];
+    if (!prev) return;
+    setUndoStack((s) => s.slice(0, -1));
+    const canvas = eraserCanvasRef.current;
+    if (!canvas) return;
+    const url = URL.createObjectURL(prev);
+    try {
+      const img = await loadImage(url);
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      setEraserDims({ w: img.naturalWidth, h: img.naturalHeight });
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0);
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+    if (cutoutUrlRef.current) URL.revokeObjectURL(cutoutUrlRef.current);
+    const u = URL.createObjectURL(prev);
+    cutoutUrlRef.current = u;
+    setCutout(prev);
+    setCutoutUrl(u);
+  }, [undoStack]);
+
+  /* ── credits: midnight auto-reset + sync ── */
   useEffect(() => {
     const sync = () => setCredits(readCredits());
     let timer = 0;
@@ -718,13 +1163,8 @@ export default function AIBackgroundRemover({ onLeadCapture }: AIBackgroundRemov
       }, nextMidnight.getTime() - now.getTime());
     };
     schedule();
-
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') sync();
-    };
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === CREDITS_KEY) sync();
-    };
+    const onVisible = () => { if (document.visibilityState === 'visible') sync(); };
+    const onStorage = (e: StorageEvent) => { if (e.key === CREDITS_KEY) sync(); };
     document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('storage', onStorage);
     return () => {
@@ -734,7 +1174,7 @@ export default function AIBackgroundRemover({ onLeadCapture }: AIBackgroundRemov
     };
   }, []);
 
-  /* ── lead capture handlers ── */
+  /* ── leads ── */
   const submitLead = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault();
@@ -747,12 +1187,10 @@ export default function AIBackgroundRemover({ onLeadCapture }: AIBackgroundRemov
       setLeadError(null);
       try {
         localStorage.setItem(NEWSLETTER_KEY, JSON.stringify({ value: v, date: todayKey(), ts: Date.now() }));
-      } catch {
-        /* ignore — unlock still applies for this session */
-      }
+      } catch { /* ignore */ }
       onLeadCapture?.('bonus', v);
       setCredits(unlockBonus());
-      flash('🎉 +5 bonus cutouts unlocked for today!', 3500);
+      flash('🎉 Bonus cutouts unlocked for today!', 3500);
     },
     [leadInput, onLeadCapture, flash],
   );
@@ -761,21 +1199,18 @@ export default function AIBackgroundRemover({ onLeadCapture }: AIBackgroundRemov
     const v = readSavedLead() || leadInput.trim();
     try {
       localStorage.setItem(WAITLIST_KEY, JSON.stringify({ value: v, ts: Date.now() }));
-    } catch {
-      /* ignore */
-    }
+    } catch { /* ignore */ }
     onLeadCapture?.('waitlist', v);
     setWaitlistJoined(true);
     flash('✨ You’re on the SellerMath Pro waitlist!', 3500);
   }, [leadInput, onLeadCapture, flash]);
 
-  /* ── derived credit state ── */
+  /* ── derived state ── */
   const dailyLimit = credits.bonusUnlocked ? BONUS_DAILY_LIMIT : BASE_DAILY_LIMIT;
   const remainingCredits = Math.max(0, dailyLimit - credits.used);
   const limitReached = remainingCredits === 0;
   const resetLabel = resetTimeLabel();
 
-  /* ── derived UI state ── */
   const activePreset = PRESETS.find((p) => p.s.ratio === ratio && p.s.size === size && p.s.padding === padding)?.id;
   const applyPreset = (s: Settings) => {
     setRatio(s.ratio);
@@ -799,6 +1234,19 @@ export default function AIBackgroundRemover({ onLeadCapture }: AIBackgroundRemov
   const secondaryBtn =
     'rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-4 py-2.5 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-white dark:disabled:hover:bg-zinc-900';
 
+  // Preview bg only when NOT in eraser mode (eraser has its own bg layer)
+  const previewBgStyle: React.CSSProperties | undefined =
+    previewUrl && status === 'done' && view === 'result' && !eraserMode
+      ? exportMode === 'transparent'
+        ? CHECKER
+        : exportMode === 'black'
+          ? { backgroundColor: '#000000' }
+          : { backgroundColor: '#FFFFFF' }
+      : undefined;
+
+  const eraserBgStyle: React.CSSProperties =
+    exportMode === 'transparent' ? CHECKER : exportMode === 'black' ? { backgroundColor: '#000000' } : { backgroundColor: '#FFFFFF' };
+
   return (
     <div className="w-full max-w-[1360px] mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 box-border overflow-x-hidden">
       <style>{`
@@ -807,7 +1255,6 @@ export default function AIBackgroundRemover({ onLeadCapture }: AIBackgroundRemov
         @media (prefers-reduced-motion: reduce) { .bgr-anim { animation: none !important; } }
       `}</style>
 
-      {/* Full-page drop overlay */}
       {isDragging && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-emerald-500/10 backdrop-blur-sm pointer-events-none">
           <div className="rounded-3xl border-4 border-dashed border-emerald-500 bg-white/90 dark:bg-zinc-900/90 px-8 py-10 text-center shadow-2xl">
@@ -818,7 +1265,20 @@ export default function AIBackgroundRemover({ onLeadCapture }: AIBackgroundRemov
         </div>
       )}
 
-      {/* Toast */}
+      {/* Brush cursor indicator */}
+      {eraserMode && pointerPos && (
+        <div
+          className="pointer-events-none fixed z-50 rounded-full border-2 border-emerald-500/70 bg-emerald-500/10"
+          style={{
+            left: pointerPos.x - brushSize / 2,
+            top: pointerPos.y - brushSize / 2,
+            width: brushSize,
+            height: brushSize,
+          }}
+          aria-hidden="true"
+        />
+      )}
+
       {toast && (
         <div
           role="status"
@@ -830,29 +1290,26 @@ export default function AIBackgroundRemover({ onLeadCapture }: AIBackgroundRemov
         </div>
       )}
 
-      {/* ─────────────────── Hero Header ─────────────────── */}
+      {/* ─── Hero Header ─── */}
       <div className="rounded-3xl border border-zinc-200/80 dark:border-zinc-800/80 bg-gradient-to-br from-white via-emerald-50/30 to-teal-50/20 dark:from-zinc-900/95 dark:via-zinc-900/90 dark:to-emerald-950/25 p-5 sm:p-7 shadow-sm mb-6">
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-        <div className="flex items-start gap-3 sm:gap-4 min-w-0">
-          <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-white text-xl sm:text-2xl shadow-lg shadow-emerald-500/25">
-            ✨
+          <div className="flex items-start gap-3 sm:gap-4 min-w-0">
+            <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-white text-xl sm:text-2xl shadow-lg shadow-emerald-500/25">
+              ✨
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-zinc-900 dark:text-zinc-100">
+                AI Background Remover &amp; Pure White Studio
+              </h1>
+              <p className="mt-1 sm:mt-2 text-sm sm:text-base text-zinc-600 dark:text-zinc-400">
+                Instantly strip backgrounds and export 100% pure white (#FFFFFF) compliant images for Amazon, Flipkart,
+                and Myntra. Runs securely in your browser.
+              </p>
+            </div>
           </div>
-          <div className="min-w-0">
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-zinc-900 dark:text-zinc-100">
-              AI Background Remover &amp; Pure White Studio
-            </h1>
-            <p className="mt-1 sm:mt-2 text-sm sm:text-base text-zinc-600 dark:text-zinc-400">
-              Instantly strip backgrounds and export 100% pure white (#FFFFFF) compliant images for Amazon, Flipkart,
-              and Myntra. Runs securely in your browser.
-            </p>
-          </div>
+          <CreditPill remaining={remainingCredits} limit={dailyLimit} bonus={credits.bonusUnlocked} />
         </div>
 
-        {/* Live daily credit counter (top-right on desktop, full-width under the title on mobile) */}
-        <CreditPill remaining={remainingCredits} limit={dailyLimit} bonus={credits.bonusUnlocked} />
-        </div>
-
-        {/* Progress stepper */}
         <div className="mt-4 flex gap-2 overflow-x-auto pb-1 -mb-1" aria-label="Progress">
           <StepPill n={1} label="Upload" state={step1} />
           <StepPill n={2} label="AI Cut-out" state={step2} />
@@ -860,8 +1317,8 @@ export default function AIBackgroundRemover({ onLeadCapture }: AIBackgroundRemov
         </div>
       </div>
 
-      {/* ─────────────────── Daily limit reached banner ─────────────────── */}
-      {limitReached && (
+      {/* ─── Daily limit banner (won't appear in DEV) ─── */}
+      {limitReached && !DEV_MODE && (
         <div
           role="alert"
           className="mb-6 rounded-3xl border border-rose-200/80 dark:border-rose-900/50 bg-gradient-to-br from-white/80 via-rose-50/60 to-amber-50/40 dark:from-zinc-900/80 dark:via-zinc-900/70 dark:to-rose-950/30 backdrop-blur p-4 sm:p-6 shadow-sm"
@@ -876,32 +1333,26 @@ export default function AIBackgroundRemover({ onLeadCapture }: AIBackgroundRemov
               </h2>
 
               {!credits.bonusUnlocked ? (
-                /* Option A — instant free unlock */
                 <>
                   <p className="mt-1 text-sm sm:text-base text-zinc-600 dark:text-zinc-400">
                     Drop your work email or store name and unlock <strong className="text-zinc-900 dark:text-zinc-100">+5 bonus cutouts</strong>{' '}
                     right now — free. Otherwise your quota resets automatically at {resetLabel}.
                   </p>
                   <form onSubmit={submitLead} noValidate className="mt-4 flex flex-col sm:flex-row gap-2">
-                    <label htmlFor="sellermath-lead" className="sr-only">
-                      Work email or store name
-                    </label>
+                    <label htmlFor="sellermath-lead" className="sr-only">Work email or store name</label>
                     <input
                       id="sellermath-lead"
                       type="text"
                       autoComplete="email"
                       value={leadInput}
-                      onChange={(e) => {
-                        setLeadInput(e.target.value);
-                        if (leadError) setLeadError(null);
-                      }}
+                      onChange={(e) => { setLeadInput(e.target.value); if (leadError) setLeadError(null); }}
                       placeholder="Work email or store name"
                       aria-invalid={leadError ? true : undefined}
                       className="min-w-0 flex-1 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-4 py-3 text-base text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
                     />
                     <button
                       type="submit"
-                      className="rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-500/25 transition-all active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
+                      className="rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-500/25 transition-all active:scale-[0.98]"
                     >
                       Unlock +5 Bonus Cutouts Today — Free
                     </button>
@@ -910,7 +1361,6 @@ export default function AIBackgroundRemover({ onLeadCapture }: AIBackgroundRemov
                   <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">No spam — just seller tips &amp; new SellerMath tools.</p>
                 </>
               ) : (
-                /* Option B — all 10/10 used */
                 <>
                   <p className="mt-1 text-sm sm:text-base text-zinc-600 dark:text-zinc-400">
                     You&apos;ve used all {BONUS_DAILY_LIMIT} daily cutouts! Your free quota resets automatically at {resetLabel}
@@ -923,7 +1373,7 @@ export default function AIBackgroundRemover({ onLeadCapture }: AIBackgroundRemov
                     <button
                       type="button"
                       onClick={joinWaitlist}
-                      className="mt-4 w-full sm:w-auto rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-500/25 transition-all active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
+                      className="mt-4 w-full sm:w-auto rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-500/25 transition-all active:scale-[0.98]"
                     >
                       ✨ Join SellerMath Pro Waitlist (Unlimited Bulk Cutouts)
                     </button>
@@ -935,10 +1385,10 @@ export default function AIBackgroundRemover({ onLeadCapture }: AIBackgroundRemov
         </div>
       )}
 
-      {/* ─────────────────── Two-column workspace ─────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        {/* ── LEFT: Upload ── */}
-        <section className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 sm:p-6 shadow-sm">
+      {/* ─── Two-column workspace ─── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 items-start">
+        {/* ── LEFT: Upload (sticky on desktop) ── */}
+        <section className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 sm:p-6 shadow-sm self-start lg:sticky lg:top-20">
           <h2 className="text-base sm:text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-3">Upload Product Photo</h2>
 
           <div
@@ -955,17 +1405,13 @@ export default function AIBackgroundRemover({ onLeadCapture }: AIBackgroundRemov
             }}
             className={`relative overflow-hidden rounded-2xl border-2 border-dashed transition-all cursor-pointer flex flex-col items-center justify-center text-center min-h-[300px] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
               limitReached ? 'opacity-60 pointer-events-none' : ''
-            } ${
-              originalUrl ? 'p-3 sm:p-4' : 'p-6 sm:p-10'
-            } ${
+            } ${originalUrl ? 'p-3 sm:p-4' : 'p-6 sm:p-10'} ${
               isDragging
                 ? 'border-emerald-500 bg-emerald-50/60 dark:bg-emerald-950/20 scale-[1.01]'
                 : 'border-zinc-300 dark:border-zinc-700 hover:border-emerald-400 dark:hover:border-emerald-600 bg-zinc-50/60 dark:bg-zinc-950/30'
             }`}
           >
-            {/* Gallery / desktop file picker */}
             <input ref={fileInputRef} type="file" accept="image/*" onChange={onFileInput} className="hidden" />
-            {/* Direct camera capture on phones & tablets */}
             <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={onFileInput} className="hidden" />
 
             {originalUrl ? (
@@ -1047,23 +1493,69 @@ export default function AIBackgroundRemover({ onLeadCapture }: AIBackgroundRemov
 
         {/* ── RIGHT: Result + Export ── */}
         <section className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 sm:p-6 shadow-sm">
-          <div className="mb-3 flex items-center justify-between gap-2">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-base sm:text-lg font-semibold text-zinc-900 dark:text-zinc-100">Result Preview</h2>
-            {status === 'done' && cutoutUrl && originalUrl && (
-              <div className="flex gap-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 p-1" role="tablist" aria-label="Preview mode">
-                <button type="button" role="tab" aria-selected={view === 'result'} onClick={() => setView('result')} className={segBtn(view === 'result')}>
-                  Result
+            <div className="flex items-center gap-2">
+              {status === 'done' && cutoutUrl && originalUrl && !eraserMode && (
+                <div className="flex gap-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 p-1" role="tablist" aria-label="Preview mode">
+                  <button type="button" role="tab" aria-selected={view === 'result'} onClick={() => setView('result')} className={segBtn(view === 'result')}>
+                    Result
+                  </button>
+                  <button type="button" role="tab" aria-selected={view === 'compare'} onClick={() => setView('compare')} className={segBtn(view === 'compare')}>
+                    Compare
+                  </button>
+                </div>
+              )}
+              {status === 'done' && cutout && (
+                <button
+                  type="button"
+                  onClick={() => setEraserMode((v) => !v)}
+                  aria-pressed={eraserMode}
+                  className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+                    eraserMode
+                      ? 'border-emerald-500 bg-emerald-500 text-white shadow-sm'
+                      : 'border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 hover:border-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-400'
+                  }`}
+                >
+                  {eraserMode ? '✓ Done Erasing' : '✏️ Erase Spots'}
                 </button>
-                <button type="button" role="tab" aria-selected={view === 'compare'} onClick={() => setView('compare')} className={segBtn(view === 'compare')}>
-                  Compare
+              )}
+            </div>
+          </div>
+
+          {/* Eraser controls */}
+          {eraserMode && (
+            <div className="mb-3 rounded-xl border border-emerald-200 dark:border-emerald-900/60 bg-emerald-50/60 dark:bg-emerald-950/20 px-3 py-2.5">
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-xs font-semibold text-emerald-800 dark:text-emerald-300 whitespace-nowrap">Brush</span>
+                  <input
+                    type="range"
+                    min={10}
+                    max={100}
+                    value={brushSize}
+                    onChange={(e) => setBrushSize(Number(e.target.value))}
+                    className="w-24 sm:w-32 accent-emerald-500"
+                    aria-label="Brush size"
+                  />
+                  <span className="text-xs font-mono text-emerald-700 dark:text-emerald-300 whitespace-nowrap">{brushSize}px</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void handleUndo()}
+                  disabled={undoStack.length === 0}
+                  className="ml-auto rounded-lg border border-emerald-300 dark:border-emerald-800 bg-white dark:bg-zinc-900 px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  ↺ Undo {undoStack.length > 0 && `(${undoStack.length})`}
                 </button>
               </div>
-            )}
-          </div>
+              <p className="mt-1.5 text-[11px] text-emerald-700/80 dark:text-emerald-300/80">Click or drag on the preview to erase unwanted spots.</p>
+            </div>
+          )}
 
           <div
             className="rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden min-h-[300px] flex items-center justify-center"
-            style={previewUrl && status === 'done' && view === 'result' ? (exportMode === 'transparent' ? CHECKER : { backgroundColor: '#FFFFFF' }) : undefined}
+            style={eraserMode ? eraserBgStyle : previewBgStyle}
           >
             {status === 'processing' ? (
               <div className="flex flex-col items-center gap-3 p-8 text-center">
@@ -1081,6 +1573,25 @@ export default function AIBackgroundRemover({ onLeadCapture }: AIBackgroundRemov
                 )}
                 <p className="text-xs text-zinc-400 dark:text-zinc-500">First run downloads the model · later runs are much faster</p>
               </div>
+            ) : eraserMode && cutout ? (
+              <div
+                className="relative w-full flex items-center justify-center p-2"
+                style={{
+                  aspectRatio: eraserDims ? `${eraserDims.w} / ${eraserDims.h}` : '1 / 1',
+                  maxHeight: '420px',
+                }}
+              >
+                <canvas
+                  ref={eraserCanvasRef}
+                  onPointerDown={handleEraserDown}
+                  onPointerMove={handleEraserMove}
+                  onPointerUp={handleEraserUp}
+                  onPointerCancel={handleEraserUp}
+                  onPointerLeave={() => setPointerPos(null)}
+                  className="max-w-full max-h-[420px] cursor-crosshair"
+                  style={{ touchAction: 'none', userSelect: 'none', objectFit: 'contain' }}
+                />
+              </div>
             ) : status === 'done' && view === 'compare' && cutoutUrl && originalUrl ? (
               <CompareSlider before={originalUrl} after={cutoutUrl} />
             ) : previewUrl && status === 'done' ? (
@@ -1094,15 +1605,19 @@ export default function AIBackgroundRemover({ onLeadCapture }: AIBackgroundRemov
             )}
           </div>
 
-          {status === 'done' && previewUrl && (
+          {status === 'done' && previewUrl && !eraserMode && (
             <div className="mt-4 space-y-4">
-              {/* Marketplace compliance badges */}
+              {/* Compliance badges */}
               <div className="flex flex-wrap items-center gap-2">
-                <Badge ok={exportMode === 'white'}>Pure white #FFFFFF</Badge>
+                {exportMode === 'black' ? (
+                  <Badge ok>Pure black #000000</Badge>
+                ) : (
+                  <Badge ok={exportMode === 'white'}>Pure white #FFFFFF</Badge>
+                )}
                 <Badge ok={minSide >= 1000}>{minSide >= 1000 ? '1000px+ (zoom ready)' : 'Under 1000px'}</Badge>
                 {previewDims && previewBlob && (
                   <span className="ml-auto text-xs text-zinc-500 dark:text-zinc-400">
-                    {previewDims.w}×{previewDims.h} · {formatBytes(previewBlob.size)} · {exportMode === 'white' ? 'JPEG' : 'PNG'}
+                    {previewDims.w}×{previewDims.h} · {formatBytes(previewBlob.size)} · {exportMode === 'transparent' ? 'PNG' : 'JPEG'}
                   </span>
                 )}
               </div>
@@ -1137,12 +1652,15 @@ export default function AIBackgroundRemover({ onLeadCapture }: AIBackgroundRemov
               </div>
 
               {/* Export mode toggle */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 p-1 rounded-xl bg-zinc-100 dark:bg-zinc-800">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 p-1 rounded-xl bg-zinc-100 dark:bg-zinc-800">
                 <button type="button" onClick={() => setExportMode('transparent')} className={segBtn(exportMode === 'transparent')}>
-                  Transparent Background (PNG)
+                  Transparent (PNG)
                 </button>
                 <button type="button" onClick={() => setExportMode('white')} className={segBtn(exportMode === 'white')}>
-                  Pure White Background (JPEG — Marketplace Compliant)
+                  Pure White (JPEG)
+                </button>
+                <button type="button" onClick={() => setExportMode('black')} className={segBtn(exportMode === 'black')}>
+                  Pure Black (JPEG)
                 </button>
               </div>
 
@@ -1151,6 +1669,60 @@ export default function AIBackgroundRemover({ onLeadCapture }: AIBackgroundRemov
                 <summary className="cursor-pointer text-sm font-semibold text-zinc-800 dark:text-zinc-200 select-none">⚙️ Fine-tune export</summary>
 
                 <div className="mt-3 space-y-4 text-sm text-zinc-700 dark:text-zinc-300">
+                  {/* Cleanup strength */}
+                  <label className="block">
+                    <span className="flex justify-between font-medium">
+                      <span>Cleanup Strength / Edge Matte</span>
+                      <span className="text-zinc-500 dark:text-zinc-400">{cleanupStrength}%</span>
+                    </span>
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      value={cleanupStrength}
+                      onChange={(e) => setCleanupStrength(Number(e.target.value))}
+                      className="mt-1 w-full accent-emerald-500"
+                    />
+                    <span className="mt-0.5 flex justify-between text-[10px] text-zinc-400 dark:text-zinc-500">
+                      <span>Gentle (0%)</span>
+                      <span>Aggressive (100%)</span>
+                    </span>
+                  </label>
+
+                  {/* Remove floating */}
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={removeFloating}
+                      onChange={(e) => setRemoveFloating(e.target.checked)}
+                      className="h-4 w-4 rounded accent-emerald-500"
+                    />
+                    <span className="text-sm font-medium">Remove Floating Artifacts</span>
+                  </label>
+
+                  {/* Auto-center */}
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={autoCenter}
+                      onChange={(e) => setAutoCenter(e.target.checked)}
+                      className="h-4 w-4 rounded accent-emerald-500"
+                    />
+                    <span className="text-sm font-medium">Auto-Center &amp; 85% Amazon Frame</span>
+                  </label>
+
+                  {/* Contact shadow */}
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={contactShadow}
+                      onChange={(e) => setContactShadow(e.target.checked)}
+                      className="h-4 w-4 rounded accent-emerald-500"
+                    />
+                    <span className="text-sm font-medium">Studio Contact Shadow</span>
+                  </label>
+
+                  {/* Frame shape */}
                   <div>
                     <span className="font-medium">Frame shape</span>
                     <div className="mt-1 grid grid-cols-3 gap-1 p-1 rounded-xl bg-zinc-100 dark:bg-zinc-800">
@@ -1162,7 +1734,7 @@ export default function AIBackgroundRemover({ onLeadCapture }: AIBackgroundRemov
                     </div>
                   </div>
 
-                  {ratio !== 'free' && (
+                  {ratio !== 'free' && !autoCenter && (
                     <label className="block">
                       <span className="flex justify-between font-medium">
                         <span>Padding around product</span>
@@ -1187,7 +1759,7 @@ export default function AIBackgroundRemover({ onLeadCapture }: AIBackgroundRemov
                     </select>
                   </label>
 
-                  {exportMode === 'white' && (
+                  {exportMode !== 'transparent' && (
                     <label className="block">
                       <span className="flex justify-between font-medium">
                         <span>JPEG quality</span>
@@ -1199,7 +1771,7 @@ export default function AIBackgroundRemover({ onLeadCapture }: AIBackgroundRemov
                 </div>
               </details>
 
-              {/* Actions — sticky on mobile so the main CTA is always in thumb reach */}
+              {/* Actions */}
               <div className="sticky bottom-3 z-10 space-y-2 rounded-2xl bg-white/80 dark:bg-zinc-900/80 backdrop-blur p-1 lg:static lg:bg-transparent lg:backdrop-blur-none lg:p-0">
                 <button
                   type="button"

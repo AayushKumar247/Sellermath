@@ -12,9 +12,12 @@ type MarketplacePreset = "amazon" | "flipkart" | "myntra" | "banner";
 type ExportFormat = "png" | "jpeg";
 type FrameShape = "square" | "portrait" | "landscape";
 type OutputSize = "original" | "1000" | "1440" | "1500" | "2000";
+type BackgroundMode = "white" | "black" | "transparent";
 
 interface GeneratedImage {
   url: string;
+  sceneUrl?: string;
+  cutoutUrl?: string;
   prompt: string;
   mode: StudioMode;
   aspect: AspectRatio;
@@ -179,9 +182,16 @@ function useUniversalImageInput(opts: UseUniversalImageInputOptions = {}) {
 /* ============================== Constants ================================ */
 
 const CREDITS_KEY = "sellermath_img_credits";
-const DAILY_CREDITS = 3;
+const DEV_MODE_KEY = "sellermath_dev_mode";
+const DAILY_CREDITS = 3;              // production default
+const DEV_DAILY_CREDITS = 999;        // dev / admin bypass
 const MAX_PROMPT = 500;
 const API_ENDPOINT = "/api/generate-image";
+
+const FLUX_PROMPT_SUFFIX =
+  ", commercial studio product photography backdrop, shallow depth of field, " +
+  "soft diffused key lighting, clean empty surface in foreground center for " +
+  "product placement, 8k photorealistic";
 
 const ASPECTS: Record<
   AspectRatio,
@@ -243,25 +253,71 @@ const msUntilMidnight = (): number => {
   return next.getTime() - now.getTime();
 };
 
-const readCredits = (): number => {
-  if (typeof window === "undefined") return DAILY_CREDITS;
+/* ----------------------- Dev/Admin vs Production split ------------------ */
+
+interface DailyLimitResolution {
+  limit: number;
+  isDev: boolean;
+}
+
+function resolveDailyLimit(): DailyLimitResolution {
+  let isDev = false;
+
+  // 1) Vite build-time dev flag
+  try {
+    const env = (import.meta as unknown as { env?: { DEV?: unknown } }).env;
+    const devFlag = env?.DEV;
+    if (devFlag === true || devFlag === "true") isDev = true;
+  } catch { /* ignore */ }
+
+  // 2) ?dev=true in URL (persists) + 3) sellermath_dev_mode localStorage
+  if (typeof window !== "undefined") {
+    try {
+      const url = new URL(window.location.href);
+      if (url.searchParams.get("dev") === "true") {
+        isDev = true;
+        try { window.localStorage.setItem(DEV_MODE_KEY, "true"); } catch { /* ignore */ }
+      }
+      if (window.localStorage.getItem(DEV_MODE_KEY) === "true") {
+        isDev = true;
+      }
+    } catch { /* ignore */ }
+  }
+
+  return {
+    limit: isDev ? DEV_DAILY_CREDITS : DAILY_CREDITS,
+    isDev,
+  };
+}
+
+const readCredits = (limit: number): number => {
+  if (typeof window === "undefined") return limit;
   try {
     const raw = window.localStorage.getItem(CREDITS_KEY);
-    if (!raw) return DAILY_CREDITS;
-    const parsed = JSON.parse(raw) as { date?: string; remaining?: number };
-    if (!parsed || parsed.date !== todayKey()) return DAILY_CREDITS;
+    if (!raw) return limit;
+    const parsed = JSON.parse(raw) as { date?: string; remaining?: number; limit?: number };
+    if (!parsed || parsed.date !== todayKey()) return limit;
+    // If the stored limit differs from the active one (e.g. legacy `3/3` data
+    // when we're now in dev mode with a 999 limit, or vice versa), reset to the
+    // new limit so the badge immediately reflects the correct budget.
+    const storedLimit =
+      typeof parsed.limit === "number" ? parsed.limit : DAILY_CREDITS;
+    if (storedLimit !== limit) return limit;
     const remaining = Number(parsed.remaining);
-    if (Number.isNaN(remaining)) return DAILY_CREDITS;
-    return Math.min(Math.max(Math.floor(remaining), 0), DAILY_CREDITS);
+    if (Number.isNaN(remaining)) return limit;
+    return Math.min(Math.max(Math.floor(remaining), 0), limit);
   } catch {
-    return DAILY_CREDITS;
+    return limit;
   }
 };
 
-const writeCredits = (remaining: number): void => {
+const writeCredits = (remaining: number, limit: number): void => {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(CREDITS_KEY, JSON.stringify({ date: todayKey(), remaining }));
+    window.localStorage.setItem(
+      CREDITS_KEY,
+      JSON.stringify({ date: todayKey(), remaining, limit })
+    );
   } catch {
     /* storage unavailable */
   }
@@ -292,117 +348,34 @@ const loadImage = (url: string): Promise<HTMLImageElement> =>
     img.src = url;
   });
 
-async function requestGeneration(
-  payload: { prompt: string; aspect: AspectRatio; mode: StudioMode },
-  file?: File | null
-): Promise<{ url: string; fallback: boolean }> {
-  try {
-    let res: Response;
-    if (file) {
-      const fd = new FormData();
-      fd.append("image", file);
-      fd.append("prompt", payload.prompt);
-      fd.append("aspect", payload.aspect);
-      fd.append("mode", payload.mode);
-      res = await fetch(API_ENDPOINT, { method: "POST", body: fd });
-    } else {
-      res = await fetch(API_ENDPOINT, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-    }
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    const url = data?.url ?? data?.imageUrl ?? data?.image;
-    if (!url || typeof url !== "string") throw new Error("Missing image URL");
-    return { url, fallback: false };
-  } catch {
-    const seed = Math.random().toString(36).slice(2, 10);
-    const { w, h } = ASPECTS[payload.aspect];
-    return { url: `https://picsum.photos/seed/${seed}/${w}/${h}`, fallback: true };
-  }
-}
+const loadImageFromBlob = (blob: Blob): Promise<HTMLImageElement> =>
+  new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(img);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Blob image load failed"));
+    };
+    img.src = url;
+  });
 
-/* ---------------------- Canvas export pipeline --------------------------- */
-
-interface ExportOptions {
-  resultUrl: string;
-  outputSize: OutputSize;
-  frameShape: FrameShape;
-  paddingPct: number;
-  warmthPct: number;
-  format: ExportFormat;
-}
-
-async function buildExportBlob(opts: ExportOptions): Promise<Blob> {
-  const img = await loadImage(opts.resultUrl);
-
-  const { w, h } = computeExportDims(opts.outputSize, opts.frameShape);
-  const canvas = document.createElement("canvas");
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Canvas 2D context unavailable");
-
-  // White padding background
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, w, h);
-
-  // Inner drawable area with padding
-  const padPx = Math.round(Math.min(w, h) * (opts.paddingPct / 100));
-  const innerW = Math.max(1, w - padPx * 2);
-  const innerH = Math.max(1, h - padPx * 2);
-  const imgAspect = img.width / img.height;
-  const innerAspect = innerW / innerH;
-
-  let drawW: number;
-  let drawH: number;
-  if (imgAspect > innerAspect) {
-    drawW = innerW;
-    drawH = innerW / imgAspect;
-  } else {
-    drawH = innerH;
-    drawW = innerH * imgAspect;
-  }
-  const dx = (w - drawW) / 2;
-  const dy = (h - drawH) / 2;
-
-  // Crop bottom strip where Pollinations logo/watermark may appear
-  const cropBottom = 35;
-  const sourceHeight = Math.max(1, img.height - cropBottom);
-  const drawHAdj = Math.max(1, drawH * (sourceHeight / img.height));
-  const dyAdj = dy + (drawH - drawHAdj) / 2;
-
-  ctx.drawImage(img, 0, 0, img.width, sourceHeight, dx, dyAdj, drawW, drawHAdj);
-
-  // Warmth tint (soft-light overlay) — matches live preview
-  if (opts.warmthPct !== 0) {
-    ctx.save();
-    ctx.globalCompositeOperation = "soft-light";
-    const alpha = (Math.abs(opts.warmthPct) / 20) * 0.35;
-    ctx.fillStyle =
-      opts.warmthPct > 0
-        ? `rgba(255, 180, 80, ${alpha})`
-        : `rgba(80, 180, 255, ${alpha})`;
-    ctx.beginPath();
-    ctx.rect(dx, dyAdj, drawW, drawHAdj);
-    ctx.clip();
-    ctx.fillRect(dx, dyAdj, drawW, drawHAdj);
-    ctx.restore();
-  }
-
-  const mime = opts.format === "jpeg" ? "image/jpeg" : "image/png";
-  const quality = opts.format === "jpeg" ? 0.95 : undefined;
-
-  return new Promise<Blob>((resolve, reject) => {
+const canvasToBlob = (
+  canvas: HTMLCanvasElement,
+  format: ExportFormat
+): Promise<Blob> =>
+  new Promise((resolve, reject) => {
+    const mime = format === "jpeg" ? "image/jpeg" : "image/png";
+    const quality = format === "jpeg" ? 0.95 : undefined;
     canvas.toBlob(
       (blob) => (blob ? resolve(blob) : reject(new Error("Canvas export failed"))),
       mime,
       quality
     );
   });
-}
 
 const downloadBlob = (blob: Blob, filename: string) => {
   const url = URL.createObjectURL(blob);
@@ -414,6 +387,479 @@ const downloadBlob = (blob: Blob, filename: string) => {
   a.remove();
   URL.revokeObjectURL(url);
 };
+
+/* -------------------- Product cutout pipeline (Phase CV) ----------------- */
+
+async function removeBackgroundWithFallback(file: File): Promise<Blob | null> {
+  const env = (import.meta as unknown as { env?: Record<string, string | undefined> }).env ?? {};
+  const removeBgKey = env.VITE_REMOVE_BG_API_KEY;
+
+  if (removeBgKey) {
+    try {
+      const fd = new FormData();
+      fd.append("image_file", file);
+      fd.append("size", "auto");
+      const res = await fetch("https://api.remove.bg/v1.0/removebg", {
+        method: "POST",
+        headers: { "X-Api-Key": removeBgKey },
+        body: fd,
+      });
+      if (res.ok) return await res.blob();
+    } catch { /* fall through */ }
+  }
+
+  try {
+    const pkgName = "@imgly/background-removal";
+    const mod: {
+      removeBackground?: (
+        src: Blob | File,
+        cfg: { model: string; output: { format: string; quality: number } }
+      ) => Promise<Blob>;
+    } = await import(/* @vite-ignore */ pkgName);
+    if (mod?.removeBackground) {
+      return await mod.removeBackground(file, {
+        model: "isnet_fp16",
+        output: { format: "image/png", quality: 1 },
+      });
+    }
+  } catch { /* package not installed or failed */ }
+
+  return null;
+}
+
+async function applyAlphaMatting(src: Blob): Promise<Blob> {
+  const img = await loadImageFromBlob(src);
+  const canvas = document.createElement("canvas");
+  canvas.width = img.width;
+  canvas.height = img.height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return src;
+
+  ctx.drawImage(img, 0, 0);
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const data = imageData.data;
+
+  for (let i = 0; i < data.length; i += 4) {
+    const alpha = data[i + 3];
+    if (alpha < 85) { data[i + 3] = 0; continue; }
+    let newAlpha: number;
+    if (alpha <= 215) {
+      const t = (alpha - 85) / (215 - 85);
+      const smooth = t * t * (3 - 2 * t);
+      newAlpha = Math.round(smooth * 255);
+    } else {
+      newAlpha = 255;
+    }
+    data[i + 3] = newAlpha;
+
+    if (newAlpha > 0 && newAlpha < 240) {
+      const strength = Math.pow(1 - newAlpha / 255, 1.4);
+      const lum = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+      const tr = Math.min(255, Math.max(lum, data[i]));
+      const tg = Math.min(255, Math.max(lum, data[i + 1]));
+      const tb = Math.min(255, Math.max(lum, data[i + 2]));
+      const k = strength * 0.55;
+      data[i] = Math.round(data[i] * (1 - k) + tr * k);
+      data[i + 1] = Math.round(data[i + 1] * (1 - k) + tg * k);
+      data[i + 2] = Math.round(data[i + 2] * (1 - k) + tb * k);
+    }
+  }
+
+  ctx.putImageData(imageData, 0, 0);
+  return canvasToBlob(canvas, "png");
+}
+
+async function processProductCutout(file: File): Promise<Blob | null> {
+  const cutout = await removeBackgroundWithFallback(file);
+  if (!cutout) return null;
+  try {
+    return await applyAlphaMatting(cutout);
+  } catch {
+    return cutout;
+  }
+}
+
+/* ------------------ Scene fetch (FLUX + optional providers) -------------- */
+
+interface RequestResult {
+  url: string;
+  fallback: boolean;
+  kind: "background" | "composite";
+}
+
+async function requestGeneration(
+  payload: { prompt: string; aspect: AspectRatio; mode: StudioMode },
+  file?: File | null
+): Promise<RequestResult> {
+  const env = (import.meta as unknown as { env?: Record<string, string | undefined> }).env ?? {};
+  const { w, h } = ASPECTS[payload.aspect];
+  const enhancedPrompt = `${payload.prompt}${FLUX_PROMPT_SUFFIX}`;
+
+  try {
+    let res: Response;
+    if (file) {
+      const fd = new FormData();
+      fd.append("image", file);
+      fd.append("prompt", enhancedPrompt);
+      fd.append("aspect", payload.aspect);
+      fd.append("mode", payload.mode);
+      res = await fetch(API_ENDPOINT, { method: "POST", body: fd });
+    } else {
+      res = await fetch(API_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...payload, prompt: enhancedPrompt }),
+      });
+    }
+    if (res.ok) {
+      const data = await res.json();
+      const url = data?.url ?? data?.imageUrl ?? data?.image;
+      if (url && typeof url === "string") {
+        return { url, fallback: false, kind: "background" };
+      }
+    }
+  } catch { /* fall through */ }
+
+  if (env.VITE_STABILITY_API_KEY) {
+    try {
+      const fd = new FormData();
+      fd.append("prompt", enhancedPrompt);
+      fd.append("output_format", "png");
+      fd.append("aspect_ratio", payload.aspect === "1:1" ? "1:1" : payload.aspect === "4:5" ? "4:5" : "16:9");
+      const res = await fetch("https://api.stability.ai/v2beta/stable-image/generate/core", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${env.VITE_STABILITY_API_KEY}`,
+          Accept: "image/*",
+        },
+        body: fd,
+      });
+      if (res.ok) {
+        const blob = await res.blob();
+        return { url: URL.createObjectURL(blob), fallback: false, kind: "background" };
+      }
+    } catch { /* fall through */ }
+  }
+
+  if (env.VITE_OPENAI_API_KEY) {
+    try {
+      const res = await fetch("https://api.openai.com/v1/images/generations", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${env.VITE_OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: "dall-e-3",
+          prompt: enhancedPrompt,
+          n: 1,
+          size: "1024x1024",
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const url = data?.data?.[0]?.url;
+        if (url) return { url, fallback: false, kind: "background" };
+      }
+    } catch { /* fall through */ }
+  }
+
+  try {
+    const seed = Math.floor(Math.random() * 1e9);
+    const pollinationsUrl =
+      `https://image.pollinations.ai/prompt/${encodeURIComponent(enhancedPrompt)}` +
+      `?width=${w}&height=${h}&model=flux&nologo=true&enhance=true&seed=${seed}`;
+    await loadImage(pollinationsUrl);
+    return { url: pollinationsUrl, fallback: false, kind: "background" };
+  } catch { /* fall through */ }
+
+  const seed = Math.random().toString(36).slice(2, 10);
+  return {
+    url: `https://picsum.photos/seed/${seed}/${w}/${h}`,
+    fallback: true,
+    kind: "composite",
+  };
+}
+
+/* ---------------------- Contact-shadow bounds scanner -------------------- */
+
+interface ProductBaseInfo {
+  baseY: number;
+  baseMinX: number;
+  baseMaxX: number;
+}
+
+function findProductBaseInfo(img: HTMLImageElement): ProductBaseInfo {
+  const SAMPLE = 256;
+  const FALLBACK: ProductBaseInfo = { baseY: 0.92, baseMinX: 0.25, baseMaxX: 0.75 };
+  try {
+    const temp = document.createElement("canvas");
+    temp.width = SAMPLE;
+    temp.height = SAMPLE;
+    const tctx = temp.getContext("2d");
+    if (!tctx) return FALLBACK;
+    tctx.drawImage(img, 0, 0, SAMPLE, SAMPLE);
+    const data = tctx.getImageData(0, 0, SAMPLE, SAMPLE).data;
+
+    let baseRow = -1;
+    for (let y = SAMPLE - 1; y >= 0; y--) {
+      let rowHasOpaque = false;
+      for (let x = 0; x < SAMPLE; x++) {
+        if (data[(y * SAMPLE + x) * 4 + 3] > 128) { rowHasOpaque = true; break; }
+      }
+      if (rowHasOpaque) { baseRow = y; break; }
+    }
+    if (baseRow < 0) return FALLBACK;
+
+    let minX = SAMPLE;
+    let maxX = 0;
+    for (let y = Math.max(0, baseRow - 4); y <= Math.min(SAMPLE - 1, baseRow + 2); y++) {
+      for (let x = 0; x < SAMPLE; x++) {
+        if (data[(y * SAMPLE + x) * 4 + 3] > 128) {
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+        }
+      }
+    }
+    if (minX > maxX) return FALLBACK;
+
+    return {
+      baseY: (baseRow + 1) / SAMPLE,
+      baseMinX: minX / SAMPLE,
+      baseMaxX: (maxX + 1) / SAMPLE,
+    };
+  } catch {
+    return FALLBACK;
+  }
+}
+
+/* ---------------------- Canvas compositing pipelines --------------------- */
+
+interface CompositeOptions {
+  sceneUrl: string;
+  cutoutUrl: string;
+  w: number;
+  h: number;
+  paddingPct: number;
+  warmthPct: number;
+  backgroundMode: BackgroundMode;
+  format: ExportFormat;
+}
+
+function drawImageCover(
+  ctx: CanvasRenderingContext2D,
+  img: HTMLImageElement,
+  x: number,
+  y: number,
+  w: number,
+  h: number
+) {
+  const ia = img.width / img.height;
+  const ba = w / h;
+  let dw: number, dh: number, dx: number, dy: number;
+  if (ia > ba) {
+    dh = h; dw = h * ia; dx = x + (w - dw) / 2; dy = y;
+  } else {
+    dw = w; dh = w / ia; dx = x; dy = y + (h - dh) / 2;
+  }
+  ctx.drawImage(img, dx, dy, dw, dh);
+}
+
+async function compositeProductScene(opts: CompositeOptions): Promise<Blob> {
+  const [sceneImg, cutoutImg] = await Promise.all([
+    loadImage(opts.sceneUrl),
+    loadImage(opts.cutoutUrl),
+  ]);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = opts.w;
+  canvas.height = opts.h;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas 2D unavailable");
+
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+
+  if (opts.backgroundMode === "white") {
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillRect(0, 0, opts.w, opts.h);
+  } else if (opts.backgroundMode === "black") {
+    ctx.fillStyle = "#000000";
+    ctx.fillRect(0, 0, opts.w, opts.h);
+  } else {
+    ctx.clearRect(0, 0, opts.w, opts.h);
+  }
+
+  const padPx = Math.round(Math.min(opts.w, opts.h) * (opts.paddingPct / 100));
+  const innerW = Math.max(1, opts.w - padPx * 2);
+  const innerH = Math.max(1, opts.h - padPx * 2);
+  const innerX = (opts.w - innerW) / 2;
+  const innerY = (opts.h - innerH) / 2;
+
+  drawImageCover(ctx, sceneImg, innerX, innerY, innerW, innerH);
+
+  const ca = cutoutImg.width / cutoutImg.height;
+  const ia = innerW / innerH;
+  let cw: number, ch: number;
+  if (ca > ia) { cw = innerW; ch = innerW / ca; }
+  else { ch = innerH; cw = innerH * ca; }
+  const cx = innerX + (innerW - cw) / 2;
+  const cy = innerY + (innerH - ch) / 2;
+
+  const info = findProductBaseInfo(cutoutImg);
+  const shadowCx = cx + ((info.baseMinX + info.baseMaxX) / 2) * cw;
+  const shadowCy = cy + info.baseY * ch;
+  const shadowW = Math.max(24, (info.baseMaxX - info.baseMinX) * cw);
+  const shadowH = Math.max(10, ch * 0.06);
+
+  ctx.save();
+  ctx.filter = "blur(14px)";
+  ctx.fillStyle = "rgba(0, 0, 0, 0.22)";
+  ctx.beginPath();
+  ctx.ellipse(shadowCx, shadowCy, shadowW * 0.55, shadowH * 0.85, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.save();
+  ctx.filter = "blur(3px)";
+  ctx.fillStyle = "rgba(0, 0, 0, 0.38)";
+  ctx.beginPath();
+  ctx.ellipse(shadowCx, shadowCy, shadowW * 0.38, shadowH * 0.55, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.drawImage(cutoutImg, cx, cy, cw, ch);
+
+  if (opts.warmthPct !== 0) {
+    ctx.save();
+    ctx.globalCompositeOperation = "soft-light";
+    const alpha = (Math.abs(opts.warmthPct) / 20) * 0.35;
+    ctx.fillStyle =
+      opts.warmthPct > 0
+        ? `rgba(255, 180, 80, ${alpha})`
+        : `rgba(80, 180, 255, ${alpha})`;
+    ctx.beginPath();
+    ctx.rect(innerX, innerY, innerW, innerH);
+    ctx.clip();
+    ctx.fillRect(innerX, innerY, innerW, innerH);
+    ctx.restore();
+  }
+
+  return canvasToBlob(canvas, opts.format);
+}
+
+interface RenderOptions {
+  url: string;
+  w: number;
+  h: number;
+  paddingPct: number;
+  warmthPct: number;
+  backgroundMode: BackgroundMode;
+  format: ExportFormat;
+}
+
+async function renderImageOnCanvas(opts: RenderOptions): Promise<Blob> {
+  const img = await loadImage(opts.url);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = opts.w;
+  canvas.height = opts.h;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas 2D unavailable");
+
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+
+  if (opts.backgroundMode === "white") {
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillRect(0, 0, opts.w, opts.h);
+  } else if (opts.backgroundMode === "black") {
+    ctx.fillStyle = "#000000";
+    ctx.fillRect(0, 0, opts.w, opts.h);
+  } else {
+    ctx.clearRect(0, 0, opts.w, opts.h);
+  }
+
+  const padPx = Math.round(Math.min(opts.w, opts.h) * (opts.paddingPct / 100));
+  const innerW = Math.max(1, opts.w - padPx * 2);
+  const innerH = Math.max(1, opts.h - padPx * 2);
+  const innerX = (opts.w - innerW) / 2;
+  const innerY = (opts.h - innerH) / 2;
+
+  const ia = img.width / img.height;
+  const ba = innerW / innerH;
+  let dw: number, dh: number;
+  if (ia > ba) { dw = innerW; dh = innerW / ia; }
+  else { dh = innerH; dw = innerH * ia; }
+  const dx = innerX + (innerW - dw) / 2;
+  const dy = innerY + (innerH - dh) / 2;
+
+  const cropBottom = 35;
+  const sourceHeight = Math.max(1, img.height - cropBottom);
+  const drawHAdj = Math.max(1, dh * (sourceHeight / img.height));
+  const dyAdj = dy + (dh - drawHAdj) / 2;
+
+  ctx.drawImage(img, 0, 0, img.width, sourceHeight, dx, dyAdj, dw, drawHAdj);
+
+  if (opts.warmthPct !== 0) {
+    ctx.save();
+    ctx.globalCompositeOperation = "soft-light";
+    const alpha = (Math.abs(opts.warmthPct) / 20) * 0.35;
+    ctx.fillStyle =
+      opts.warmthPct > 0
+        ? `rgba(255, 180, 80, ${alpha})`
+        : `rgba(80, 180, 255, ${alpha})`;
+    ctx.beginPath();
+    ctx.rect(dx, dyAdj, dw, drawHAdj);
+    ctx.clip();
+    ctx.fillRect(dx, dyAdj, dw, drawHAdj);
+    ctx.restore();
+  }
+
+  return canvasToBlob(canvas, opts.format);
+}
+
+/* ---------------------- Public export entry point ------------------------ */
+
+interface ExportOptions {
+  resultUrl: string;
+  sceneUrl?: string;
+  cutoutUrl?: string;
+  outputSize: OutputSize;
+  frameShape: FrameShape;
+  paddingPct: number;
+  warmthPct: number;
+  format: ExportFormat;
+  backgroundMode?: BackgroundMode;
+}
+
+async function buildExportBlob(opts: ExportOptions): Promise<Blob> {
+  const { w, h } = computeExportDims(opts.outputSize, opts.frameShape);
+  const bg: BackgroundMode = opts.backgroundMode ?? "white";
+  const effectiveBg: BackgroundMode =
+    bg === "transparent" && opts.format === "jpeg" ? "white" : bg;
+
+  if (opts.sceneUrl && opts.cutoutUrl) {
+    return compositeProductScene({
+      sceneUrl: opts.sceneUrl,
+      cutoutUrl: opts.cutoutUrl,
+      w, h,
+      paddingPct: opts.paddingPct,
+      warmthPct: opts.warmthPct,
+      backgroundMode: effectiveBg,
+      format: opts.format,
+    });
+  }
+
+  return renderImageOnCanvas({
+    url: opts.resultUrl,
+    w, h,
+    paddingPct: opts.paddingPct,
+    warmthPct: opts.warmthPct,
+    backgroundMode: effectiveBg,
+    format: opts.format,
+  });
+}
 
 /* ================================ Icons ================================== */
 
@@ -576,8 +1022,18 @@ export default function AIImageGenerator() {
   const [mode, setMode] = useState<StudioMode>("product");
   const [aspect, setAspect] = useState<AspectRatio>("1:1");
   const [prompt, setPrompt] = useState("");
-  const [remaining, setRemaining] = useState<number>(DAILY_CREDITS);
   const [styleTags, setStyleTags] = useState<Set<string>>(new Set());
+
+  /* ------------------- Daily limit + credits state ------------------ */
+  const [dailyLimit, setDailyLimit] = useState<number>(() => {
+    if (typeof window === "undefined") return DAILY_CREDITS;
+    return resolveDailyLimit().limit;
+  });
+  const [remaining, setRemaining] = useState<number>(() => {
+    if (typeof window === "undefined") return DAILY_CREDITS;
+    const { limit } = resolveDailyLimit();
+    return readCredits(limit);
+  });
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [result, setResult] = useState<GeneratedImage | null>(null);
@@ -600,6 +1056,11 @@ export default function AIImageGenerator() {
   const [outputSize, setOutputSize] = useState<OutputSize>("2000");
   const [justCopied, setJustCopied] = useState(false);
 
+  /* ------------------ Phase CV: cutout pipeline state --------------- */
+  const [cleanedCutoutBlob, setCleanedCutoutBlob] = useState<Blob | null>(null);
+  const [cleanedCutoutUrl, setCleanedCutoutUrl] = useState<string | null>(null);
+  const processingPromiseRef = useRef<Promise<Blob | null> | null>(null);
+
   /* ---------------------- Universal input hook ---------------------- */
   const imageInput = useUniversalImageInput({
     onPasteSuccess: () =>
@@ -608,17 +1069,23 @@ export default function AIImageGenerator() {
   });
 
   /* --------------------------- Lifecycle ---------------------------- */
+  // Sync dev/prod limit + credits on mount.
   useEffect(() => {
-    setRemaining(readCredits());
+    const { limit } = resolveDailyLimit();
+    setDailyLimit(limit);
+    const stored = readCredits(limit);
+    setRemaining(stored);
+    // Persist any reset caused by a limit change (e.g. legacy 3/3 → dev 999/999)
+    writeCredits(stored, limit);
   }, []);
 
   useEffect(() => {
     const id = window.setTimeout(() => {
-      setRemaining(DAILY_CREDITS);
-      writeCredits(DAILY_CREDITS);
+      setRemaining(dailyLimit);
+      writeCredits(dailyLimit, dailyLimit);
     }, msUntilMidnight() + 1000);
     return () => window.clearTimeout(id);
-  }, []);
+  }, [dailyLimit]);
 
   useEffect(() => {
     if (!toast) return;
@@ -640,6 +1107,44 @@ export default function AIImageGenerator() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [lightbox]);
+
+  /* --------------- Phase CV: background removal pipeline ------------ */
+  useEffect(() => {
+    if (!imageInput.file) {
+      setCleanedCutoutBlob(null);
+      setCleanedCutoutUrl(null);
+      processingPromiseRef.current = null;
+      return;
+    }
+
+    let cancelled = false;
+    const file = imageInput.file;
+
+    const promise = (async (): Promise<Blob | null> => {
+      try {
+        return await processProductCutout(file);
+      } catch {
+        return null;
+      }
+    })();
+    processingPromiseRef.current = promise;
+
+    promise.then((blob) => {
+      if (cancelled) return;
+      if (!blob) {
+        setCleanedCutoutBlob(null);
+        setCleanedCutoutUrl(null);
+        return;
+      }
+      setCleanedCutoutBlob(blob);
+      const url = URL.createObjectURL(blob);
+      setCleanedCutoutUrl(url);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [imageInput.file]);
 
   /* ---------------------------- Helpers ----------------------------- */
   const finalPrompt = useMemo(() => {
@@ -702,18 +1207,59 @@ export default function AIImageGenerator() {
     if (!canGenerate) return;
     const nextRemaining = Math.max(0, remaining - 1);
     setRemaining(nextRemaining);
-    writeCredits(nextRemaining);
+    writeCredits(nextRemaining, dailyLimit);
 
     setIsGenerating(true);
     setResult(null);
 
     try {
-      const { url } = await requestGeneration(
+      let cutoutBlob: Blob | null = cleanedCutoutBlob;
+      if (mode === "product" && processingPromiseRef.current) {
+        try {
+          const resolved = await processingPromiseRef.current;
+          if (resolved) cutoutBlob = resolved;
+        } catch { /* keep state value */ }
+      }
+
+      let uploadFile: File | null = null;
+      if (mode === "product") {
+        uploadFile = cutoutBlob
+          ? new File([cutoutBlob], "cleaned-cutout.png", { type: "image/png" })
+          : imageInput.file;
+      }
+
+      const scene = await requestGeneration(
         { prompt: finalPrompt, aspect, mode },
-        mode === "product" ? imageInput.file : null
+        uploadFile
       );
+
+      let finalUrl = scene.url;
+      let cutoutUrlForExport: string | undefined;
+
+      if (mode === "product" && cutoutBlob && scene.kind === "background") {
+        const tempCutoutUrl = URL.createObjectURL(cutoutBlob);
+        try {
+          const compositeBlob = await compositeProductScene({
+            sceneUrl: scene.url,
+            cutoutUrl: tempCutoutUrl,
+            w: 1024,
+            h: 1024,
+            paddingPct: 0,
+            warmthPct,
+            backgroundMode: "white",
+            format: "png",
+          });
+          finalUrl = URL.createObjectURL(compositeBlob);
+          cutoutUrlForExport = tempCutoutUrl;
+        } catch {
+          URL.revokeObjectURL(tempCutoutUrl);
+        }
+      }
+
       const newImage: GeneratedImage = {
-        url,
+        url: finalUrl,
+        sceneUrl: scene.kind === "background" ? scene.url : undefined,
+        cutoutUrl: cutoutUrlForExport,
         prompt: finalPrompt,
         mode,
         aspect,
@@ -732,11 +1278,14 @@ export default function AIImageGenerator() {
     if (!result) return null;
     return buildExportBlob({
       resultUrl: result.url,
+      sceneUrl: result.sceneUrl,
+      cutoutUrl: result.cutoutUrl,
       outputSize,
       frameShape,
       paddingPct,
       warmthPct,
       format: exportFormat,
+      backgroundMode: "white",
     });
   }, [result, outputSize, frameShape, paddingPct, warmthPct, exportFormat]);
 
@@ -767,22 +1316,23 @@ export default function AIImageGenerator() {
       if (typeof ClipboardItem === "undefined" || !navigator.clipboard?.write) {
         throw new Error("Clipboard image write not supported.");
       }
-      // Prefer requested format; fall back to PNG if browser rejects it
       const preferredType = exportFormat === "jpeg" ? "image/jpeg" : "image/png";
       try {
         await navigator.clipboard.write([new ClipboardItem({ [preferredType]: blob })]);
       } catch {
-        // Some browsers only allow image/png in clipboard
         const pngBlob =
           exportFormat === "png"
             ? blob
             : await buildExportBlob({
                 resultUrl: result.url,
+                sceneUrl: result.sceneUrl,
+                cutoutUrl: result.cutoutUrl,
                 outputSize,
                 frameShape,
                 paddingPct,
                 warmthPct,
                 format: "png",
+                backgroundMode: "white",
               });
         await navigator.clipboard.write([new ClipboardItem({ "image/png": pngBlob })]);
       }
@@ -845,7 +1395,7 @@ export default function AIImageGenerator() {
             >
               <BoltIcon className="h-4 w-4" />
               <span>
-                {remaining} / {DAILY_CREDITS} Free Generations Left
+                {remaining} / {dailyLimit} Free Generations Left
               </span>
             </div>
             <span className="text-[11px] text-zinc-500 dark:text-zinc-500">Resets daily at midnight</span>

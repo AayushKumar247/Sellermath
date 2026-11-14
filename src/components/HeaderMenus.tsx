@@ -231,12 +231,13 @@ export function HeaderMenus({
   return (
     <header
       className={[
-        'sticky top-0 z-40 w-full max-w-full overflow-x-clip select-none border-b backdrop-blur-xl transition-shadow duration-300',
+        'fixed top-0 left-0 right-0 z-50 w-full h-16 max-w-full overflow-x-clip select-none border-b backdrop-blur-xl transition-colors duration-200',
         'border-zinc-200/70 bg-white/80 dark:border-zinc-800/60 dark:bg-zinc-950/70',
         scrolled ? 'shadow-lg shadow-zinc-900/5 dark:shadow-black/40' : '',
       ].join(' ')}
+      style={{ top: 0, transform: 'none' }}
     >
-      <div className={`relative mx-auto flex w-full max-w-[1360px] items-center justify-between gap-1.5 sm:gap-3 px-3 transition-[height] duration-300 motion-reduce:transition-none sm:px-6 lg:px-8 ${scrolled ? 'h-14' : 'h-16'}`}>
+      <div className="relative mx-auto flex w-full max-w-[1360px] items-center justify-between gap-1.5 sm:gap-3 px-3 h-16 sm:px-6 lg:px-8">
 
         {/* LEFT: hamburger + logo */}
         <div className="flex items-center gap-1.5 sm:gap-3">

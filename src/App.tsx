@@ -266,6 +266,16 @@ export default function App() {
   return (
     <div className="min-h-screen dark:bg-zinc-950 bg-zinc-50 transition-colors">
       <ScrollToTop trigger={activePage} />
+      
+      {/* Header must be outside any transformed containers to ensure fixed positioning works correctly */}
+      <HeaderMenus
+        currentPage={activePage}
+        onNavigate={handleNavigate}
+        isDark={isDark}
+        onToggleDark={toggleTheme}
+        onToggleMobileMenu={() => setSidebarOpen(true)}
+      />
+
       <Sidebar
         activePage={activePage}
         onNavigate={handleNavigate}
@@ -275,15 +285,7 @@ export default function App() {
       />
 
       <div>
-        <HeaderMenus
-          currentPage={activePage}
-          onNavigate={handleNavigate}
-          isDark={isDark}
-          onToggleDark={toggleTheme}
-          onToggleMobileMenu={() => setSidebarOpen(true)}
-        />
-
-        <main className="w-full max-w-full overflow-x-hidden">
+        <main className="w-full max-w-full overflow-x-hidden pt-16">
           {/* Home.tsx and every tool page already supply their own px-3 sm:px-6 lg:px-8 */}
           {renderPage()}
         </main>

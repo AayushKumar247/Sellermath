@@ -515,6 +515,15 @@ export default function SettlementReconciliation() {
   const [donutHover, setDonutHover] = useState<string | null>(null);
   const [orderHover, setOrderHover] = useState<string | null>(null);
 
+  /* ═════════════════════════════════════════════════════════════════════════════════
+     1-CLICK DISPUTE CLAIM GENERATOR — STATE
+     ════════════════════════════════════════════════════════════════════════════════ */
+  const [selectedClaimOrder, setSelectedClaimOrder] = useState<ComputedRow | null>(null);
+  const [awbNumber, setAwbNumber] = useState('');
+  const [claimTone, setClaimTone] = useState<'formal' | 'urgent' | 'escalation'>('formal');
+  const [copiedField, setCopiedField] = useState<'subject' | 'body' | 'all' | null>(null);
+  const [evidenceChecked, setEvidenceChecked] = useState<Record<string, boolean>>({});
+
   const activeMarket = MARKETPLACES.find((m) => m.id === marketplace) ?? MARKETPLACES[0];
 
   useEffect(() => {
@@ -685,6 +694,118 @@ export default function SettlementReconciliation() {
     setCopied(true); setToast('Claim text copied to clipboard');
     window.setTimeout(() => setCopied(false), 2000);
   }, [claimText]);
+
+  const DISCREPANCY_LABELS: Record<FlagKey, string> = {
+    weight: 'Weight',
+    commission: 'Commission',
+    missingReturn: 'Missing Returns',
+    pending: 'Pending Payouts',
+  };
+
+  const getDiscrepancyCategory = (row: ComputedRow): FlagKey => {
+    return row.primary !== 'matched' && row.primary ? row.primary : (row.flags[0] ?? 'weight');
+  };
+
+  const getWhereToSubmit = (mkt: Marketplace): string => {
+    switch (mkt) {
+      case 'Amazon': return 'Seller Central → Orders → Manage SAFE-T Claims / Case Log';
+      case 'Flipkart': return 'Seller Hub → Payments → Seller Protection Fund (SPF) / Help';
+      case 'Meesho': return 'Supplier Panel → Support → Raise Ticket (Payments / RTO)';
+      case 'Myntra': return 'Myntra Seller Panel → Help → Raise Dispute / Claim';
+      default: return 'Seller Support Portal → Dispute / Claims Section';
+    }
+  };
+
+  const getTonePrefix = (tone: 'formal' | 'urgent' | 'escalation'): string => {
+    switch (tone) {
+      case 'urgent': return '[URGENT AUDIT]';
+      case 'escalation': return '[FINAL NODAL NOTICE]';
+      default: return '[STANDARD AUDIT]';
+    }
+  };
+
+  const getToneLabel = (tone: 'formal' | 'urgent' | 'escalation'): string => {
+    switch (tone) {
+      case 'urgent': return 'Firm Escalation';
+      case 'escalation': return 'Final Nodal Notice';
+      default: return 'Standard Audit';
+    }
+  };
+
+  const generateTicketSubject = (row: ComputedRow, leakAmount: string): string => {
+    const prefix = getTonePrefix(claimTone);
+    return `${prefix} Payout Discrepancy & Reimbursement Claim — Order #${row.orderId} (Shortfall: ${leakAmount})`;
+  };
+
+  const generateTicketBody = (row: ComputedRow, leakAmount: string): string => {
+    const mkt = marketplace;
+    const category = getDiscrepancyCategory(row);
+    const categoryLabel = DISCREPANCY_LABELS[category];
+    const prefix = getTonePrefix(claimTone);
+    const awbLine = awbNumber.trim() ? `Courier AWB / Return Tracking ID: ${awbNumber.trim()}\n` : '';
+
+    const evidenceItems = [
+      { id: 'invoice', label: 'Tax Invoice & Manifest Copy', checked: false },
+      { id: 'label', label: 'Dispatch Packaging Label Photo with Barcode', checked: false },
+      { id: 'video', label: 'Warehouse CCTV / Unboxing Video', checked: false },
+      { id: 'awb', label: 'Courier AWB Tracking Screenshot', checked: false },
+    ];
+    const evidenceList = evidenceItems.map((e) => (e.checked ? `✅ ${e.label}` : `⬜ ${e.label}`)).join('\n');
+
+    const gross = fmtMoney(row.sellingPrice);
+    const expected = fmtMoney(row.expectedSettlement);
+    const settled = fmtMoney(row.bankUtrSettled);
+    const leak = fmtMoney(Math.max(0, row.leak));
+
+    let justification = '';
+    switch (category) {
+      case 'missingReturn':
+        justification = `The physical return unit for Order #${row.orderId} (SKU: ${row.sku}) has not been received back at my warehouse. The Warehouse_Return_Received flag is set to "No", indicating the item was either lost in transit or damaged during RTO. As per the ${activeMarket.claim} policy, the marketplace is liable to reimburse the net realisable value of the unit. I request Reverse AWB POD verification or SAFE-T/SPF reimbursement for the unsettled amount of ${leak}.`;
+        break;
+      case 'weight':
+        justification = `The courier has charged an incorrect billed weight of ${row.billedWeightG.toLocaleString('en-IN')}g against my declared weight of ${row.declaredWeightG.toLocaleString('en-IN')}g — an excess of ${Math.max(0, row.billedWeightG - row.declaredWeightG).toLocaleString('en-IN')}g. The volumetric weight calculation (L×B×H ÷ 5000) appears to have been misapplied, resulting in a shipping slab overcharge. I request a courier weight-audit recalibration and a refund of the excess shipping fee of ${leak}, including 18% GST on the overcharged amount.`;
+        break;
+      case 'commission':
+        justification = `The commission deducted for Order #${row.orderId} (${fmtMoney(row.chargedCommission)}) does not match the contracted category rate card (expected: ${fmtMoney(row.expectedCommission)}). This fee rate card mismatch has resulted in an overcharge of ${leak}. I request a fee recalculation against the correct category slab and a credit of 18% GST on the excess commission deducted.`;
+        break;
+      case 'pending':
+        justification = `Payment for Order #${row.orderId} remains unsettled despite the order being marked as Delivered. The SLA settlement window (T+7 days) has elapsed and ₹0 has been credited against this order in the current settlement cycle. I request immediate UTR release and credit of the unsettled amount of ${leak} to my next settlement cycle.`;
+        break;
+      default:
+        justification = `Settlement shortfall identified for Order #${row.orderId} against the contracted seller fee schedule. The bank settlement credited is lower than the expected net payout computed on contracted rates. I request a review and credit of ${leak} to my next settlement cycle.`;
+        break;
+    }
+
+    return [
+      `${prefix} Payout Discrepancy & Reimbursement Claim — Order #${row.orderId}`,
+      '',
+      `Dear ${mkt} Seller Support / Nodal Audit Team,`,
+      '',
+      `I am filing a ${activeMarket.claim} for the order referenced below. The settlement credited against this order is lower than the payout computed on my contracted seller fee schedule.`,
+      '',
+      '── ORDER & FINANCIAL AUDIT SUMMARY ────────────────',
+      `Order ID               : ${row.orderId}`,
+      `SKU                    : ${row.sku}`,
+      `Order Date / Status    : ${row.status}`,
+      `Discrepancy Category   : ${categoryLabel}`,
+      `Gross Selling Price    : ${gross}`,
+      `Expected Net Settlement (2026 Rate Card): ${expected}`,
+      `Actual Settled Amount Received : ${settled}`,
+      `Net Unsettled / Overcharged Claim Amount: ${leak}`,
+      '',
+      awbLine,
+      '── CATEGORY-SPECIFIC AUDIT JUSTIFICATION ────────────────',
+      justification,
+      '',
+      '── ATTACHED EVIDENCE CHECKLIST ────────────────',
+      evidenceList,
+      '',
+      `Request you to review and credit ${leak} to my next settlement cycle within 7 working days.`,
+      '',
+      'Regards,',
+      'Seller — Settlement Audit (SellerMath CSV Intelligence)',
+    ].join('\n');
+  };
 
   const exportLeaksCsv = useCallback(() => {
     const leaked = computed.filter((r) => r.actionable && r.leak > 0);
@@ -1484,7 +1605,7 @@ export default function SettlementReconciliation() {
                             <BadgeCheck className="h-3.5 w-3.5" /> Claim Filed
                           </div>
                         ) : (
-                          <button type="button" onClick={() => setClaimTarget({ mode: 'single', row: r })}
+                          <button type="button" onClick={() => setSelectedClaimOrder(r)}
                             className="w-full select-none rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 py-2 text-[10px] font-bold text-zinc-950 shadow-sm shadow-emerald-500/20 transition-all hover:from-emerald-400 hover:to-teal-400">
                             ⚡ Draft Claim
                           </button>
@@ -1563,7 +1684,7 @@ export default function SettlementReconciliation() {
                                   <BadgeCheck className="h-3 w-3" /> Filed
                                 </span>
                               ) : (
-                                <button type="button" onClick={(e) => { e.stopPropagation(); setClaimTarget({ mode: 'single', row: r }); }}
+                                <button type="button" onClick={(e) => { e.stopPropagation(); setSelectedClaimOrder(r); }}
                                   className="select-none whitespace-nowrap rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-3.5 py-1.5 text-[10px] font-bold text-zinc-950 shadow-sm shadow-emerald-500/20 transition-all hover:scale-[1.02] hover:from-emerald-400 hover:to-teal-400">
                                   ⚡ Draft Claim
                                 </button>
@@ -1666,7 +1787,139 @@ export default function SettlementReconciliation() {
         </div>
       )}
 
+      {/* ─────────────── DISPUTE CLAIM GENERATOR MODAL ─────────────── */}
+      {selectedClaimOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-4" onClick={() => setSelectedClaimOrder(null)}>
+          <div onClick={(e) => e.stopPropagation()} className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-zinc-200/80 bg-white shadow-2xl dark:border-zinc-800/80 dark:bg-zinc-900">
+            <div className="flex items-start gap-3 border-b border-zinc-200 p-4 sm:p-5 dark:border-zinc-800/80">
+              <MarketplaceLogo marketplace={marketplace} size="sm" className="shrink-0" />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-[10px] font-bold text-zinc-900 dark:text-zinc-100">Order #{selectedClaimOrder.orderId}</span>
+                  <span className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[9px] font-semibold ${FLAG_META[getDiscrepancyCategory(selectedClaimOrder)].chip}`}>
+                    {DISCREPANCY_LABELS[getDiscrepancyCategory(selectedClaimOrder)]}
+                  </span>
+                </div>
+                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 select-none">
+                  Recoverable Claim: <span className="font-bold text-rose-600 dark:text-rose-400">₹{Math.max(0, selectedClaimOrder.leak).toLocaleString('en-IN')}</span>
+                </p>
+              </div>
+              <button type="button" onClick={() => setSelectedClaimOrder(null)} className="shrink-0 rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200" aria-label="Close">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
 
+            <div className="px-4 sm:p-4">
+              <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-50/60 px-2.5 py-1 text-[9px] font-bold text-emerald-700 sm:text-[10px] dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
+                <ArrowRight className="h-3 w-3 shrink-0 text-emerald-500" />
+                <span>Where to Submit: {getWhereToSubmit(marketplace)}</span>
+              </div>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Ticket Subject</h4>
+                  <button onClick={() => { navigator.clipboard.writeText(generateTicketSubject(selectedClaimOrder, fmtMoney(Math.max(0, selectedClaimOrder.leak)))); setCopiedField('subject'); }} className="flex items-center gap-1 rounded-md border border-zinc-200 bg-white px-2 py-0.5 text-[9px] font-semibold text-zinc-600 transition-colors hover:border-emerald-400 hover:text-emerald-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-emerald-400 dark:hover:text-emerald-400">
+                    <Copy className="h-3 w-3 shrink-0" /> Copy Subject
+                  </button>
+                </div>
+                <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 font-mono text-[10px] leading-relaxed text-zinc-800 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200">
+                  {generateTicketSubject(selectedClaimOrder, fmtMoney(Math.max(0, selectedClaimOrder.leak)))}
+                </div>
+                {copiedField === 'subject' && <p className="mt-1 text-[9px] text-emerald-600 dark:text-emerald-400 select-none">✅ Subject copied!</p>}
+              </div>
+
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Claim Tone</h4>
+                </div>
+                <div className="flex gap-2">
+                  {(['formal', 'urgent', 'escalation'] as const).map((t) => (
+                    <button key={t} onClick={() => setClaimTone(t)} className={`flex-1 rounded-lg border px-3 py-2 text-[9px] font-semibold transition-all ${
+                      claimTone === t
+                        ? 'border-emerald-500 bg-emerald-50 text-emerald-700 shadow-sm shadow-emerald-500/10'
+                        : 'border-zinc-200 bg-white text-zinc-600 hover:border-emerald-400 hover:text-emerald-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-emerald-400 dark:hover:text-emerald-400'
+                    }`}>
+                      {getToneLabel(t)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Courier AWB / Return Tracking ID</h4>
+                </div>
+                <input
+                  value={awbNumber}
+                  onChange={(e) => setAwbNumber(e.target.value)}
+                  placeholder="e.g., AWB123456789IN"
+                  className="w-full min-w-0 rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-900 placeholder-text-zinc-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500/50 transition dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder-zinc-500"
+                />
+              </div>
+
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Claim Ticket Body</h4>
+                  <button onClick={() => { navigator.clipboard.writeText(generateTicketBody(selectedClaimOrder, fmtMoney(Math.max(0, selectedClaimOrder.leak)))); setCopiedField('body'); }} className="flex items-center gap-1 rounded-md border border-zinc-200 bg-white px-2 py-0.5 text-[9px] font-semibold text-zinc-600 transition-colors hover:border-emerald-400 hover:text-emerald-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-emerald-400 dark:hover:text-emerald-400">
+                    <Copy className="h-3 w-3 shrink-0" /> Copy Body
+                  </button>
+                </div>
+                <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 font-mono text-[9px] leading-relaxed text-zinc-800 sm:text-[10px] dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200 max-h-64 overflow-y-auto">
+                  {generateTicketBody(selectedClaimOrder, fmtMoney(Math.max(0, selectedClaimOrder.leak)))}
+                </div>
+                {copiedField === 'body' && <p className="mt-1 text-[9px] text-emerald-600 dark:text-emerald-400 select-none">✅ Body copied!</p>}
+              </div>
+
+              <div className="mb-4">
+                <h4 className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-2">Attached Evidence</h4>
+                <div className="space-y-1">
+                  {[
+                    { id: 'invoice', label: 'Tax Invoice & Manifest Copy' },
+                    { id: 'label', label: 'Dispatch Packaging Label Photo with Barcode' },
+                    { id: 'video', label: 'Warehouse CCTV / Unboxing Video' },
+                    { id: 'awb', label: 'Courier AWB Tracking Screenshot' },
+                  ].map((item) => (
+                    <label key={item.id} className="flex items-center gap-2 cursor-pointer select-none">
+                      <input type="checkbox" checked={!!evidenceChecked[item.id]} onChange={() => setEvidenceChecked((prev) => ({ ...prev, [item.id]: !prev[item.id] }))} className="w-4 h-4 rounded border-zinc-300 dark:border-zinc-700 text-emerald-500 focus:ring-emerald-500 bg-white dark:bg-zinc-900" />
+                      <span className={`text-[10px] ${evidenceChecked[item.id] ? 'text-emerald-600 line-through' : 'text-zinc-700'} dark:${evidenceChecked[item.id] ? 'text-emerald-400 line-through' : 'text-zinc-300'}`}>{item.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2 border-t border-zinc-200 p-4 sm:p-5 dark:border-zinc-800/80">
+              <button onClick={() => {
+                const subject = generateTicketSubject(selectedClaimOrder, fmtMoney(Math.max(0, selectedClaimOrder.leak)));
+                const body = generateTicketBody(selectedClaimOrder, fmtMoney(Math.max(0, selectedClaimOrder.leak)));
+                navigator.clipboard.writeText(`${subject}\n\n${body}`);
+                setCopiedField('all');
+              }} className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-3 text-[10px] font-bold text-white shadow-lg shadow-emerald-500/25 transition-all hover:opacity-90 sm:text-[11px]">
+                {copiedField === 'all' ? <Check className="h-3.5 w-3.5 shrink-0" /> : <ClipboardList className="h-3.5 w-3.5 shrink-0" />}
+                {copiedField === 'all' ? 'Copied to Clipboard!' : 'Copy Full Claim Ticket'}
+              </button>
+              <button onClick={() => {
+                const content = `${generateTicketSubject(selectedClaimOrder, fmtMoney(Math.max(0, selectedClaimOrder.leak)))}\n\n${generateTicketBody(selectedClaimOrder, fmtMoney(Math.max(0, selectedClaimOrder.leak)))}`;
+                const blob = new Blob([content], { type: 'text/plain;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `Claim_${selectedClaimOrder.orderId}.txt`;
+                a.click();
+                URL.revokeObjectURL(url);
+                setToast(`Claim_${selectedClaimOrder.orderId}.txt downloaded`);
+              }} className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-3 text-[10px] font-bold text-zinc-700 transition-colors hover:border-emerald-400 hover:text-emerald-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 sm:text-[11px]">
+                <Download className="h-3.5 w-3.5 shrink-0" /> Download Claim (.txt)
+              </button>
+              <button onClick={() => setSelectedClaimOrder(null)} className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-3 text-[10px] font-bold text-zinc-600 transition-colors hover:bg-zinc-50 hover:text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100 sm:text-[11px]">
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {toast && (
         <div className="fixed bottom-4 left-1/2 z-[60] w-[calc(100%-1.5rem)] max-w-sm -translate-x-1/2">

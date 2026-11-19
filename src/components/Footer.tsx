@@ -53,7 +53,8 @@ const productLinks: FooterNavItem[] = [
 ];
 
 const resourceLinks: FooterNavItem[] = [
-  { label: 'Seller Guides', href: '#blog' },
+  { label: 'Seller Guides', page: 'marketplace-selling-guides' },
+  { label: 'E-Commerce Guides', page: 'ecommerce-guides', badge: 'New' },
   { label: '2026 Fee & GST Rates', href: '#rates', badge: 'New' },
   { label: 'Seller Glossary', href: '#glossary' },
   { label: 'Help Center', href: '#help' },

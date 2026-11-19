@@ -17,6 +17,8 @@ export type PageId =
   | 'rto-analytics'
   | 'gst-invoice'
   | 'seller-tutorials'
+  | 'marketplace-selling-guides'
+  | 'ecommerce-guides'
   | 'about'
   | 'contact'
   | 'privacy'
@@ -79,8 +81,8 @@ const navGroups: NavGroup[] = [
   {
     id: 'learn', label: 'Learn', icon: BarChart3, isDropdown: true,
     items: [
-      { id: 'ecom-guides', label: 'E-Commerce Guides', status: 'coming-soon' },
-      { id: 'marketplace-guides', label: 'Marketplace Selling Guides', status: 'coming-soon' },
+      { id: 'ecommerce-guides', label: 'E-Commerce Guides', status: 'new' },
+      { id: 'marketplace-selling-guides', label: 'Marketplace Selling Guides', status: 'new' },
       { id: 'seller-tutorials', label: 'Seller Tutorials', status: 'new' },
     ],
   },
@@ -162,7 +164,7 @@ export default function Sidebar({ activePage, onNavigate, isOpen, onClose, class
                       return (
                         <div
                           key={item.id}
-                          onClick={!isDisabled && item.status === 'active' ? () => onNavigate(item.id as PageId) : undefined}
+                          onClick={!isDisabled ? () => onNavigate(item.id as PageId) : undefined}
                           className={`flex items-center gap-3 px-3 py-2 text-left rounded-xl text-sm transition-colors ${isDisabled ? 'opacity-60 cursor-not-allowed dark:text-zinc-500 text-zinc-400' : isItemActive ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'dark:text-zinc-300 text-zinc-600 dark:hover:bg-zinc-800/60 hover:bg-zinc-100'}`}
                         >
                           {item.icon ? (

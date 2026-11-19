@@ -282,22 +282,23 @@ const TOOL_GROUPS: ToolCategory[] = [
         status: 'new',
         onClick: () => {},
       },
-      // Still coming soon
       {
         icon: <BarChart3 className="w-5 h-5" />,
-        iconBg: 'bg-zinc-500/10 border border-zinc-500/20 text-zinc-500 dark:text-zinc-400',
+        iconBg: 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 dark:text-emerald-400',
         title: 'E-Commerce Guides',
         description: 'Deep dives on profit optimization, marketplace fees and GST compliance.',
         tools: ['Profit guides', 'Strategies', 'Fee updates', 'Seller tips'],
-        status: 'coming-soon',
+        status: 'new',
+        onClick: () => {},
       },
       {
         icon: <Rocket className="w-5 h-5" />,
-        iconBg: 'bg-zinc-500/10 border border-zinc-500/20 text-zinc-500 dark:text-zinc-400',
+        iconBg: 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 dark:text-emerald-400',
         title: 'Marketplace Selling Guides',
         description: 'Platform-specific playbooks for Amazon, Flipkart, Meesho & more.',
         tools: ['Platform strategy', 'Best practices', 'Growth tactics'],
-        status: 'coming-soon',
+        status: 'new',
+        onClick: () => {},
       },
     ],
   },
@@ -851,7 +852,9 @@ function mapToolPage(title: string): PageId {
     'Settlement Reconciliation': 'settlement-reconciliation',
     'Returns & RTO Analytics': 'rto-analytics',
     'GST Invoice Generator': 'gst-invoice',
-    'Seller Tutorials': 'seller-tutorials',   // ← NEW
+    'Seller Tutorials': 'seller-tutorials',
+    'Marketplace Selling Guides': 'marketplace-selling-guides',
+    'E-Commerce Guides': 'ecommerce-guides',
   };
   return map[title] ?? 'calculator';
 }

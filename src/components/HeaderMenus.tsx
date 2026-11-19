@@ -79,8 +79,8 @@ const NAV: NavItem[] = [
   {
     id: 'learn', label: 'Learn',
     children: [
-      { id: P('guides'), label: 'E-Commerce Guides', hint: 'Coming soon', icon: BarChart3, disabled: true },
-      { id: P('selling-guides'), label: 'Marketplace Selling Guides', hint: 'Coming soon', icon: Rocket, disabled: true },
+      { id: P('ecommerce-guides'), label: 'E-Commerce Guides', hint: 'Unit economics, GST, RTO & ROAS masterclasses', icon: BarChart3, badge: 'NEW' },
+      { id: P('marketplace-selling-guides'), label: 'Marketplace Selling Guides', hint: 'Platform onboarding, fee rules & growth playbooks', icon: Rocket, badge: 'NEW' },
       { id: P('seller-tutorials'), label: 'Seller Tutorials', hint: 'Step-by-step marketplace playbooks', icon: Sparkles, badge: 'NEW' },
     ],
   },

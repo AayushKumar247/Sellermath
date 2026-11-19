@@ -20,6 +20,8 @@ import Home from '@/components/Home';
 import { HeaderMenus } from '@/components/HeaderMenus';
 import ScrollToTop from '@/components/ScrollToTop';
 import SellerTutorials from '@/components/SellerTutorials';
+import MarketplaceSellingGuides from '@/components/MarketplaceSellingGuides';
+import EcommerceGuides from '@/components/EcommerceGuides';
 
 const THEME_KEY = 'sellermath_theme';
 
@@ -42,6 +44,8 @@ const PAGE_TO_PATH: Record<PageId, string> = {
   'settlement-reconciliation': '/settlement-reconciliation',
   'gst-invoice': '/gst-invoice',
   'seller-tutorials': '/seller-tutorials',
+  'marketplace-selling-guides': '/marketplace-selling-guides',
+  'ecommerce-guides': '/ecommerce-guides',
   about: '/about',
   contact: '/contact',
   privacy: '/privacy-policy',
@@ -100,6 +104,8 @@ export default function App() {
       'settlement-reconciliation': "Payment Settlement & Leak Reconciliation | SellerMath",
       'gst-invoice': "Free GST Tax Invoice Generator with UPI QR | SellerMath",
       'seller-tutorials': "Seller Tutorials & Playbooks | SellerMath",
+      'marketplace-selling-guides': "Marketplace Selling Guides | SellerMath",
+      'ecommerce-guides': "E-Commerce Strategy & Profit Guides | SellerMath",
       about: "About Us | SellerMath",
       contact: "Contact Us | SellerMath",
       privacy: "Privacy Policy | SellerMath",
@@ -246,6 +252,10 @@ export default function App() {
         return <GSTInvoiceGenerator />;
       case 'seller-tutorials':
         return <SellerTutorials onNavigate={handleNavigate} />;
+      case 'marketplace-selling-guides':
+        return <MarketplaceSellingGuides onNavigate={handleNavigate} />;
+      case 'ecommerce-guides':
+        return <EcommerceGuides onNavigate={handleNavigate} />;
       case 'about':
         return <CompanyLegalPages activeSection="about" onNavigate={handleNavigate} />;
       case 'contact':

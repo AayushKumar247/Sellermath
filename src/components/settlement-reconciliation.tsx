@@ -39,6 +39,55 @@ type FilterKey = 'all' | 'actionable' | 'weight' | 'commission' | 'missingReturn
 type SortKey = 'leak' | 'value' | 'weight' | 'orderId';
 type ClaimTarget = { mode: 'single'; row: ComputedRow } | { mode: 'bulk' } | null;
 
+type MarketAliases = {
+  orderId: string[];
+  sku: string[];
+  sellingPrice: string[];
+  chargedCommission?: string[];
+  chargedCommissionSum?: string[][];
+  bankUtrSettled: string[];
+  status: string[];
+};
+
+type MarketMap = {
+  id: Marketplace;
+  label: string;
+  aliases: MarketAliases;
+};
+
+type DetectionResult = {
+  marketplace: Marketplace;
+  label: string;
+  headerRowIndex: number;
+  score: number;
+  headers: string[];
+  colMap: {
+    orderId: number;
+    sku: number;
+    sellingPrice: number;
+    chargedCommission: number;
+    bankUtrSettled: number;
+    status: number;
+    commissionSumCols?: number[];
+  };
+};
+
+type ColumnMapperState = {
+  grid: string[][];
+  headers: string[];
+  fileName: string;
+  utr: string;
+  date: string;
+} | null;
+
+type MapperSelection = {
+  orderId: number;
+  sku: number;
+  sellingPrice: number;
+  bankUtrSettled: number;
+  status: number;
+};
+
 /* ══════════════════════════════════════════════════════════════════════════
    CONSTANTS
    ══════════════════════════════════════════════════════════════════════════ */
@@ -68,6 +117,49 @@ const HEADER_MAP: Record<string, keyof RawOrder> = {
   charged_shipping: 'chargedShipping', bank_utr_settled: 'bankUtrSettled',
   warehouse_return_received: 'warehouseReturnReceived', utr: 'utr', settlement_date: 'settlementDate',
 };
+
+/* ─── Multi-marketplace header alias maps ─────────────────────────────────── */
+
+const MARKET_HEADER_MAPS: MarketMap[] = [
+  {
+    id: 'Amazon',
+    label: 'Amazon India',
+    aliases: {
+      orderId: ['order id', 'order-id'],
+      sku: ['sku'],
+      sellingPrice: ['product sales', 'principal'],
+      chargedCommissionSum: [
+        ['selling fees', 'fba fees'],
+        ['other transaction fees'],
+      ],
+      bankUtrSettled: ['total', 'net settlement'],
+      status: ['type', 'status'],
+    },
+  },
+  {
+    id: 'Flipkart',
+    label: 'Flipkart',
+    aliases: {
+      orderId: ['order id', 'order item id'],
+      sku: ['seller sku', 'sku'],
+      sellingPrice: ['sale amount (rs.)', 'invoice amount'],
+      chargedCommission: ['total marketplace fee'],
+      bankUtrSettled: ['bank settlement value (rs.)', 'settlement value'],
+      status: ['return type', 'order status'],
+    },
+  },
+  {
+    id: 'Meesho',
+    label: 'Meesho',
+    aliases: {
+      orderId: ['sub order no'],
+      sku: ['supplier sku', 'sku'],
+      sellingPrice: ['listed price', 'total sale amount'],
+      bankUtrSettled: ['final settlement amount', 'net settlement'],
+      status: ['live order status'],
+    },
+  },
+];
 
 const FLAG_META: Record<FlagKey, { label: string; short: string; chip: string; dot: string }> = {
   weight:       { label: '⚖️ Weight Slab Overcharge', short: 'Weight',         chip: 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30', dot: 'bg-amber-500' },
@@ -100,23 +192,43 @@ function fmtMoney(n: number): string {
 }
 function num(v: unknown): number {
   if (typeof v === 'number') return Number.isFinite(v) ? v : 0;
-  const cleaned = String(v ?? '').replace(/[₹,\s]/g, '').trim();
-  const parsed = Number(cleaned);
-  return Number.isFinite(parsed) ? parsed : 0;
+  if (v == null) return 0;
+  let s = String(v);
+  const isNegParen = /^\(.*\)$/.test(s.trim());
+  s = s.replace(/^\(|\)$/g, '');
+  s = s.replace(/[₹$,]/g, '');
+  s = s.replace(/rs\.?/gi, '').replace(/inr/gi, '');
+  s = s.replace(/\s+/g, '');
+  if (!s) return 0;
+  const n = Number(s);
+  if (!Number.isFinite(n)) return 0;
+  return isNegParen ? -n : n;
 }
 function normKey(s: string): string {
-  return s.trim().toLowerCase().replace(/[\s\-.]+/g, '_').replace(/_+/g, '_');
+  return s
+    .replace(/^\uFEFF/, '')
+    .trim()
+    .toLowerCase()
+    .replace(/[₹"'`]/g, '')
+    .replace(/[()\[\]]/g, ' ')
+    .replace(/[\s\-./]+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '');
 }
 
+/* ── FIX 3b: auto-detect tab delimiter for Excel/Sheets paste ───────────── */
 function parseCsv(text: string): string[][] {
+  const cleaned = text.replace(/^\uFEFF/, '');
+  const firstLine = cleaned.split(/\r?\n/).find((l) => l.trim() !== '') ?? '';
+  const delimiter = firstLine.includes('\t') && !firstLine.includes(',') ? '\t' : ',';
   const rows: string[][] = []; let cur: string[] = []; let field = ''; let inQuotes = false;
-  for (let i = 0; i < text.length; i++) {
-    const ch = text[i];
+  for (let i = 0; i < cleaned.length; i++) {
+    const ch = cleaned[i];
     if (inQuotes) {
-      if (ch === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else inQuotes = false; }
+      if (ch === '"') { if (cleaned[i + 1] === '"') { field += '"'; i++; } else inQuotes = false; }
       else field += ch;
     } else if (ch === '"') { inQuotes = true; }
-    else if (ch === ',') { cur.push(field); field = ''; }
+    else if (ch === delimiter) { cur.push(field); field = ''; }
     else if (ch === '\n') { cur.push(field); rows.push(cur); cur = []; field = ''; }
     else if (ch !== '\r') { field += ch; }
   }
@@ -124,44 +236,167 @@ function parseCsv(text: string): string[][] {
   return rows.filter((r) => r.some((c) => c.trim() !== ''));
 }
 
-function mapGridToOrders(grid: string[][]): { orders: RawOrder[]; error: string | null } {
+/* ─── Marketplace header detection ─────────────────────────────────────────── */
+
+function findColumn(normHeaders: string[], aliases: string[]): number {
+  for (const alias of aliases) {
+    const a = normKey(alias);
+    const idx = normHeaders.indexOf(a);
+    if (idx >= 0) return idx;
+  }
+  return -1;
+}
+
+function detectMarketplace(grid: string[][]): DetectionResult | null {
+  if (grid.length < 2) return null;
+  let best: DetectionResult | null = null;
+
+  for (let r = 0; r < Math.min(grid.length, 10); r++) {
+    const row = grid[r];
+    if (!row || row.length === 0) continue;
+    const normHeaders = row.map(normKey);
+
+    for (const map of MARKET_HEADER_MAPS) {
+      const orderIdCol = findColumn(normHeaders, map.aliases.orderId);
+      const sellingCol = findColumn(normHeaders, map.aliases.sellingPrice);
+      const settleCol = findColumn(normHeaders, map.aliases.bankUtrSettled);
+
+      if (orderIdCol < 0 || sellingCol < 0 || settleCol < 0) continue;
+
+      const skuCol = findColumn(normHeaders, map.aliases.sku);
+      const statusCol = findColumn(normHeaders, map.aliases.status);
+
+      let commissionCol = -1;
+      if (map.aliases.chargedCommission) {
+        commissionCol = findColumn(normHeaders, map.aliases.chargedCommission);
+      }
+      let commissionSumCols: number[] | undefined;
+      if (map.aliases.chargedCommissionSum) {
+        for (const group of map.aliases.chargedCommissionSum) {
+          const cols: number[] = [];
+          let allFound = true;
+          for (const a of group) {
+            const c = findColumn(normHeaders, [a]);
+            if (c < 0) { allFound = false; break; }
+            cols.push(c);
+          }
+          if (allFound && cols.length > 0) { commissionSumCols = cols; break; }
+        }
+      }
+
+      let score = 3;
+      if (skuCol >= 0) score += 1;
+      if (statusCol >= 0) score += 1;
+      if (commissionCol >= 0) score += 1;
+      if (commissionSumCols) score += 1;
+
+      if (!best || score > best.score) {
+        best = {
+          marketplace: map.id,
+          label: map.label,
+          headerRowIndex: r,
+          score,
+          headers: normHeaders,
+          colMap: {
+            orderId: orderIdCol,
+            sku: skuCol,
+            sellingPrice: sellingCol,
+            chargedCommission: commissionCol,
+            bankUtrSettled: settleCol,
+            status: statusCol,
+            commissionSumCols,
+          },
+        };
+      }
+    }
+  }
+
+  return best;
+}
+
+function mapGridToOrders(
+  grid: string[][],
+  detection?: DetectionResult | null,
+): { orders: RawOrder[]; error: string | null } {
   if (grid.length < 2) return { orders: [], error: 'The data appears to be empty or missing a header row.' };
+
+  if (detection) {
+    const { colMap, headerRowIndex } = detection;
+    const get = (cells: string[], i: number) => (i >= 0 ? String(cells[i] ?? '').trim() : '');
+
+    const orders = grid
+      .slice(headerRowIndex + 1)
+      .map((cells): RawOrder => {
+        const selling = num(get(cells, colMap.sellingPrice));
+        const settled = num(get(cells, colMap.bankUtrSettled));
+        /* ── FIX 3a: abs() fees so negative-delta exports never invert math ── */
+        let charged = 0;
+        if (colMap.commissionSumCols && colMap.commissionSumCols.length > 0) {
+          charged = colMap.commissionSumCols.reduce((s, i) => s + Math.abs(num(cells[i])), 0);
+        } else if (colMap.chargedCommission >= 0) {
+          charged = Math.abs(num(get(cells, colMap.chargedCommission)));
+        }
+        return {
+          orderId: get(cells, colMap.orderId),
+          sku: get(cells, colMap.sku),
+          status: get(cells, colMap.status) || 'Delivered',
+          sellingPrice: selling,
+          expectedCommission: charged,
+          chargedCommission: charged,
+          declaredWeightG: 0,
+          billedWeightG: 0,
+          expectedShipping: 0,
+          chargedShipping: 0,
+          bankUtrSettled: settled,
+          warehouseReturnReceived: 'Yes',
+        };
+      })
+      .filter((r) => r.orderId.length > 0);
+
+    if (!orders.length) return { orders: [], error: 'Detected marketplace headers but found no valid order rows.' };
+    return { orders, error: null };
+  }
+
+  /* Legacy template path */
   const headers = grid[0].map(normKey);
   const mapped = headers.map((h) => HEADER_MAP[h]);
   if (!mapped.includes('orderId')) {
     return { orders: [], error: 'Missing required column "Order_ID". Download the template to see the expected format.' };
   }
-  const orders = grid.slice(1).map((cells) => {
-    const rec: Record<string, string | number> = {};
-    headers.forEach((h, i) => {
-      const field = HEADER_MAP[h]; if (!field) return;
-      const raw = cells[i] ?? '';
-      const isStringField = ['orderId', 'sku', 'status', 'warehouseReturnReceived', 'utr', 'settlementDate'].includes(field);
-      rec[field] = isStringField ? String(raw).trim() : num(raw);
-    });
-    return {
-      orderId: String(rec.orderId ?? ''),
-      sku: String(rec.sku ?? ''),
-      status: String(rec.status ?? 'Delivered') || 'Delivered',
-      sellingPrice: Number(rec.sellingPrice ?? 0),
-      expectedCommission: Number(rec.expectedCommission ?? 0),
-      chargedCommission: Number(rec.chargedCommission ?? 0),
-      declaredWeightG: Number(rec.declaredWeightG ?? 0),
-      billedWeightG: Number(rec.billedWeightG ?? 0),
-      expectedShipping: Number(rec.expectedShipping ?? 0),
-      chargedShipping: Number(rec.chargedShipping ?? 0),
-      bankUtrSettled: Number(rec.bankUtrSettled ?? 0),
-      warehouseReturnReceived: String(rec.warehouseReturnReceived ?? 'Yes') || 'Yes',
-      utr: rec.utr ? String(rec.utr) : undefined,
-      settlementDate: rec.settlementDate ? String(rec.settlementDate) : undefined,
-    } as RawOrder;
-  }).filter((r) => r.orderId.length > 0);
+  const orders = grid
+    .slice(1)
+    .map((cells) => {
+      const rec: Record<string, string | number> = {};
+      headers.forEach((h, i) => {
+        const field = HEADER_MAP[h]; if (!field) return;
+        const raw = cells[i] ?? '';
+        const isStringField = ['orderId', 'sku', 'status', 'warehouseReturnReceived', 'utr', 'settlementDate'].includes(field);
+        rec[field] = isStringField ? String(raw).trim() : num(raw);
+      });
+      return {
+        orderId: String(rec.orderId ?? ''),
+        sku: String(rec.sku ?? ''),
+        status: String(rec.status ?? 'Delivered') || 'Delivered',
+        sellingPrice: Number(rec.sellingPrice ?? 0),
+        expectedCommission: Number(rec.expectedCommission ?? 0),
+        chargedCommission: Number(rec.chargedCommission ?? 0),
+        declaredWeightG: Number(rec.declaredWeightG ?? 0),
+        billedWeightG: Number(rec.billedWeightG ?? 0),
+        expectedShipping: Number(rec.expectedShipping ?? 0),
+        chargedShipping: Number(rec.chargedShipping ?? 0),
+        bankUtrSettled: Number(rec.bankUtrSettled ?? 0),
+        warehouseReturnReceived: String(rec.warehouseReturnReceived ?? 'Yes') || 'Yes',
+        utr: rec.utr ? String(rec.utr) : undefined,
+        settlementDate: rec.settlementDate ? String(rec.settlementDate) : undefined,
+      } as RawOrder;
+    })
+    .filter((r) => r.orderId.length > 0);
   if (!orders.length) return { orders: [], error: 'No valid order rows found. Please check the column headers.' };
   return { orders, error: null };
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   RECONCILIATION MATH ENGINE  — UNCHANGED
+   RECONCILIATION MATH ENGINE — UNCHANGED
    ══════════════════════════════════════════════════════════════════════════ */
 
 function computeRow(row: OrderRow): ComputedRow {
@@ -221,7 +456,7 @@ function computeRow(row: OrderRow): ComputedRow {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   SAMPLE PRESETS  — UNCHANGED
+   SAMPLE PRESETS — UNCHANGED
    ══════════════════════════════════════════════════════════════════════════ */
 
 type SampleKey = 'apparel' | 'electronics' | 'beauty';
@@ -287,7 +522,7 @@ const SAMPLE_DEFS: SampleDef[] = [
 ];
 
 /* ══════════════════════════════════════════════════════════════════════════
-   CLAIM TEXT BUILDER  — UNCHANGED
+   CLAIM TEXT BUILDER — UNCHANGED
    ══════════════════════════════════════════════════════════════════════════ */
 
 function buildClaimText(row: ComputedRow, mkt: Marketplace, claimLabel: string): string {
@@ -504,6 +739,12 @@ export default function SettlementReconciliation() {
   const [showManual, setShowManual] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  /* ─── inline column-mapper fallback state ─────────────────────────────── */
+  const [columnMapper, setColumnMapper] = useState<ColumnMapperState>(null);
+  const [mapperSelection, setMapperSelection] = useState<MapperSelection>({
+    orderId: -1, sku: -1, sellingPrice: -1, bankUtrSettled: -1, status: -1,
+  });
+
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortKey>('leak');
   const [expandedUid, setExpandedUid] = useState<string | null>(null);
@@ -531,6 +772,18 @@ export default function SettlementReconciliation() {
     const t = window.setTimeout(() => setToast(null), 2600);
     return () => window.clearTimeout(t);
   }, [toast]);
+
+  /* ── FIX 4a: auto-reset copiedField + reset on modal change ─────────── */
+  useEffect(() => {
+    if (!copiedField) return;
+    const t = window.setTimeout(() => setCopiedField(null), 2000);
+    return () => window.clearTimeout(t);
+  }, [copiedField]);
+
+  useEffect(() => {
+    setCopiedField(null);
+    setAwbNumber('');
+  }, [selectedClaimOrder]);
 
   const computed = useMemo<ComputedRow[]>(() => rows.map(computeRow), [rows]);
 
@@ -609,18 +862,48 @@ export default function SettlementReconciliation() {
     setExpandedUid((cur) => (cur === rowUid ? null : rowUid));
   }, []);
 
-  const ingestRows = useCallback((incoming: RawOrder[], name: string, utr: string, date: string) => {
+  /* ─── ingest w/ optional marketplace detection ────────────────────────── */
+  const ingestRows = useCallback((incoming: RawOrder[], name: string, utr: string, date: string, detectedMarket?: Marketplace) => {
     if (!incoming.length) { setParseError('No valid order rows found. Please check the column headers against the template.'); return; }
     setRows(incoming.map((r) => ({ ...r, uid: uid() })));
     setBatchName(name); setBatchUtr(utr); setBatchDate(date); setParseError(null);
     setFilter('all'); setSearchQuery(''); setExpandedUid(null); setClaimedUids(new Set());
-    setToast(`Parsed ${incoming.length} settlement orders`);
+    setColumnMapper(null);
+    if (detectedMarket) {
+      setMarketplace(detectedMarket);
+      const label = MARKETPLACES.find((m) => m.id === detectedMarket)?.label ?? detectedMarket;
+      setToast(`✅ Detected ${label} Report — ${incoming.length} orders parsed locally`);
+    } else {
+      setToast(`Parsed ${incoming.length} settlement orders`);
+    }
   }, []);
 
   const ingestCsvText = useCallback((text: string, name: string, utr: string, date: string) => {
-    const { orders, error } = mapGridToOrders(parseCsv(text));
-    if (error) { setParseError(error); return; }
-    ingestRows(orders, name, utr, date);
+    const grid = parseCsv(text);
+    const detection = detectMarketplace(grid);
+
+    if (detection) {
+      const { orders, error } = mapGridToOrders(grid, detection);
+      if (error) { setParseError(error); return; }
+      ingestRows(orders, name, utr, date, detection.marketplace);
+      return;
+    }
+
+    /* Legacy template path */
+    const legacy = mapGridToOrders(grid);
+    if (!legacy.error) {
+      ingestRows(legacy.orders, name, utr, date);
+      return;
+    }
+
+    /* Fallback → show inline column mapper */
+    if (grid.length >= 1 && grid[0].length > 0) {
+      setColumnMapper({ grid, headers: grid[0], fileName: name, utr, date });
+      setMapperSelection({ orderId: -1, sku: -1, sellingPrice: -1, bankUtrSettled: -1, status: -1 });
+      setParseError(null);
+    } else {
+      setParseError(legacy.error);
+    }
   }, [ingestRows]);
 
   const handleFile = useCallback((file: File) => {
@@ -647,7 +930,8 @@ export default function SettlementReconciliation() {
     setRows([]); setBatchName(''); setBatchUtr(''); setBatchDate(''); setFilter('all');
     setParseError(null); setClaimTarget(null); setShowManual(false);
     setSearchQuery(''); setExpandedUid(null); setClaimedUids(new Set());
-    setPasteText(''); setShowPaste(false); setToast('Batch cleared');
+    setPasteText(''); setShowPaste(false); setColumnMapper(null);
+    setToast('Batch cleared');
   }, []);
 
   const downloadTemplate = useCallback(() => {
@@ -659,12 +943,103 @@ export default function SettlementReconciliation() {
     setToast('Template downloaded');
   }, []);
 
+  /* ─── 1-Click marketplace sample CSVs ─────────────────────────────────── */
+  const downloadMarketplaceSample = useCallback((market: 'Amazon' | 'Flipkart' | 'Meesho') => {
+    let content: string;
+    let filename: string;
+    if (market === 'Amazon') {
+      content = [
+        'Order ID,SKU,Product Sales,Selling Fees,FBA Fees,Total,Type',
+        'AMZ-10001,TSH-BLK-M,799,80,55,632,Delivered',
+        'AMZ-10002,KRT-BLU-L,1299,130,90,1042,Delivered',
+        'AMZ-10003,JNS-GRY-32,1899,190,130,1500,Delivered',
+        'AMZ-10004,TSH-WHT-XL,799,80,55,0,RTO',
+        'AMZ-10005,HOD-RED-M,1499,150,80,1000,Delivered',
+        'AMZ-10006,TSH-BLK-L,799,80,55,632,Delivered',
+        'AMZ-10007,KRT-BLK-S,1299,130,90,0,RTO',
+        'AMZ-10008,JNS-BLK-34,1899,190,130,1500,Delivered',
+        'AMZ-10009,TSH-GRN-L,799,80,55,600,Delivered',
+        'AMZ-10010,HOD-BLU-XL,1499,150,80,1200,Delivered',
+      ].join('\n');
+      filename = 'amazon_settlement_sample.csv';
+    } else if (market === 'Flipkart') {
+      content = [
+        'Order ID,Seller SKU,Sale Amount (Rs.),Total Marketplace Fee,Bank Settlement Value (Rs.),Order Status',
+        'FK-20001,BOAT-AIRD-141,1499,120,1280,Delivered',
+        'FK-20002,NOISE-CLR-2,2499,200,2150,Delivered',
+        'FK-20003,BOAT-ROCK-3,1799,150,0,RTO',
+        'FK-20004,MI-BAND-7,2999,240,2550,Delivered',
+        'FK-20005,REALME-BUDS,1299,110,1100,Delivered',
+        'FK-20006,BOAT-AIRD-141,1499,120,1280,Delivered',
+        'FK-20007,NOISE-CLR-2,2499,200,0,Return',
+        'FK-20008,MI-BAND-7,2999,240,2550,Delivered',
+        'FK-20009,BOAT-ROCK-3,1799,150,1400,Delivered',
+        'FK-20010,REALME-BUDS,1299,110,1100,Delivered',
+      ].join('\n');
+      filename = 'flipkart_settlement_sample.csv';
+    } else {
+      content = [
+        'Sub Order No,Supplier SKU,Listed Price,Final Settlement Amount,Live Order Status',
+        'MS-30001,FACE-SERUM-30,599,470,Delivered',
+        'MS-30002,LIP-TINT-RED,349,216,Delivered',
+        'MS-30003,HAIR-OIL-100,449,0,RTO',
+        'MS-30004,FACE-WASH-100,299,213,Delivered',
+        'MS-30005,BODY-LOT-400,699,486,Delivered',
+        'MS-30006,LIP-TINT-PINK,349,257,Delivered',
+        'MS-30007,SERUM-VITC,899,0,Return',
+        'MS-30008,FACE-SERUM-30,599,470,Delivered',
+        'MS-30009,HAIR-OIL-100,449,274,Delivered',
+        'MS-30010,BODY-LOT-400,699,539,Delivered',
+      ].join('\n');
+      filename = 'meesho_settlement_sample.csv';
+    }
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url;
+    a.download = filename; a.click(); URL.revokeObjectURL(url);
+    setToast(`${market} sample CSV downloaded`);
+  }, []);
+
   const handlePasteParse = useCallback(() => {
     if (!pasteText.trim()) { setParseError('Paste some settlement rows first.'); return; }
     ingestCsvText(pasteText, 'pasted_settlement_batch.csv', 'Pasted Batch',
       new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }));
     setShowPaste(false); setPasteText('');
   }, [pasteText, ingestCsvText]);
+
+  /* ─── inline column mapper: apply user selection ──────────────────────── */
+  const applyColumnMapper = useCallback(() => {
+    if (!columnMapper) return;
+    const { grid, fileName, utr, date } = columnMapper;
+    const { orderId, sku, sellingPrice, bankUtrSettled, status } = mapperSelection;
+    if (orderId < 0) { setParseError('Please pick the Order ID column.'); return; }
+    if (sellingPrice < 0 || bankUtrSettled < 0) { setParseError('Please pick the Gross Amount and Actual Settled columns.'); return; }
+
+    const get = (cells: string[], i: number) => (i >= 0 ? String(cells[i] ?? '').trim() : '');
+    const orders: RawOrder[] = grid.slice(1)
+      .map((cells): RawOrder => {
+        const selling = num(get(cells, sellingPrice));
+        const settled = num(get(cells, bankUtrSettled));
+        return {
+          orderId: get(cells, orderId),
+          sku: get(cells, sku),
+          status: get(cells, status) || 'Delivered',
+          sellingPrice: selling,
+          expectedCommission: 0,
+          chargedCommission: 0,
+          declaredWeightG: 0,
+          billedWeightG: 0,
+          expectedShipping: 0,
+          chargedShipping: 0,
+          bankUtrSettled: settled,
+          warehouseReturnReceived: 'Yes',
+        };
+      })
+      .filter((r) => r.orderId.length > 0);
+
+    if (!orders.length) { setParseError('No valid rows found using the selected columns.'); return; }
+    ingestRows(orders, fileName, utr, date);
+  }, [columnMapper, mapperSelection, ingestRows]);
 
   const claimText = useMemo(() => {
     if (!claimTarget) return '';
@@ -744,11 +1119,12 @@ export default function SettlementReconciliation() {
     const prefix = getTonePrefix(claimTone);
     const awbLine = awbNumber.trim() ? `Courier AWB / Return Tracking ID: ${awbNumber.trim()}\n` : '';
 
+    /* ── FIX 1a: wire live evidenceChecked state into the checklist ──── */
     const evidenceItems = [
-      { id: 'invoice', label: 'Tax Invoice & Manifest Copy', checked: false },
-      { id: 'label', label: 'Dispatch Packaging Label Photo with Barcode', checked: false },
-      { id: 'video', label: 'Warehouse CCTV / Unboxing Video', checked: false },
-      { id: 'awb', label: 'Courier AWB Tracking Screenshot', checked: false },
+      { id: 'invoice', label: 'Tax Invoice & Manifest Copy', checked: !!evidenceChecked['invoice'] },
+      { id: 'label', label: 'Dispatch Packaging Label Photo with Barcode', checked: !!evidenceChecked['label'] },
+      { id: 'video', label: 'Warehouse CCTV / Unboxing Video', checked: !!evidenceChecked['video'] },
+      { id: 'awb', label: 'Courier AWB Tracking Screenshot', checked: !!evidenceChecked['awb'] },
     ];
     const evidenceList = evidenceItems.map((e) => (e.checked ? `✅ ${e.label}` : `⬜ ${e.label}`)).join('\n');
 
@@ -856,6 +1232,12 @@ export default function SettlementReconciliation() {
     const leaked = computed.filter((r) => r.actionable && r.leak > 0);
     return leaked.length > 0 && leaked.every((r) => claimedUids.has(r.uid));
   }, [claimTarget, claimedUids, computed]);
+
+  /* ── FIX 4b: derived "filed" flag for the single-claim modal ─────────── */
+  const isSelectedClaimFiled = useMemo(
+    () => (selectedClaimOrder ? claimedUids.has(selectedClaimOrder.uid) : false),
+    [selectedClaimOrder, claimedUids],
+  );
 
   const handleMarkFiled = useCallback(() => {
     if (!claimTarget) return;
@@ -1064,9 +1446,28 @@ export default function SettlementReconciliation() {
                 ))}
               </div>
 
+              {/* ─── 1-Click marketplace sample CSV downloads ─── */}
+              <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                <span className="select-none text-[9px] font-semibold uppercase tracking-wider text-zinc-500 sm:text-[10px] dark:text-zinc-400">
+                  Try a sample:
+                </span>
+                <button type="button" onClick={() => downloadMarketplaceSample('Amazon')}
+                  className="flex select-none items-center gap-1 whitespace-nowrap rounded-lg border border-amber-300 bg-amber-50 px-2 py-1 text-[9px] font-semibold text-amber-800 shadow-sm transition-all hover:-translate-y-0.5 hover:border-amber-400 hover:bg-amber-100 sm:text-[10px] dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
+                  <Download className="h-3 w-3 shrink-0" /> Amazon CSV
+                </button>
+                <button type="button" onClick={() => downloadMarketplaceSample('Flipkart')}
+                  className="flex select-none items-center gap-1 whitespace-nowrap rounded-lg border border-sky-300 bg-sky-50 px-2 py-1 text-[9px] font-semibold text-sky-800 shadow-sm transition-all hover:-translate-y-0.5 hover:border-sky-400 hover:bg-sky-100 sm:text-[10px] dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-300">
+                  <Download className="h-3 w-3 shrink-0" /> Flipkart CSV
+                </button>
+                <button type="button" onClick={() => downloadMarketplaceSample('Meesho')}
+                  className="flex select-none items-center gap-1 whitespace-nowrap rounded-lg border border-pink-300 bg-pink-50 px-2 py-1 text-[9px] font-semibold text-pink-800 shadow-sm transition-all hover:-translate-y-0.5 hover:border-pink-400 hover:bg-pink-100 sm:text-[10px] dark:border-pink-500/30 dark:bg-pink-500/10 dark:text-pink-300">
+                  <Download className="h-3 w-3 shrink-0" /> Meesho CSV
+                </button>
+              </div>
+
               <div className="mt-3 max-w-2xl select-none rounded-xl border border-emerald-200 bg-white/70 px-3 py-2 text-[9px] leading-relaxed text-zinc-600 sm:mt-4 sm:text-[10px] dark:border-emerald-500/20 dark:bg-zinc-950/40 dark:text-zinc-400">
-                <span className="font-semibold text-zinc-700 dark:text-zinc-300">Supported columns: </span>
-                <code className="break-words font-mono text-emerald-700 dark:text-emerald-300">Order_ID, SKU, Status, Selling_Price, Expected_Commission, Charged_Commission, Declared_Weight_g, Billed_Weight_g, Expected_Shipping, Charged_Shipping, Bank_UTR_Settled, Warehouse_Return_Received</code>
+                <span className="font-semibold text-zinc-700 dark:text-zinc-300">Auto-detects: </span>
+                <code className="break-words font-mono text-emerald-700 dark:text-emerald-300">Amazon · Flipkart · Meesho reports — or use template columns (Order_ID, SKU, Status, Selling_Price, Expected_Commission, Charged_Commission, Declared_Weight_g, Billed_Weight_g, Expected_Shipping, Charged_Shipping, Bank_UTR_Settled, Warehouse_Return_Received)</code>
               </div>
             </div>
           ) : (
@@ -1104,6 +1505,66 @@ export default function SettlementReconciliation() {
           {parseError && (
             <div className="mt-2 flex items-start gap-2 rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-[10px] text-rose-700 sm:text-[11px] dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300">
               <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" /><span className="select-none">{parseError}</span>
+            </div>
+          )}
+
+          {/* ─── Inline column-mapper fallback ─── */}
+          {columnMapper && (
+            <div className="mt-2.5 rounded-2xl border border-amber-300 bg-amber-50/60 p-3 shadow-sm dark:border-amber-500/30 dark:bg-amber-500/[0.06]">
+              <div className="mb-2 flex items-start gap-2">
+                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+                <div className="min-w-0 flex-1">
+                  <p className="select-none text-[11px] font-bold text-amber-800 dark:text-amber-300 sm:text-[12px]">
+                    Headers not auto-recognised — map columns manually
+                  </p>
+                  <p className="select-none text-[10px] text-amber-700 dark:text-amber-400">
+                    {columnMapper.fileName} · {Math.max(columnMapper.grid.length - 1, 0)} data rows
+                  </p>
+                </div>
+                <button type="button" onClick={() => { setColumnMapper(null); setParseError(null); }}
+                  className="shrink-0 rounded-lg p-1 text-amber-600 transition-colors hover:bg-amber-100 dark:text-amber-400 dark:hover:bg-amber-500/10" aria-label="Dismiss mapper">
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+                {([
+                  ['orderId', 'Order ID *'],
+                  ['sku', 'SKU'],
+                  ['sellingPrice', 'Gross Amount *'],
+                  ['bankUtrSettled', 'Actual Settled *'],
+                  ['status', 'Status'],
+                ] as const).map(([key, label]) => (
+                  <label key={key} className="block min-w-0">
+                    <span className="mb-0.5 block select-none truncate text-[9px] font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-300">{label}</span>
+                    <select
+                      value={mapperSelection[key]}
+                      onChange={(e) => setMapperSelection((m) => ({ ...m, [key]: Number(e.target.value) }))}
+                      className="w-full rounded-lg border border-amber-300 bg-white px-2 py-1.5 text-[11px] text-zinc-900 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 dark:border-amber-500/40 dark:bg-zinc-950 dark:text-zinc-100"
+                    >
+                      <option value={-1}>— select —</option>
+                      {columnMapper.headers.map((h, i) => (
+                        <option key={`${h}_${i}`} value={i}>{h || `Column ${i + 1}`}</option>
+                      ))}
+                    </select>
+                  </label>
+                ))}
+              </div>
+
+              <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                <button type="button" onClick={applyColumnMapper}
+                  disabled={mapperSelection.orderId < 0 || mapperSelection.sellingPrice < 0 || mapperSelection.bankUtrSettled < 0}
+                  className="select-none rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-3.5 py-1.5 text-[10px] font-bold text-white shadow-md shadow-amber-500/20 transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40 sm:text-[11px]">
+                  Apply &amp; Reconcile
+                </button>
+                <button type="button" onClick={() => { setColumnMapper(null); setParseError(null); }}
+                  className="select-none rounded-xl border border-zinc-200 bg-white px-3.5 py-1.5 text-[10px] font-semibold text-zinc-600 hover:text-rose-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
+                  Cancel
+                </button>
+                <span className="select-none text-[9px] text-amber-700 dark:text-amber-400">
+                  * Required — Order ID, Gross Amount, and Actual Settled must be mapped.
+                </span>
+              </div>
             </div>
           )}
 
@@ -1296,7 +1757,7 @@ export default function SettlementReconciliation() {
               </div>
             </div>
 
-            {/* ── CARD 2: Leakage Distribution (UPGRADED) ── */}
+            {/* ── CARD 2: Leakage Distribution ── */}
             <div className="relative flex h-full flex-col justify-between rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-sm transition-all duration-200 hover:border-emerald-500/40 hover:shadow-md sm:p-6 dark:border-zinc-800/80 dark:bg-zinc-900">
               <div className="flex flex-col h-full">
                 <div className="flex items-center gap-2">
@@ -1309,10 +1770,7 @@ export default function SettlementReconciliation() {
                   </div>
                 </div>
 
-                {/* Chart Container: flex-1 centers content */}
                 <div className="flex flex-col items-center justify-center gap-5 flex-1 w-full my-auto py-2 overflow-hidden">
-
-                  {/* Large Centered SVG Donut Chart */}
                   <div className="relative flex items-center justify-center w-44 h-44 sm:w-48 sm:h-48 shrink-0 mx-auto" onMouseLeave={() => setDonutHover(null)}>
                     <svg viewBox="0 0 120 120" className="w-full h-full overflow-visible">
                       {(() => {
@@ -1356,13 +1814,11 @@ export default function SettlementReconciliation() {
                       })()}
                     </svg>
 
-                    {/* Center Overlay Text */}
                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                       <span className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 tracking-wider">TOTAL LEAK</span>
                       <span className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white mt-0.5">{fmtShort(portfolio.totalLeak)}</span>
                     </div>
 
-                    {/* Tooltip positioned at top-center of Donut */}
                     {donutHover && (() => {
                       const s = [
                         { key: 'missingReturn' as const, color: '#a855f7', label: 'Missing Returns', tooltipColor: 'text-purple-400' },
@@ -1384,7 +1840,6 @@ export default function SettlementReconciliation() {
                     })()}
                   </div>
 
-                  {/* Sleek 2x2 Grid Legend Below the Donut - 2-line compact layout */}
                   <div className="grid grid-cols-2 gap-2 w-full pt-1" onMouseLeave={() => setDonutHover(null)}>
                     {([
                       { key: 'missingReturn' as const, label: 'Missing Returns', color: 'bg-purple-500', tooltipColor: 'text-purple-400' },
@@ -1866,7 +2321,8 @@ export default function SettlementReconciliation() {
                     <Copy className="h-3 w-3 shrink-0" /> Copy Body
                   </button>
                 </div>
-                <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 font-mono text-[9px] leading-relaxed text-zinc-800 sm:text-[10px] dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200 max-h-64 overflow-y-auto">
+                {/* ── FIX 2: preserve line breaks + selectable ── */}
+                <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 font-mono text-[9px] leading-relaxed text-zinc-800 sm:text-[10px] dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200 max-h-64 overflow-y-auto whitespace-pre-wrap break-words select-text">
                   {generateTicketBody(selectedClaimOrder, fmtMoney(Math.max(0, selectedClaimOrder.leak)))}
                 </div>
                 {copiedField === 'body' && <p className="mt-1 text-[9px] text-emerald-600 dark:text-emerald-400 select-none">✅ Body copied!</p>}
@@ -1883,7 +2339,8 @@ export default function SettlementReconciliation() {
                   ].map((item) => (
                     <label key={item.id} className="flex items-center gap-2 cursor-pointer select-none">
                       <input type="checkbox" checked={!!evidenceChecked[item.id]} onChange={() => setEvidenceChecked((prev) => ({ ...prev, [item.id]: !prev[item.id] }))} className="w-4 h-4 rounded border-zinc-300 dark:border-zinc-700 text-emerald-500 focus:ring-emerald-500 bg-white dark:bg-zinc-900" />
-                      <span className={`text-[10px] ${evidenceChecked[item.id] ? 'text-emerald-600 line-through' : 'text-zinc-700'} dark:${evidenceChecked[item.id] ? 'text-emerald-400 line-through' : 'text-zinc-300'}`}>{item.label}</span>
+                      {/* ── FIX 1b: static dark classes, no template interpolation ── */}
+                      <span className={`text-[10px] ${evidenceChecked[item.id] ? 'text-emerald-600 dark:text-emerald-400 line-through' : 'text-zinc-700 dark:text-zinc-300'}`}>{item.label}</span>
                     </label>
                   ))}
                 </div>
@@ -1899,6 +2356,22 @@ export default function SettlementReconciliation() {
               }} className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-3 text-[10px] font-bold text-white shadow-lg shadow-emerald-500/25 transition-all hover:opacity-90 sm:text-[11px]">
                 {copiedField === 'all' ? <Check className="h-3.5 w-3.5 shrink-0" /> : <ClipboardList className="h-3.5 w-3.5 shrink-0" />}
                 {copiedField === 'all' ? 'Copied to Clipboard!' : 'Copy Full Claim Ticket'}
+              </button>
+              {/* ── FIX 4b: Mark as Claim Filed / Undo toggle for single claim ── */}
+              <button
+                onClick={() => toggleClaimed([selectedClaimOrder.uid], !claimedUids.has(selectedClaimOrder.uid))}
+                className={[
+                  'flex-1 flex items-center justify-center gap-2 rounded-lg border px-4 py-3 text-[10px] font-bold transition-colors sm:text-[11px]',
+                  isSelectedClaimFiled
+                    ? 'border-emerald-400 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-300'
+                    : 'border-zinc-200 bg-white text-zinc-700 hover:border-emerald-400 hover:text-emerald-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-emerald-500/50 dark:hover:text-emerald-300',
+                ].join(' ')}
+              >
+                {isSelectedClaimFiled ? (
+                  <><BadgeCheck className="h-3.5 w-3.5 shrink-0" /> Claim Filed — Undo</>
+                ) : (
+                  <><Check className="h-3.5 w-3.5 shrink-0" /> Mark as Claim Filed</>
+                )}
               </button>
               <button onClick={() => {
                 const content = `${generateTicketSubject(selectedClaimOrder, fmtMoney(Math.max(0, selectedClaimOrder.leak)))}\n\n${generateTicketBody(selectedClaimOrder, fmtMoney(Math.max(0, selectedClaimOrder.leak)))}`;
